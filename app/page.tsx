@@ -63,12 +63,12 @@ export default function Home() {
 
                 <div id="support-me" className="pt-10">
                     <h1 className="text-3xl pb-10">Support me</h1>
-                    <div className="flex flex-row justify-center items-center text-center center border-2 border-gray-300 rounded-lg p-4">
-                        <Image width={25} height={Coffee.height} src={Coffee} alt="coffee" />
-                        <a href="https://www.buymeacoffee.com/yorunoken" target="_blank" rel="noopener noreferrer">
-                            Buy me a coffee! ($0)
-                        </a>
-                    </div>
+                    <a href="https://www.buymeacoffee.com/yorunoken" target="_blank" rel="noopener noreferrer">
+                        <div className="flex flex-row justify-center items-center text-center center border-2 border-gray-300 rounded-lg p-4">
+                            <Image width={25} height={Coffee.height} src={Coffee} alt="coffee" />
+                            <span>Buy me a coffee! ($0)</span>
+                        </div>
+                    </a>
                     <div className="flex flex-row justify-center items-center text-center center border-2 border-gray-300 rounded-lg p-4 mt-4">
                         <p>More coming soon..</p>
                     </div>
