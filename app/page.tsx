@@ -83,6 +83,11 @@ export default function Home() {
                             <span className="text-white text-sm">Support server</span>
                         </div>
                     </a>
+                    <a className="px-3" href="https://github.com/YoruNoKen/HanamiBot" target="_blank" rel="noopener noreferrer">
+                        <div className="bg-black bg-opacity-60 p-2 rounded-xl ring-2 ring-special-purple hover:cursor-pointer hover:ring-gray-100 transition-all">
+                            <span className="text-white text-sm">GitHub Repository</span>
+                        </div>
+                    </a>
                 </div>
                 <span className="text-gray-500 text-opacity-60 italic mt-4 text-lg">Scroll to learn more..</span>
             </div>
