@@ -5,7 +5,7 @@
 :root {
     --foreground-rgb: 255, 255, 255;
     --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 62, 46, 74, 0.3;
+    --background-end-rgb: 0, 0, 0;
 }
 
 body {
