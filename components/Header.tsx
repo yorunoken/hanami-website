@@ -3,7 +3,7 @@ import Link from "next/link";
 
 const HeaderContainer = styles.header``;
 
-const linksClass = "text-gray-200 text-2xl px-5 hover:scale-110 hover:text-white transition-all text-bold";
+const linksClass = "text-gray-200 text-2xl px-5 hover:text-white transition-all text-bold";
 
 export default function Header() {
     return (
