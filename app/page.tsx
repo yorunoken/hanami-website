@@ -80,7 +80,7 @@ export default function Home() {
                     </a>
                     <a className="px-3" href="https://discord.gg/RcGjBZkDP6" target="_blank" rel="noopener noreferrer">
                         <div className="bg-black bg-opacity-60 p-2 rounded-xl ring-2 ring-special-purple hover:cursor-pointer hover:ring-gray-100 transition-all">
-                            <span className="text-white text-sm">Support server</span>
+                            <span className="text-white text-sm">Support Server</span>
                         </div>
                     </a>
                     <a className="px-3" href="https://github.com/YoruNoKen/HanamiBot" target="_blank" rel="noopener noreferrer">
