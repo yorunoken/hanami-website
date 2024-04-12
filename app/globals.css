@@ -4,16 +4,27 @@
 
 :root {
     --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 59, 42, 70;
-    --background-end-rgb: 59, 42, 70;
+    --purple-rgb: 59, 42, 70;
     --black-rgb: 12, 12, 12;
 }
 
-
 body {
     color: rgb(var(--foreground-rgb));
-    background: linear-gradient(to bottom, rgba(var(--background-start-rgb)), rgba(var(--black-rgb)),rgba(var(--black-rgb)), rgba(var(--black-rgb)), rgba(var(--black-rgb)), rgba(var(--black-rgb)), rgba(var(--black-rgb)), rgba(var(--black-rgb)), rgba(var(--background-end-rgb)));
+    background: linear-gradient(
+        180deg,
+        rgba(var(--purple-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--black-rgb)),
+        rgba(var(--purple-rgb))
+    );
+    overflow-x: hidden;
 }
+
 @layer utilities {
     .text-balance {
         text-wrap: balance;

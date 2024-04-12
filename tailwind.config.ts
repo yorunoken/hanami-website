@@ -17,6 +17,7 @@ const config: Config = {
       colors: {
         'special-purple': '#A855F7',
         'inner-box': '#131313',
+        'header-color': '#121212',
         'command-box': "#272727"
       },
     },

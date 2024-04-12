@@ -1,22 +1,31 @@
+import { enableSkipping } from "app/page";
 import styles from "styled-components";
-import Link from "next/link";
 
 const HeaderContainer = styles.header``;
 
-const linksClass = "text-gray-300 text-2xl px-5 hover:text-white transition-all text-bold";
+const scrollToSection = (sectionId: string) => {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        enableSkipping();
+        section.scrollIntoView({ behavior: "smooth" });
+    }
+};
+
+const linksClass = "select-none text-gray-300 text-2xl px-5 hover:text-white hover:cursor-pointer transition-all text-bold ";
+const boxClass = "border border-gray-400 bg-black bg-opacity-60 rounded-lg p-2 m-2";
 
 export default function Header() {
     return (
-        <HeaderContainer className="bg-opacity-60 flex justify-center items-center backdrop-blur-md p-4 fixed top-0 left-0 w-full z-50">
-            <Link href={"#"} className={linksClass}>
-                Home
-            </Link>
-            <Link href={"#features"} className={linksClass}>
-                Features
-            </Link>
-            <Link href={"#support-me"} className={linksClass}>
+        <HeaderContainer className="p-4 fixed z-50 flex justify-center items-center w-full left-auto right-auto">
+            <span className={linksClass + boxClass} onClick={() => scrollToSection("main")}>
+                Hanami
+            </span>
+            <span className={linksClass + boxClass} onClick={() => scrollToSection("commands")}>
+                Commands
+            </span>
+            <span className={linksClass + boxClass} onClick={() => scrollToSection("support")}>
                 Support me
-            </Link>
+            </span>
         </HeaderContainer>
     );
 }

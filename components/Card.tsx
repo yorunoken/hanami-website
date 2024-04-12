@@ -3,7 +3,7 @@ import { Command } from "./Command";
 
 export const Card = ({ title, children, commands, descriptions, titleLeft }: CardProps) => {
     return (
-        <div className="items-center grid grid-cols-3 bg-dark bg-opacity-50 border border-gray-300 p-8 rounded-lg transition-all duration-300 hover:cursor-default">
+        <div className="items-center grid grid-cols-3 bg-dark bg-opacity-50 border border-blue-500 p-8 rounded-lg transition-all duration-300 hover:cursor-default">
             {titleLeft ? (
                 <>
                     <h2 className="text-xl font-semibold">{title}</h2>
