@@ -96,8 +96,8 @@ export default function Component() {
                         <motion.ul className="space-y-3 sm:space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
                             {[
                                 { name: "Lilybird", description: "To communicate with Discord's API" },
-                                { name: "osu-web.js", description: "To communicate with osu! servers" },
-                                { name: "rosu-pp's JavaScript bind", description: "To calculate pp, bpm values, and other values" },
+                                { name: "osu-api-extended", description: "To communicate with osu! servers" },
+                                { name: "rosu-pp-js", description: "To calculate pp, bpm, and other values" },
                             ].map((library, index) => (
                                 <motion.li
                                     key={library.name}
@@ -119,7 +119,7 @@ export default function Component() {
 
                 <section id="support" className="text-center mb-12 sm:mb-16">
                     <h3 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Support</h3>
-                    <p className="text-sm sm:text-base mb-4 sm:mb-6 text-gray-400">I am eternally grateful for donations. It enables me to keep going and create more projects.</p>
+                    <p className="text-sm sm:text-base mb-4 sm:mb-6 text-gray-400">We are eternally grateful for donations. It enables us to keep going and create more projects.</p>
                     <div className="flex flex-col sm:flex-row justify-center">
                         <motion.button
                             className="bg-purple-600 hover:bg-purple-700 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
@@ -127,7 +127,7 @@ export default function Component() {
                             whileTap={{ scale: 0.95 }}
                             onTap={() => window.open("https://yorunoken.com/support", "_blank", "noopener noreferrer")}
                         >
-                            Support Me <Heart className="ml-2 h-5 w-5" />
+                            Support Us <Heart className="ml-2 h-5 w-5" />
                         </motion.button>
                     </div>
                 </section>
