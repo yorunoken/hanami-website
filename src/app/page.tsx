@@ -32,7 +32,7 @@ export default function Component() {
             <main className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12">
                 <section className="text-center mb-12 sm:mb-16">
                     <motion.h2 className="text-3xl sm:text-5xl font-bold mb-4" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                        Welcome to Hanami
+                        Welcome to Hanami Bot
                     </motion.h2>
                     <motion.p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-400" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
                         A specialized Discord bot for osu! written in TypeScript using the Bun runtime engine.
@@ -92,32 +92,34 @@ export default function Component() {
 
                 <section id="libraries" className="mb-12 sm:mb-16">
                     <h3 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Main Libraries</h3>
-                    <motion.ul className="space-y-3 sm:space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-                        {[
-                            { name: "Lilybird", description: "To communicate with Discord's API" },
-                            { name: "osu-web.js", description: "To communicate with osu! servers" },
-                            { name: "rosu-pp's JavaScript bind", description: "To calculate pp, bpm values, and other values" },
-                        ].map((library, index) => (
-                            <motion.li
-                                key={library.name}
-                                className="flex items-start sm:items-center space-x-2"
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.5, delay: index * 0.1 }}
-                            >
-                                <span className="text-purple-400 text-xl">•</span>
-                                <div>
-                                    <span className="font-semibold text-gray-200">{library.name}</span>
-                                    <span className="block sm:inline sm:ml-1 text-sm sm:text-base text-gray-400">- {library.description}</span>
-                                </div>
-                            </motion.li>
-                        ))}
-                    </motion.ul>
+                    <div className="flex justify-center">
+                        <motion.ul className="space-y-3 sm:space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+                            {[
+                                { name: "Lilybird", description: "To communicate with Discord's API" },
+                                { name: "osu-web.js", description: "To communicate with osu! servers" },
+                                { name: "rosu-pp's JavaScript bind", description: "To calculate pp, bpm values, and other values" },
+                            ].map((library, index) => (
+                                <motion.li
+                                    key={library.name}
+                                    className="flex items-start sm:items-center space-x-2"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                                >
+                                    <span className="text-purple-400 text-xl">•</span>
+                                    <div>
+                                        <span className="font-semibold text-gray-200">{library.name}</span>
+                                        <span className="block sm:inline sm:ml-1 text-sm sm:text-base text-gray-400">- {library.description}</span>
+                                    </div>
+                                </motion.li>
+                            ))}
+                        </motion.ul>
+                    </div>
                 </section>
 
-                <section className="text-center mb-12 sm:mb-16">
+                <section id="support" className="text-center mb-12 sm:mb-16">
                     <h3 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Support</h3>
-                    <p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-400">I am eternally grateful for donations. It enables me to keep going and create more projects.</p>
+                    <p className="text-sm sm:text-base mb-4 sm:mb-6 text-gray-400">I am eternally grateful for donations. It enables me to keep going and create more projects.</p>
                     <div className="flex flex-col sm:flex-row justify-center">
                         <motion.button
                             className="bg-purple-600 hover:bg-purple-700 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"

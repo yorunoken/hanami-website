@@ -7,7 +7,7 @@ import Script from "next/script";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-    title: "Hanami",
+    title: "Hanami Bot",
     description: "Main page of Hanami Bot.",
 };
 
