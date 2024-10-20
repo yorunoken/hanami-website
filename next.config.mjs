@@ -3,13 +3,8 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
-    experimental: {
-        serverActions: {
-            allowedOrigins: ["analyze.yorunoken.com", "127.0.0.1:3006"],
-        },
-    },
     images: {
-        remotePatterns: [{ hostname: "assets.ppy.sh" }],
+        remotePatterns: [{ hostname: "assets.ppy.sh" }, { hostname: "yorunoken.s-ul.eu" }, { hostname: "cdn.discordapp.com" }, { hostname: "raw.githubusercontent.com" }],
     },
 };
 

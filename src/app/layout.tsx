@@ -18,11 +18,14 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+            </head>
             <body className={cn("min-h-screen font-sans antialiased")}>
                 <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
                     <div className="flex flex-col min-h-screen">
                         <Header />
-                        <main>{children}</main>
+                        <main className="flex-grow">{children}</main>
                         <Footer />
                     </div>
                 </ThemeProvider>
