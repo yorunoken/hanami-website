@@ -22,11 +22,11 @@ export default function Component() {
         }
     }, []);
 
-    const background = "https://yorunoken.s-ul.eu/hZnMlXzR";
+    const backgroundUrl = "https://yorunoken.s-ul.eu/hZnMlXzR";
     return (
         <div className="min-h-screen text-purple-100">
             <div className="fixed inset-0 w-full h-full pointer-events-none opacity-20 blur-sm">
-                <Image src={background} alt="Floral Background" fill style={{ objectFit: "cover" }} />
+                <Image src={backgroundUrl} alt="Floral Background" fill style={{ objectFit: "cover" }} />
             </div>
 
             <main className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12">
