@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import os from "os";
+import path from "path";
+import fs from "node:fs/promises";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -6,10 +9,29 @@ export async function GET(request: Request) {
     const state = searchParams.get("state");
 
     if (!code) {
-        return NextResponse.redirect(new URL("/error", request.url));
+        return NextResponse.json({ success: false, message: "There seems to have been an error in your request, as `code` doesn't exist in your url parameters. Please try again." });
     }
 
     try {
+        let userCachePath = process.env.USER_CACHE_PATH;
+        if (!userCachePath) {
+            throw new Error("Please set USER_CACHE_PATH in your environment variables.");
+        }
+
+        if (userCachePath.startsWith("~")) {
+            userCachePath = path.join(os.homedir(), userCachePath.slice(1));
+        }
+
+        const userCache = await fs.readFile(userCachePath, "utf8");
+        const data = userCache.trim().split("\n");
+        const discordLine = data.find((line) => line.startsWith(state + "="));
+
+        if (!discordLine) {
+            throw new Error("It seems I couldn't find any discord IDs linked to the state: ");
+        }
+
+        const discordId = discordLine.split("=")[1];
+
         const tokenResponse = await fetch("https://osu.ppy.sh/oauth/token", {
             method: "POST",
             headers: {
@@ -41,8 +63,11 @@ export async function GET(request: Request) {
 
         const userData = await userResponse.json();
 
-        console.log("State:", state);
-        console.log("User Data:", userData);
+        // Delete state
+        const content = await fs.readFile(userCachePath, "utf8");
+        const lines = content.split("\n");
+        const filteredLines = lines.filter((line) => !line.endsWith(`=${discordId}`));
+        await fs.writeFile(userCachePath, filteredLines.join("\n"));
 
         return NextResponse.json({ success: true, message: `Successfully authenticated as ${userData.username}. You may close this tab.` });
     } catch (error) {
