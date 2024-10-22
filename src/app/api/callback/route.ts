@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
+import { Database } from "sqlite3";
 import os from "os";
 import path from "path";
 import fs from "node:fs/promises";
 
+const tableName = "users";
+const tablePrimaryKey = "discord_id";
+
 export async function GET(request: Request) {
+    const databasePath = process.env.DATABASE_PATH;
+    if (!databasePath) {
+        throw new Error("Please set DATABASE_PATH in your environment variables.");
+    }
+
+    const db = new Database(databasePath);
+
     const { searchParams } = new URL(request.url);
     const code = searchParams.get("code");
     const state = searchParams.get("state");
@@ -68,6 +79,9 @@ export async function GET(request: Request) {
         const lines = content.split("\n");
         const filteredLines = lines.filter((line) => !line.endsWith(`=${discordId}`));
         await fs.writeFile(userCachePath, filteredLines.join("\n"));
+
+        // Insert bancho_id and discord_id into database.
+        db.prepare(`INSERT OR REPLACE INTO ${tableName} (${tablePrimaryKey}, bancho_id) VALUES (?, ?);`).run(discordId, userData.id);
 
         return NextResponse.json({ success: true, message: `Successfully authenticated as ${userData.username}. You may close this tab.` });
     } catch (error) {
