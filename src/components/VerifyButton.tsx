@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { SiOsu } from "react-icons/si";
 import { useState } from "react";
-import { LoadingSpinner } from "@/components/ui/loading";
 
 export default function VerifyButton({ state }: { state?: string }) {
     const [isLoading, setIsLoading] = useState(false);
@@ -30,13 +29,12 @@ export default function VerifyButton({ state }: { state?: string }) {
 
     return (
         <button
-            className="bg-pink-500 hover:bg-pink-600 hover:shadow-lg hover:scale-[1.02] active:scale-95 font-bold py-2 px-4 rounded-md flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-w-[200px] shadow-md"
+            className="bg-pink-500 hover:bg-pink-600 hover:shadow-lg font-bold py-2 px-4 rounded-md flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-w-[200px] shadow-md"
             onClick={handleClick}
             disabled={isLoading}
         >
             {isLoading ? (
                 <>
-                    <LoadingSpinner size="sm" />
                     <span className="ml-2">Loading...</span>
                 </>
             ) : (

@@ -11,13 +11,13 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
         }
 
-        if (!process.env.OSU_REDIRECT_URI) {
-            console.error("OSU_REDIRECT_URI environment variable is not set");
+        if (!process.env.OSU_CALLBACK_URL) {
+            console.error("OSU_CALLBACK_URL environment variable is not set");
             return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
         }
 
         const osuAuthUrl = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-            process.env.OSU_REDIRECT_URI
+            process.env.OSU_CALLBACK_URL
         )}&response_type=code&scope=identify&state=${encodeURIComponent(state)}`;
 
         return NextResponse.json({ url: osuAuthUrl });

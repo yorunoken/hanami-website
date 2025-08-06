@@ -1,10 +1,9 @@
 import VerifyButton from "@/components/VerifyButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { SiOsu } from "react-icons/si";
 
 interface VerifyPageProps {
     searchParams: { state?: string };
@@ -17,8 +16,10 @@ export default function VerifyPage({ searchParams }: VerifyPageProps) {
     return (
         <div className="min-h-screen text-white relative">
             <div className="fixed inset-0 w-full h-full pointer-events-none">
-                <Image src={backgroundUrl} alt="Floral Background" fill style={{ objectFit: "cover" }} priority sizes="100vw" quality={75} className="opacity-10" />
+                <Image src={backgroundUrl} alt="Floral Background" fill style={{ objectFit: "cover" }} priority sizes="100vw" quality={75} className="blur-xs" />
             </div>
+
+            <div className="fixed inset-0 w-full h-full pointer-events-none bg-black opacity-70" />
 
             <main className="relative z-10 container mx-auto px-6 py-12 max-w-2xl">
                 <div className="mb-8">
@@ -32,12 +33,6 @@ export default function VerifyPage({ searchParams }: VerifyPageProps) {
 
                 <Card className="bg-gray-900/30 border-gray-700">
                     <CardHeader className="text-center">
-                        <div className="flex items-center justify-center gap-3 mb-4">
-                            <div className="p-3 rounded-full bg-purple-500/20 border border-purple-500/30">
-                                <Shield className="h-8 w-8 text-purple-400" />
-                            </div>
-                            <SiOsu className="h-10 w-10 text-pink-400" />
-                        </div>
                         <CardTitle className="text-3xl font-bold">Account Verification</CardTitle>
                     </CardHeader>
 
@@ -50,9 +45,11 @@ export default function VerifyPage({ searchParams }: VerifyPageProps) {
                                     <p className="text-blue-300 text-sm">You&apos;ll be redirected to osu! to authorize the connection. This is completely safe and secure.</p>
                                 </div>
 
-                                <VerifyButton state={state} />
+                                <div className="flex justify-center mt-6">
+                                    <VerifyButton state={state} />
+                                </div>
 
-                                {process.env.NODE_ENV === "development" && <div className="mt-4 p-3 bg-gray-800/50 rounded text-xs text-gray-500">State: {state}</div>}
+                                {/* {process.env.NODE_ENV === "development" && <div className="mt-4 p-3 bg-gray-800/50 rounded text-xs text-gray-500">State: {state}</div>} */}
                             </>
                         ) : (
                             <>

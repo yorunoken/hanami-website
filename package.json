@@ -1,5 +1,5 @@
 {
-    "name": "hanami-website-remake",
+    "name": "hanami-website",
     "version": "0.1.0",
     "private": true,
     "scripts": {
@@ -26,6 +26,7 @@
     "devDependencies": {
         "@eslint/eslintrc": "^3",
         "@tailwindcss/postcss": "^4.1.11",
+        "@types/bun": "^1.2.19",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "eslint": "^9",
