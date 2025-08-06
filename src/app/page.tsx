@@ -3,7 +3,6 @@
 import PrivacyPolicy from "@/components/legal/privacy-policy";
 import TermsOfService from "@/components/legal/tos";
 import { Modal } from "@/components/modal";
-import { motion } from "framer-motion";
 import { ChevronsRight, FileText, Heart, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -31,37 +30,27 @@ export default function Component() {
 
             <main className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12">
                 <section className="text-center mb-12 sm:mb-16">
-                    <motion.h2 className="text-3xl sm:text-5xl font-bold mb-4" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                        Welcome to Hanami Bot
-                    </motion.h2>
-                    <motion.p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-400" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-                        A specialized Discord bot for osu! written in TypeScript using the Bun runtime engine.
-                    </motion.p>
+                    <h2 className="text-3xl sm:text-5xl font-bold mb-4">Welcome to Hanami Bot</h2>
+                    <p className="text-lg sm:text-xl mb-6 sm:mb-8 text-gray-400">A specialized Discord bot for osu! written in TypeScript using the Bun runtime engine.</p>
                     <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                        <motion.button
+                        <button
                             className="bg-purple-600 hover:bg-purple-700 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onTap={() => window.open("https://discord.com/oauth2/authorize?client_id=995999045157916763&permissions=265216&scope=bot", "_blank", "noopener noreferrer")}
+                            onClick={() => window.open("https://discord.com/oauth2/authorize?client_id=995999045157916763&permissions=265216&scope=bot", "_blank", "noopener noreferrer")}
                         >
                             Invite to Server <ChevronsRight className="ml-2 h-5 w-5" />
-                        </motion.button>
-                        <motion.button
+                        </button>
+                        <button
                             className="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onTap={() => window.open("https://discord.gg/RcGjBZkDP6", "_blank", "noopener noreferrer")}
+                            onClick={() => window.open("https://discord.gg/RcGjBZkDP6", "_blank", "noopener noreferrer")}
                         >
                             Support Server <MessageCircle className="ml-2 h-5 w-5" />
-                        </motion.button>
-                        <motion.button
+                        </button>
+                        <button
                             className="bg-gray-800 hover:bg-gray-700 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onTap={() => window.open("https://github.com/yorunoken/HanamiBot", "_blank", "noopener noreferrer")}
+                            onClick={() => window.open("https://github.com/yorunoken/HanamiBot", "_blank", "noopener noreferrer")}
                         >
                             View on GitHub <FaGithub className="ml-2 h-5 w-5" />
-                        </motion.button>
+                        </button>
                     </div>
                 </section>
 
@@ -72,17 +61,11 @@ export default function Component() {
                             { name: "/osu", description: "Get a user's osu! profile" },
                             { name: "/recent", description: "Get a user's most recent osu! score" },
                             { name: "/top", description: "Get a user's osu! top plays" },
-                        ].map((command, index) => (
-                            <motion.div
-                                key={command.name}
-                                className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-lg hover:shadow-purple-500/20 transition duration-300"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.5, delay: index * 0.1 }}
-                            >
+                        ].map((command) => (
+                            <div key={command.name} className="bg-gray-800 rounded-lg p-4 sm:p-6 shadow-lg hover:shadow-purple-500/20 transition duration-300">
                                 <h4 className="text-lg sm:text-xl font-semibold mb-2 text-purple-400">{command.name}</h4>
                                 <p className="text-sm sm:text-base text-gray-400">{command.description}</p>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
                     <p className="text-center mt-4 sm:mt-6 text-sm sm:text-base text-gray-400">
@@ -93,27 +76,21 @@ export default function Component() {
                 <section id="libraries" className="mb-12 sm:mb-16">
                     <h3 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Main Libraries</h3>
                     <div className="flex justify-center">
-                        <motion.ul className="space-y-3 sm:space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+                        <ul className="space-y-3 sm:space-y-4">
                             {[
                                 { name: "Lilybird", description: "To communicate with Discord's API" },
                                 { name: "osu-api-extended", description: "To communicate with osu! servers" },
                                 { name: "rosu-pp-js", description: "To calculate pp, bpm, and other values" },
-                            ].map((library, index) => (
-                                <motion.li
-                                    key={library.name}
-                                    className="flex items-start sm:items-center space-x-2"
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                                >
+                            ].map((library) => (
+                                <li key={library.name} className="flex items-start sm:items-center space-x-2">
                                     <span className="text-purple-400 text-xl">•</span>
                                     <div>
                                         <span className="font-semibold text-gray-200">{library.name}</span>
                                         <span className="block sm:inline sm:ml-1 text-sm sm:text-base text-gray-400">- {library.description}</span>
                                     </div>
-                                </motion.li>
+                                </li>
                             ))}
-                        </motion.ul>
+                        </ul>
                     </div>
                 </section>
 
@@ -121,14 +98,12 @@ export default function Component() {
                     <h3 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-center">Support</h3>
                     <p className="text-sm sm:text-base mb-4 sm:mb-6 text-gray-400">We are eternally grateful for donations. It enables us to keep going and create more projects.</p>
                     <div className="flex flex-col sm:flex-row justify-center">
-                        <motion.button
+                        <button
                             className="bg-purple-600 hover:bg-purple-700 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onTap={() => window.open("https://yorunoken.com/support", "_blank", "noopener noreferrer")}
+                            onClick={() => window.open("https://yorunoken.com/support", "_blank", "noopener noreferrer")}
                         >
                             Support Us <Heart className="ml-2 h-5 w-5" />
-                        </motion.button>
+                        </button>
                     </div>
                 </section>
 
@@ -146,22 +121,12 @@ export default function Component() {
                 <section id="legal" className="text-center mb-12 sm:mb-16">
                     <h3 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Legal</h3>
                     <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-                        <motion.button
-                            className="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setActiveModal("tos")}
-                        >
+                        <button className="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300" onClick={() => setActiveModal("tos")}>
                             Terms of Service <FileText className="ml-2 h-5 w-5" />
-                        </motion.button>
-                        <motion.button
-                            className="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setActiveModal("privacy")}
-                        >
+                        </button>
+                        <button className="bg-gray-700 hover:bg-gray-600 font-bold py-2 px-4 rounded-full flex items-center justify-center transition duration-300" onClick={() => setActiveModal("privacy")}>
                             Privacy Policy <FileText className="ml-2 h-5 w-5" />
-                        </motion.button>
+                        </button>
                     </div>
                 </section>
             </main>

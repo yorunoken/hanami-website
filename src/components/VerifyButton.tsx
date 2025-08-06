@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { SiOsu } from "react-icons/si";
 import { useState } from "react";
 
@@ -21,14 +20,9 @@ export default function VerifyButton({ state }: { state?: string }) {
         }
     };
     return (
-        <motion.button
-            className="bg-pink-500 hover:bg-pink-600 font-bold py-2 px-4 rounded-md flex items-center justify-center transition duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onTap={handleClick}
-        >
+        <button className="bg-pink-500 hover:bg-pink-600 font-bold py-2 px-4 rounded-md flex items-center justify-center transition duration-300" onClick={handleClick} disabled={isLoading}>
             {isLoading ? "Loading..." : "Verify with osu!"}
             <SiOsu className="ml-2 h-7 w-7" />
-        </motion.button>
+        </button>
     );
 }
