@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { SiOsu } from "react-icons/si";
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/ui/loading";
 
 export default function VerifyButton({ state }: { state?: string }) {
     const [isLoading, setIsLoading] = useState(false);
@@ -12,17 +13,38 @@ export default function VerifyButton({ state }: { state?: string }) {
         setIsLoading(true);
         try {
             const response = await fetch(`/api/auth?state=${state || ""}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const data = await response.json();
-            router.push(data.url);
+            if (data.url) {
+                router.push(data.url);
+            } else {
+                throw new Error("No URL returned from auth endpoint");
+            }
         } catch (error) {
             console.error("Error initiating auth:", error);
             setIsLoading(false);
         }
     };
+
     return (
-        <button className="bg-pink-500 hover:bg-pink-600 font-bold py-2 px-4 rounded-md flex items-center justify-center transition duration-300" onClick={handleClick} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Verify with osu!"}
-            <SiOsu className="ml-2 h-7 w-7" />
+        <button
+            className="bg-pink-500 hover:bg-pink-600 hover:shadow-lg hover:scale-[1.02] active:scale-95 font-bold py-2 px-4 rounded-md flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-w-[200px] shadow-md"
+            onClick={handleClick}
+            disabled={isLoading}
+        >
+            {isLoading ? (
+                <>
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2">Loading...</span>
+                </>
+            ) : (
+                <>
+                    Verify with osu!
+                    <SiOsu className="ml-2 h-7 w-7" />
+                </>
+            )}
         </button>
     );
 }

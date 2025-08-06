@@ -15,15 +15,15 @@ export async function GET(request: Request) {
 
     const db = new Database(databasePath);
 
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get("code");
-    const state = searchParams.get("state");
-
-    if (!code) {
-        return NextResponse.json({ success: false, message: "There seems to have been an error in your request, as `code` doesn't exist in your url parameters. Please try again." });
-    }
-
     try {
+        const { searchParams } = new URL(request.url);
+        const code = searchParams.get("code");
+        const state = searchParams.get("state");
+
+        if (!code) {
+            return NextResponse.json({ success: false, message: "There seems to have been an error in your request, as `code` doesn't exist in your url parameters. Please try again." });
+        }
+
         let userCachePath = process.env.USER_CACHE_PATH;
         if (!userCachePath) {
             throw new Error("Please set USER_CACHE_PATH in your environment variables.");
@@ -74,7 +74,6 @@ export async function GET(request: Request) {
 
         const userData = await userResponse.json();
 
-        // Delete state
         const content = await fs.readFile(userCachePath, "utf8");
         const lines = content.split("\n");
         const filteredLines = lines.filter((line) => !line.endsWith(`=${discordId}`));
@@ -87,5 +86,8 @@ export async function GET(request: Request) {
     } catch (error) {
         console.error("Error during OAuth callback:", error);
         return NextResponse.json({ success: false, message: String(error) });
+    } finally {
+        // Ensure database connection is always closed
+        db.close();
     }
 }
