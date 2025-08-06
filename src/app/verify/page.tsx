@@ -6,11 +6,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 interface VerifyPageProps {
-    searchParams: { state?: string };
+    searchParams: Promise<{ state?: string }>;
 }
 
-export default function VerifyPage({ searchParams }: VerifyPageProps) {
-    const { state } = searchParams;
+export default async function VerifyPage({ searchParams }: VerifyPageProps) {
+    const { state } = await searchParams;
     const backgroundUrl = "https://yorunoken.s-ul.eu/hZnMlXzR";
 
     return (
