@@ -72,7 +72,9 @@ export default function Home() {
                         <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
                             <FaGithub className="h-6 w-6" /> Open Source
                         </h3>
-                        <p className="text-zinc-400 mb-8 leading-relaxed">Hanami is proudly open source. You can host it yourself, contribute new features, or inspect the code to ensure your data is handled safely.</p>
+                        <p className="text-zinc-400 mb-8 leading-relaxed">
+                            Hanami is proudly open source. You can host it yourself, contribute new features, or inspect the code to ensure your data is handled safely.
+                        </p>
                         <div className="flex gap-4">
                             <a href="https://github.com/hanami-osu/bot" target="_blank" rel="noopener noreferrer">
                                 <Button variant="secondary" className="rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700">
@@ -110,7 +112,6 @@ export default function Home() {
                     </div>
                 </section>
 
-                {/* Support / Sponsor */}
                 <section id="support" className="mb-32">
                     <div className="p-10 rounded-3xl bg-zinc-900/80 border border-pink-500/20 flex flex-col items-center text-center backdrop-blur-sm relative overflow-hidden">
                         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-pink-500/50 to-transparent" />
