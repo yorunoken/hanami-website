@@ -1,26 +1,20 @@
 import { NextResponse } from "next/server";
-import { Database } from "sqlite3";
+import mysql from "mysql2/promise";
 
 import { createClient } from "redis";
 
 const tableName = "users";
-const tablePrimaryKey = "discord_id";
+const tablePrimaryKey = "id";
 
 export async function GET(request: Request) {
-    const databasePath = process.env.DATABASE_PATH;
-    if (!databasePath) {
-        throw new Error("Please set DATABASE_PATH in your environment variables.");
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+        throw new Error("Please set DATABASE_URL in your environment variables.");
     }
-    const db = new Database(databasePath);
+    const db = await mysql.createConnection(databaseUrl);
 
     const redis = createClient({
-        socket: {
-            host: process.env.REDIS_HOST || "localhost",
-            port: parseInt(process.env.REDIS_PORT || "6379"),
-            connectTimeout: 10000,
-        },
-        password: process.env.REDIS_PASSWORD,
-        database: parseInt(process.env.REDIS_DB || "0"),
+        url: process.env.REDIS_URL,
     });
     await redis.connect();
 
@@ -34,9 +28,15 @@ export async function GET(request: Request) {
         }
 
         let discordId: string | null = null;
-        discordId = await redis.get(`state:${state}`);
-        if (!discordId) {
+        const rawDiscordId = await redis.get(`state:${state}`);
+        if (!rawDiscordId) {
             throw new Error(`It seems I couldn't find any discord IDs linked to the state: ${state}`);
+        }
+        
+        try {
+            discordId = JSON.parse(rawDiscordId);
+        } catch {
+            discordId = rawDiscordId;
         }
 
         const tokenResponse = await fetch("https://osu.ppy.sh/oauth/token", {
@@ -64,23 +64,25 @@ export async function GET(request: Request) {
             headers: { Authorization: `Bearer ${access_token}` },
         });
 
+        console.log(userResponse);
         if (!userResponse.ok) {
             throw new Error("Failed to fetch user data (banned user?)");
         }
 
         const userData = await userResponse.json();
+        console.log(userData);
 
         await redis.del(`state:${state}`);
 
-        // Insert bancho_id and discord_id into database.
-        db.prepare(`INSERT OR REPLACE INTO ${tableName} (${tablePrimaryKey}, bancho_id) VALUES (?, ?);`).run(discordId, userData.id);
+        // Insert banchoId and id into database.
+        await db.execute(`INSERT INTO ${tableName} (${tablePrimaryKey}, banchoId) VALUES (?, ?) ON DUPLICATE KEY UPDATE banchoId = VALUES(banchoId)`, [discordId, userData.id.toString()]);
 
         return NextResponse.json({ success: true, message: `Successfully authenticated as ${userData.username}. You may close this tab.` });
     } catch (error) {
         console.error("Error during OAuth callback:", error);
         return NextResponse.json({ success: false, message: String(error) });
     } finally {
-        db.close();
+        await db.end();
         if (redis.isOpen) {
             await redis.quit();
         }
