@@ -125,7 +125,7 @@ export default function Home() {
                             Hanami is completely free and open-source, but running the servers isn't. If you love the bot, consider sponsoring the project to help keep the lights on!
                         </p>
 
-                        <a href="https://yorunoken.com/support" target="_blank" rel="noopener noreferrer">
+                        <a href="https://yorunoken.com#support" target="_blank" rel="noopener noreferrer">
                             <Button className="h-14 px-8 bg-pink-600 hover:bg-pink-700 text-white rounded-full font-medium text-lg shadow-none">
                                 <Heart className="mr-2 h-5 w-5 fill-current" />
                                 Sponsor Hanami
