@@ -7,12 +7,11 @@ import { Link, useSearchParams } from "react-router-dom";
 export default function VerifyPage() {
     const [searchParams] = useSearchParams();
     const state = searchParams.get("state");
-    const backgroundUrl = "https://yorunoken.s-ul.eu/hZnMlXzR";
 
     return (
         <div className="min-h-screen text-zinc-100 relative flex flex-col items-center justify-center">
             <div className="fixed inset-0 w-full h-full pointer-events-none -z-20">
-                <img src={backgroundUrl} alt="Background" style={{ objectFit: "cover", width: "100%", height: "100%" }} className="blur-sm" />
+                <img src="background.webp" alt="Background" style={{ objectFit: "cover", width: "100%", height: "100%" }} className="blur-sm" />
             </div>
             <div className="fixed inset-0 w-full h-full pointer-events-none bg-black/80 -z-10" />
 

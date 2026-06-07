@@ -4,12 +4,10 @@ import { FaGithub } from "react-icons/fa";
 import { SiOsu } from "react-icons/si";
 
 export default function Home() {
-    const backgroundUrl = "https://yorunoken.s-ul.eu/hZnMlXzR";
-
     return (
         <div className="min-h-screen text-zinc-100 relative">
             <div className="fixed inset-0 w-full h-full pointer-events-none -z-20">
-                <img src={backgroundUrl} alt="Background" style={{ objectFit: "cover", width: "100%", height: "100%" }} className="blur-sm" />
+                <img src="background.webp" alt="Background" style={{ objectFit: "cover", width: "100%", height: "100%" }} className="blur-sm" />
             </div>
             <div className="fixed inset-0 w-full h-full pointer-events-none bg-black/80 -z-10" />
 
