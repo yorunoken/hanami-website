@@ -3,6 +3,8 @@ import { staticPlugin } from "@elysiajs/static";
 import mysql from "mysql2/promise";
 import { createClient } from "redis";
 
+const PORT = process.env.PORT ?? 3000;
+
 const app = new Elysia()
     .use(staticPlugin({ assets: "dist", prefix: "/" }))
     .get("/api/auth", ({ query, set }) => {
@@ -15,7 +17,7 @@ const app = new Elysia()
         }
 
         const osuAuthUrl = `https://osu.ppy.sh/oauth/authorize?client_id=${process.env.OSU_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-            process.env.OSU_CALLBACK_URL
+            process.env.OSU_CALLBACK_URL,
         )}&response_type=code&scope=identify&state=${encodeURIComponent(state)}`;
 
         return { url: osuAuthUrl };
@@ -35,7 +37,7 @@ const app = new Elysia()
 
         const db = await mysql.createConnection(databaseUrl);
         const redis = createClient({ url: process.env.REDIS_URL });
-        
+
         try {
             await redis.connect();
 
@@ -67,7 +69,7 @@ const app = new Elysia()
                 throw new Error("Failed to fetch token");
             }
 
-            const { access_token } = await tokenResponse.json() as any;
+            const { access_token } = (await tokenResponse.json()) as any;
 
             const userResponse = await fetch("https://osu.ppy.sh/api/v2/me", {
                 headers: { Authorization: `Bearer ${access_token}` },
@@ -77,14 +79,11 @@ const app = new Elysia()
                 throw new Error("Failed to fetch user data (banned user?)");
             }
 
-            const userData = await userResponse.json() as any;
+            const userData = (await userResponse.json()) as any;
 
             await redis.del(`state:${state}`);
 
-            await db.execute(
-                `INSERT INTO users (id, banchoId) VALUES (?, ?) ON DUPLICATE KEY UPDATE banchoId = VALUES(banchoId)`,
-                [discordId, userData.id.toString()]
-            );
+            await db.execute(`INSERT INTO users (id, banchoId) VALUES (?, ?) ON DUPLICATE KEY UPDATE banchoId = VALUES(banchoId)`, [discordId, userData.id.toString()]);
 
             return { success: true, message: `Successfully authenticated as ${userData.username}. You may close this tab.` };
         } catch (e) {
@@ -109,6 +108,6 @@ export default app;
 
 // Only listen if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    app.listen(3001);
+    app.listen(PORT);
     console.log(`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`);
 }
