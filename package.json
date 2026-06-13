@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "dotenv -e .env -- concurrently \"vite\" \"bun --watch src/server/index.ts\"",
+        "dev": "concurrently \"vite\" \"bun --watch src/server/index.ts\"",
         "build": "vite build",
-        "start": "dotenv -e .env -- bun src/server/index.ts",
+        "start": "bun src/server/index.ts",
         "lint": "eslint ."
     },
     "dependencies": {
