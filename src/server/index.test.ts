@@ -11,7 +11,7 @@ describe("Auth Endpoint", () => {
 
         const req = new Request("http://localhost/api/auth?state=teststate");
         const res = await app.handle(req);
-        
+
         expect(res.status).toBe(500);
 
         // Restore
@@ -25,9 +25,9 @@ describe("Auth Endpoint", () => {
 
         const req = new Request("http://localhost/api/auth?state=teststate");
         const res = await app.handle(req);
-        
+
         expect(res.status).toBe(200);
-        const data = await res.json() as any;
+        const data = (await res.json()) as any;
         expect(data.url).toContain("https://osu.ppy.sh/oauth/authorize");
         expect(data.url).toContain("client_id=12345");
         expect(data.url).toContain("state=teststate");
