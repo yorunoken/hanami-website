@@ -11,6 +11,7 @@
     "dependencies": {
         "@elysiajs/static": "^1.4.10",
         "@radix-ui/react-slot": "^1.2.3",
+        "better-auth": "^1.6.18",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "elysia": "^1.4.28",
