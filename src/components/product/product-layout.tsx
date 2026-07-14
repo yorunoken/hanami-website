@@ -5,11 +5,10 @@ import Header from "@/components/header";
 import { sectionSpacingClass, siteContainerClass, sitePageClass } from "@/components/layout/styles";
 import { cn } from "@/lib/utils";
 
-export const productHeroCopyClass =
-    "relative z-20 max-w-[720px] motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both]";
+export const productHeroCopyClass = "relative z-20 max-w-180 motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both]";
 export const productTitleClass =
     "text-[clamp(3.3rem,17vw,4.8rem)] leading-[0.92] tracking-[-0.075em] text-white min-[601px]:text-[clamp(3.7rem,7.4vw,6.7rem)]";
-export const productSubtitleClass = "mt-6 max-w-[680px] text-[clamp(1.35rem,2.3vw,2rem)] leading-[1.3] tracking-[-0.035em] text-[#e8e4e8]";
+export const productSubtitleClass = "mt-6 max-w-170 text-[clamp(1.35rem,2.3vw,2rem)] leading-[1.3] tracking-[-0.035em] text-[#e8e4e8]";
 export const productBodyClass = "mt-[1.35rem] max-w-[62ch] text-[1.02rem] leading-7 text-muted";
 export const sectionHeadingClass = "text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white";
 export const sectionBodyClass = "mt-5 max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted";
@@ -26,11 +25,11 @@ export function ProductPage({ children }: { children: ReactNode }) {
 
 export function ProductHero({ children, className }: { children: ReactNode; className?: string }) {
     return (
-        <section className={cn("relative min-h-[690px] overflow-hidden border-b border-border max-[820px]:min-h-0", className)}>
+        <section className={cn("relative min-h-172.5 overflow-hidden border-b border-border max-[820px]:min-h-0", className)}>
             <div
                 className={cn(
                     siteContainerClass,
-                    "grid min-h-[690px] grid-cols-[minmax(0,0.88fr)_minmax(340px,0.72fr)] items-center gap-[clamp(3rem,8vw,8rem)] py-[4.5rem] max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-0 max-[820px]:grid-cols-1 max-[820px]:py-16",
+                    "grid min-h-172.5 grid-cols-[minmax(0,0.88fr)_minmax(340px,0.72fr)] items-center gap-[clamp(3rem,8vw,8rem)] py-18 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-0 max-[820px]:grid-cols-1 max-[820px]:py-16",
                 )}
             >
                 {children}
@@ -72,7 +71,7 @@ export function ProductFootnote({ children, className }: { children: ReactNode; 
         <aside
             className={cn(
                 siteContainerClass,
-                "flex items-center justify-between gap-8 py-10 max-[600px]:flex-col max-[600px]:items-start max-[600px]:gap-4 [&>p]:max-w-[70ch] [&>p]:text-[0.85rem] [&>p]:leading-[1.65] [&>p]:text-muted [&>p>strong]:text-white [&>svg]:size-[22px] [&>svg]:shrink-0",
+                "flex items-center justify-between gap-8 py-10 max-[600px]:flex-col max-[600px]:items-start max-[600px]:gap-4 [&>p]:max-w-[70ch] [&>p]:text-[0.85rem] [&>p]:leading-[1.65] [&>p]:text-muted [&>p>strong]:text-white [&>svg]:size-5.5 [&>svg]:shrink-0",
                 className,
             )}
         >

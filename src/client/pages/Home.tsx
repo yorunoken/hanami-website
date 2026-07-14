@@ -20,7 +20,7 @@ export default function Home() {
             <Header />
 
             <main>
-                <section className="relative min-h-[min(820px,calc(100svh-72px))] overflow-hidden border-b border-border max-[820px]:min-h-[720px] max-[600px]:min-h-[660px]">
+                <section className="relative min-h-[min(820px,calc(100svh-72px))] overflow-hidden border-b border-border max-[820px]:min-h-180 max-[600px]:min-h-165">
                     <div className="absolute inset-0" aria-hidden="true">
                         <img
                             className="size-full object-cover object-[50%_38%] opacity-55"
@@ -39,15 +39,14 @@ export default function Home() {
                     <div
                         className={cn(
                             siteContainerClass,
-                            "relative z-10 grid min-h-[min(820px,calc(100svh-72px))] grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)] items-center gap-[clamp(2rem,7vw,7rem)] py-16 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-[720px] max-[820px]:grid-cols-1 max-[820px]:content-center max-[820px]:py-12 max-[600px]:min-h-[660px]",
+                            "relative z-10 grid min-h-[min(820px,calc(100svh-72px))] grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)] items-center gap-[clamp(2rem,7vw,7rem)] py-16 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-180 max-[820px]:grid-cols-1 max-[820px]:content-center max-[820px]:py-12 max-[600px]:min-h-165",
                         )}
                     >
-                        <div className="relative z-20 max-w-[720px] pr-0 motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both] min-[601px]:max-[820px]:pr-[10%]">
-                            <Eyebrow>Hanami ecosystem</Eyebrow>
+                        <div className="relative z-20 max-w-180 pr-0 motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both] min-[601px]:max-[820px]:pr-[10%]">
                             <h1 className="text-[clamp(4rem,24vw,5.7rem)] leading-[0.88] tracking-[-0.085em] text-white min-[601px]:text-[clamp(4.4rem,9vw,7.2rem)]">
                                 Hanami
                             </h1>
-                            <p className="mt-[1.8rem] max-w-[660px] text-[1.08rem] leading-[1.45] tracking-[-0.025em] text-[#e9e4e9] min-[601px]:text-[clamp(1.2rem,2.2vw,1.65rem)]">
+                            <p className="mt-[1.8rem] max-w-165 text-[1.08rem] leading-[1.45] tracking-tight text-[#e9e4e9] min-[601px]:text-[clamp(1.2rem,2.2vw,1.65rem)]">
                                 A small family of osu! projects: a Discord bot, a guessing game, a desktop prototype, and a Rust analysis
                                 toolkit.
                             </p>
@@ -60,7 +59,7 @@ export default function Home() {
                         </div>
 
                         <div
-                            className="w-[min(45vw,530px)] self-end justify-self-end motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both] max-[820px]:absolute max-[820px]:right-[-5rem] max-[820px]:bottom-[-2.5rem] max-[820px]:w-[min(62vw,390px)] max-[820px]:opacity-40 max-[600px]:right-[-6.5rem] max-[600px]:opacity-30"
+                            className="w-[min(45vw,530px)] self-end justify-self-end motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both] max-[820px]:absolute max-[820px]:-right-20 max-[820px]:-bottom-10 max-[820px]:w-[min(62vw,390px)] max-[820px]:opacity-40 max-[600px]:-right-26 max-[600px]:opacity-30"
                             aria-hidden="true"
                         >
                             <img
@@ -76,8 +75,8 @@ export default function Home() {
                 </section>
 
                 <section className={cn(siteContainerClass, sectionSpacingClass)} id="projects" aria-labelledby="projects-title">
-                    <header className="mb-10 grid grid-cols-1 items-end gap-x-20 gap-y-6 min-[601px]:mb-[4.5rem] min-[821px]:grid-cols-[minmax(0,0.85fr)_minmax(280px,0.55fr)]">
-                        <Eyebrow className="mb-0 min-[821px]:col-span-2 min-[821px]:mb-[-0.5rem]">Projects</Eyebrow>
+                    <header className="mb-10 grid grid-cols-1 items-end gap-x-20 gap-y-6 min-[601px]:mb-18 min-[821px]:grid-cols-[minmax(0,0.85fr)_minmax(280px,0.55fr)]">
+                        <Eyebrow className="mb-0 min-[821px]:col-span-2 min-[821px]:-mb-2">Projects</Eyebrow>
                         <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white" id="projects-title">
                             Choose the thing you need.
                         </h2>
@@ -90,7 +89,7 @@ export default function Home() {
                     <div className="border-t border-border-strong">
                         {products.map((product) => (
                             <article
-                                className="grid min-h-[150px] grid-cols-[3rem_minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 border-b border-border max-[1080px]:grid-cols-[2.5rem_minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-[2rem_1fr] max-[600px]:items-start max-[600px]:gap-x-4 max-[600px]:gap-y-3 max-[600px]:py-6"
+                                className="grid min-h-37.5 grid-cols-[3rem_minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 border-b border-border max-[1080px]:grid-cols-[2.5rem_minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-[2rem_1fr] max-[600px]:items-start max-[600px]:gap-x-4 max-[600px]:gap-y-3 max-[600px]:py-6"
                                 key={product.key}
                             >
                                 <div

@@ -53,7 +53,7 @@ export default function Login() {
                 )}
 
                 {error && (
-                    <p className={cn(formMessageClass, "!text-danger")} role="alert">
+                    <p className={cn(formMessageClass, "text-danger!")} role="alert">
                         {error}
                     </p>
                 )}

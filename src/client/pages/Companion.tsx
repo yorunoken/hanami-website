@@ -67,7 +67,7 @@ export default function Companion() {
                 <div className="grid grid-cols-1 border-t border-border-strong min-[821px]:grid-cols-3">
                     {currentCapabilities.map(([title, description], index) => (
                         <article
-                            className="flex min-h-[150px] flex-col border-b border-border p-[1.6rem] min-[821px]:min-h-[210px] min-[821px]:border-r last:min-[821px]:border-r-0"
+                            className="flex min-h-37.5 flex-col border-b border-border p-[1.6rem] min-[821px]:min-h-52.5 min-[821px]:border-r last:min-[821px]:border-r-0"
                             key={title}
                         >
                             <span className="font-mono text-[0.7rem] text-quiet" aria-hidden="true">

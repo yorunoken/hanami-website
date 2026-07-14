@@ -72,7 +72,7 @@ export function ConfirmationPage({
                                 Type <code className="font-mono text-accent-soft">{confirmationPhrase}</code> to continue
                             </span>
                             <input
-                                className="min-h-[50px] w-full rounded-sm border border-border-strong bg-surface px-[0.9rem] text-white focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/30"
+                                className="min-h-12.5 w-full rounded-sm border border-border-strong bg-surface px-[0.9rem] text-white focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent/30"
                                 type="text"
                                 value={phrase}
                                 onChange={(event) => onPhraseChange(event.target.value)}
@@ -119,7 +119,7 @@ export function RequestStatus({
                     {statusLabel(request.status)}
                 </h2>
             </div>
-            <dl className="my-8 grid grid-cols-1 max-[600px]:divide-y max-[600px]:divide-border min-[601px]:grid-cols-3 min-[601px]:divide-x min-[601px]:divide-border [&_dd]:mt-[0.55rem] [&_dd]:text-[0.82rem] [&_dd]:[overflow-wrap:anywhere] [&_dd]:text-[#e6e1e7] [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&>div]:py-5 min-[601px]:[&>div]:px-6 min-[601px]:[&>div:first-child]:pl-0 min-[601px]:[&>div:last-child]:pr-0">
+            <dl className="my-8 grid grid-cols-1 max-[600px]:divide-y max-[600px]:divide-border min-[601px]:grid-cols-3 min-[601px]:divide-x min-[601px]:divide-border [&_dd]:mt-[0.55rem] [&_dd]:text-[0.82rem] [&_dd]:wrap-anywhere [&_dd]:text-[#e6e1e7] [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&>div]:py-5 min-[601px]:[&>div]:px-6 min-[601px]:[&>div:first-child]:pl-0 min-[601px]:[&>div:last-child]:pr-0">
                 <div>
                     <dt>Reference</dt>
                     <dd>{request.requestReference}</dd>
@@ -139,7 +139,7 @@ export function RequestStatus({
                     {cancelling ? "Cancelling…" : "Cancel request"}
                 </button>
             )}
-            <p className="!text-[0.78rem] !leading-[1.6]">
+            <p className="text-[0.78rem]! leading-[1.6]!">
                 Contact <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> and include the reference if you need help.
             </p>
         </section>
@@ -158,9 +158,9 @@ export function DeletionReceipt({ request, copied, onCopy }: { request: PublicDe
                     again if you need to check or cancel it while cancellation remains available.
                 </p>
                 <div className="my-8 flex items-center justify-between gap-4 border-y border-border py-4">
-                    <code className="font-mono text-[1.05rem] [overflow-wrap:anywhere] text-accent-soft">{request.requestReference}</code>
+                    <code className="font-mono text-[1.05rem] wrap-anywhere text-accent-soft">{request.requestReference}</code>
                     <button
-                        className="inline-flex items-center gap-[0.4rem] border-0 bg-transparent text-white [&_svg]:size-[15px]"
+                        className="inline-flex items-center gap-[0.4rem] border-0 bg-transparent text-white [&_svg]:size-3.75"
                         type="button"
                         onClick={onCopy}
                     >

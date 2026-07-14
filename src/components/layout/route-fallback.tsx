@@ -6,7 +6,7 @@ export function RouteFallback() {
         <div className={sitePageClass}>
             <Header />
             <main
-                className="mx-auto flex min-h-[calc(100svh-72px)] w-[min(calc(100%_-_2rem),1240px)] items-center"
+                className="mx-auto flex min-h-[calc(100svh-72px)] w-[min(calc(100%-2rem),1240px)] items-center"
                 aria-live="polite"
                 aria-busy="true"
             >

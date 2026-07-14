@@ -28,15 +28,15 @@ export default function Header() {
     }, []);
 
     return (
-        <header className="sticky top-0 isolate z-50 h-[72px] border-b border-border bg-[rgba(10,9,12,0.88)] backdrop-blur-2xl print:hidden">
-            <div className="mx-auto flex h-full w-[min(calc(100%_-_1.5rem),1400px)] items-center gap-8 sm:w-[min(calc(100%_-_clamp(2rem,6vw,6rem)),1400px)]">
+        <header className="sticky top-0 isolate z-50 h-18 border-b border-border bg-[rgba(10,9,12,0.88)] backdrop-blur-2xl print:hidden">
+            <div className="mx-auto flex h-full w-[min(calc(100%-1.5rem),1400px)] items-center gap-8 sm:w-[min(calc(100%-clamp(2rem,6vw,6rem)),1400px)]">
                 <PrefetchLink
                     to={routes.home}
                     prefetch="none"
                     className="inline-flex shrink-0 items-center gap-[0.65rem] text-base font-extrabold tracking-[-0.02em] text-white no-underline"
                     aria-label="Hanami home"
                 >
-                    <img className="size-[38px] object-contain" src="/hanami-transparent.png" alt="" width="42" height="42" />
+                    <img className="size-9.5 object-contain" src="/hanami-transparent.png" alt="" width="42" height="42" />
                     <span>Hanami</span>
                 </PrefetchLink>
 
@@ -47,7 +47,7 @@ export default function Header() {
                             to={item.to}
                             prefetch="intent"
                             aria-current={pathname === item.to ? "page" : undefined}
-                            className="relative py-6 text-[0.82rem] font-semibold whitespace-nowrap text-muted no-underline transition-colors duration-[160ms] after:absolute after:inset-x-0 after:bottom-[0.95rem] after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-[160ms] hover:text-white hover:after:scale-x-100 aria-[current=page]:text-white aria-[current=page]:after:scale-x-100"
+                            className="relative py-6 text-[0.82rem] font-semibold whitespace-nowrap text-muted no-underline transition-colors duration-160 after:absolute after:inset-x-0 after:bottom-[0.95rem] after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-160 hover:text-white hover:after:scale-x-100 aria-[current=page]:text-white aria-[current=page]:after:scale-x-100"
                         >
                             {item.label}
                         </PrefetchLink>
@@ -66,7 +66,7 @@ export default function Header() {
                         </PrefetchLink>
                     )}
                     <button
-                        className="inline-flex min-h-10 w-[42px] items-center justify-center border-0 bg-transparent text-white min-[1081px]:hidden [&_svg]:size-[18px]"
+                        className="inline-flex min-h-10 w-10.5 items-center justify-center border-0 bg-transparent text-white min-[1081px]:hidden [&_svg]:size-4.5"
                         type="button"
                         aria-expanded={menuOpen}
                         aria-controls="mobile-navigation"
@@ -80,7 +80,7 @@ export default function Header() {
 
             <nav
                 id="mobile-navigation"
-                className="absolute inset-x-0 top-[72px] min-h-[calc(100svh-72px)] border-b border-border bg-[rgba(10,9,12,0.98)] px-[clamp(1.25rem,5vw,3rem)] py-8 motion-safe:animate-[nav-in_180ms_ease_both] min-[1081px]:hidden"
+                className="absolute inset-x-0 top-18 min-h-[calc(100svh-72px)] border-b border-border bg-[rgba(10,9,12,0.98)] px-[clamp(1.25rem,5vw,3rem)] py-8 motion-safe:animate-[nav-in_180ms_ease_both] min-[1081px]:hidden"
                 aria-label="Mobile navigation"
                 hidden={!menuOpen}
             >

@@ -15,9 +15,9 @@ import { cn } from "@/lib/utils";
 import { sectionHeadingClass } from "./account-shell";
 
 const identityBlockClass =
-    "flex min-h-[330px] flex-col border-b border-border p-[clamp(1.5rem,4vw,2.5rem)] min-[821px]:min-h-[370px] min-[821px]:border-r last:min-[821px]:border-r-0";
+    "flex min-h-82.5 flex-col border-b border-border p-[clamp(1.5rem,4vw,2.5rem)] min-[821px]:min-h-92.5 min-[821px]:border-r last:min-[821px]:border-r-0";
 const identityPersonClass =
-    "flex items-center gap-[1.1rem] [&_h3]:text-xl [&_h3_a]:inline-flex [&_h3_a]:items-center [&_h3_a]:gap-[0.45rem] [&_h3_a]:no-underline [&_h3_svg]:size-[15px] [&_p]:mb-[0.3rem] [&_p]:font-mono [&_p]:text-[0.68rem] [&_p]:text-quiet [&_p]:uppercase [&_span:not(.account-avatar):not(.osu-mark)]:mt-1 [&_span:not(.account-avatar):not(.osu-mark)]:block [&_span:not(.account-avatar):not(.osu-mark)]:text-[0.78rem] [&_span:not(.account-avatar):not(.osu-mark)]:text-muted";
+    "flex items-center gap-[1.1rem] [&_h3]:text-xl [&_h3_a]:inline-flex [&_h3_a]:items-center [&_h3_a]:gap-[0.45rem] [&_h3_a]:no-underline [&_h3_svg]:size-3.75 [&_p]:mb-[0.3rem] [&_p]:font-mono [&_p]:text-[0.68rem] [&_p]:text-quiet [&_p]:uppercase [&_span:not(.account-avatar):not(.osu-mark)]:mt-1 [&_span:not(.account-avatar):not(.osu-mark)]:block [&_span:not(.account-avatar):not(.osu-mark)]:text-[0.78rem] [&_span:not(.account-avatar):not(.osu-mark)]:text-muted";
 const identityDetailsClass =
     "mt-auto mb-6 pt-8 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-3 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
 
@@ -133,7 +133,7 @@ export function IdentitySection({ discordUser, linkStatus, loading, action, onLi
                         <>
                             <div className={identityPersonClass}>
                                 <span
-                                    className="osu-mark grid size-[60px] shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong text-[0.85rem] font-extrabold text-accent-soft"
+                                    className="osu-mark grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong text-[0.85rem] font-extrabold text-accent-soft"
                                     aria-hidden="true"
                                 >
                                     osu!
@@ -258,7 +258,7 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
 
 export function AccountPrivacyAside() {
     return (
-        <aside className="mt-16 max-w-[760px] border-l-2 border-accent pl-6 [&_a]:text-[0.82rem] [&_a]:text-white [&_a]:underline-offset-[0.2em] [&_h2]:text-[1.1rem] [&_p]:my-[0.7rem] [&_p]:text-[0.84rem] [&_p]:leading-[1.65] [&_p]:text-muted">
+        <aside className="mt-16 max-w-190 border-l-2 border-accent pl-6 [&_a]:text-[0.82rem] [&_a]:text-white [&_a]:underline-offset-[0.2em] [&_h2]:text-[1.1rem] [&_p]:my-[0.7rem] [&_p]:text-[0.84rem] [&_p]:leading-[1.65] [&_p]:text-muted">
             <h2>Privacy and deletion requests</h2>
             <p>Review what Hanami may hold, submit a verified deletion request, or check a request already in progress.</p>
             <PrefetchLink to={routes.profilePrivacy}>Manage account privacy</PrefetchLink>
@@ -279,7 +279,7 @@ function Avatar({ src, name }: { src?: string | null; name: string }) {
     if (src)
         return (
             <img
-                className="account-avatar size-[60px] shrink-0 rounded-md object-cover"
+                className="account-avatar size-15 shrink-0 rounded-md object-cover"
                 src={src}
                 alt={`${name} avatar`}
                 width="64"
@@ -288,7 +288,7 @@ function Avatar({ src, name }: { src?: string | null; name: string }) {
         );
     return (
         <span
-            className="account-avatar grid size-[60px] shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong font-extrabold text-white"
+            className="account-avatar grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong font-extrabold text-white"
             aria-hidden="true"
         >
             {name.slice(0, 1).toUpperCase()}
@@ -312,7 +312,7 @@ function SelectField({
         <label className="grid gap-[0.7rem]" htmlFor={id}>
             <span className="text-[0.82rem] font-bold text-[#ded9df]">{label}</span>
             <select
-                className="min-h-[46px] w-full rounded-sm border border-border-strong bg-surface px-[0.85rem] text-white"
+                className="min-h-11.5 w-full rounded-sm border border-border-strong bg-surface px-[0.85rem] text-white"
                 id={id}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}

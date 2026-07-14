@@ -47,7 +47,7 @@ export default function OsuGuessr() {
 
     return (
         <ProductPage>
-            <section className="relative min-h-[720px] overflow-hidden border-b border-border max-[820px]:min-h-[680px]">
+            <section className="relative min-h-180 overflow-hidden border-b border-border max-[820px]:min-h-170">
                 <img
                     className="absolute inset-0 size-full object-cover object-[55%_46%]"
                     src="/products/osuguessr-hero.webp"
@@ -60,8 +60,8 @@ export default function OsuGuessr() {
                     className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,9,12,0.97)_0%,rgba(10,9,12,0.82)_41%,rgba(10,9,12,0.18)_75%),linear-gradient(0deg,rgba(10,9,12,0.72),transparent_42%)]"
                     aria-hidden="true"
                 />
-                <div className={cn(siteContainerClass, "relative z-20 flex min-h-[720px] items-center py-20 max-[820px]:min-h-[680px]")}>
-                    <div className={cn(productHeroCopyClass, "max-w-[700px]")}>
+                <div className={cn(siteContainerClass, "relative z-20 flex min-h-180 items-center py-20 max-[820px]:min-h-170")}>
+                    <div className={cn(productHeroCopyClass, "max-w-175")}>
                         <Eyebrow>Browser game</Eyebrow>
                         <StatusLine status={product.status} detail="Background, audio, and skin modes" tone={product.tone} />
                         <h1 className={productTitleClass}>{product.name}</h1>
@@ -94,11 +94,11 @@ export default function OsuGuessr() {
                 <div className="grid grid-cols-1 border-y border-border-strong min-[821px]:grid-cols-3">
                     {modes.map(({ icon: Icon, title, description, image, alt }) => (
                         <article
-                            className="group relative min-h-[300px] overflow-hidden border-b border-border-strong last:border-b-0 min-[821px]:min-h-[340px] min-[821px]:border-r min-[821px]:border-b-0 last:min-[821px]:border-r-0"
+                            className="group relative min-h-75 overflow-hidden border-b border-border-strong last:border-b-0 min-[821px]:min-h-85 min-[821px]:border-r min-[821px]:border-b-0 last:min-[821px]:border-r-0"
                             key={title}
                         >
                             <img
-                                className="absolute inset-0 size-full object-cover transition-transform duration-[450ms] ease-[cubic-bezier(0.2,0.7,0.2,1)] group-hover:scale-[1.025] motion-reduce:transform-none"
+                                className="absolute inset-0 size-full object-cover transition-transform duration-450 ease-[cubic-bezier(0.2,0.7,0.2,1)] group-hover:scale-[1.025] motion-reduce:transform-none"
                                 src={image}
                                 alt={alt}
                                 width="1920"

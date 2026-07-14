@@ -7,7 +7,7 @@ import { products, siteConfig } from "@/data/site-config";
 import { cn } from "@/lib/utils";
 
 const footerLinkClass =
-    "inline-flex items-center gap-[0.3rem] text-[0.78rem] text-muted no-underline transition-colors hover:text-white [&_svg]:size-[13px]";
+    "inline-flex items-center gap-[0.3rem] text-[0.78rem] text-muted no-underline transition-colors hover:text-white [&_svg]:size-3.25";
 
 export default function Footer() {
     return (
@@ -78,7 +78,7 @@ export default function Footer() {
             <div
                 className={cn(
                     siteContainerClass,
-                    "grid grid-cols-1 items-center gap-y-[0.6rem] border-t border-border py-[1.35rem] text-[0.68rem] leading-[1.5] text-quiet min-[821px]:grid-cols-[auto_1fr_auto] min-[821px]:gap-x-8",
+                    "grid grid-cols-1 items-center gap-y-[0.6rem] border-t border-border py-[1.35rem] text-[0.68rem] leading-normal text-quiet min-[821px]:grid-cols-[auto_1fr_auto] min-[821px]:gap-x-8",
                 )}
             >
                 <span>© {new Date().getFullYear()} Hanami</span>

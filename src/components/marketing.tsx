@@ -82,7 +82,7 @@ export function StatusLine({
 }) {
     return (
         <p className="mb-[1.2rem] flex items-center gap-[0.55rem] text-[0.76rem] text-muted">
-            <span className={cn("size-[7px] rounded-full", statusToneClasses[tone])} aria-hidden="true" />
+            <span className={cn("size-1.75 rounded-full", statusToneClasses[tone])} aria-hidden="true" />
             <strong className="font-bold text-white">{status}</strong>
             <span className="h-4 w-px bg-border-strong" aria-hidden="true" />
             {detail}
@@ -92,7 +92,7 @@ export function StatusLine({
 
 export function SectionIntro({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
     return (
-        <header className="mb-[clamp(2.5rem,5vw,4.5rem)] max-w-[720px]">
+        <header className="mb-[clamp(2.5rem,5vw,4.5rem)] max-w-180">
             <Eyebrow>{eyebrow}</Eyebrow>
             <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white">{title}</h2>
             {body && <p className="mt-5 max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">{body}</p>}
@@ -124,7 +124,7 @@ export function TextLink({
         return (
             <a
                 className={cn(
-                    "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-[160ms] hover:border-current hover:text-accent-soft [&_svg]:size-4",
+                    "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-160 hover:border-current hover:text-accent-soft [&_svg]:size-4",
                     className,
                 )}
                 href={href}
@@ -139,7 +139,7 @@ export function TextLink({
     return (
         <PrefetchLink
             className={cn(
-                "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-[160ms] hover:border-current hover:text-accent-soft [&_svg]:size-4",
+                "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-160 hover:border-current hover:text-accent-soft [&_svg]:size-4",
                 className,
             )}
             to={href}

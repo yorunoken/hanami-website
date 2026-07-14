@@ -28,7 +28,7 @@ export default function MapAnalyzer() {
 
     return (
         <ProductPage>
-            <ProductHero className="bg-[linear-gradient(rgba(180,218,122,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(180,218,122,0.045)_1px,transparent_1px),#0a0d0a] bg-[length:48px_48px]">
+            <ProductHero className="bg-[linear-gradient(rgba(180,218,122,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(180,218,122,0.045)_1px,transparent_1px),#0a0d0a] bg-size-[48px_48px]">
                 <div className={productHeroCopyClass}>
                     <Eyebrow>Rust library and CLI</Eyebrow>
                     <StatusLine status={product.status} detail="Crate version 0.2.9" tone={product.tone} />
@@ -83,7 +83,7 @@ export default function MapAnalyzer() {
                             <span className="font-mono text-[0.7rem] text-quiet" aria-hidden="true">
                                 {String(index + 1).padStart(2, "0")}
                             </span>
-                            <Icon className="size-[19px] text-lime" aria-hidden="true" />
+                            <Icon className="size-4.75 text-lime" aria-hidden="true" />
                             <div>
                                 <h3 className="text-base tracking-[-0.02em]">{title}</h3>
                                 <p className="mt-[0.35rem] max-w-[62ch] text-[0.9rem] leading-[1.65] text-muted">{description}</p>

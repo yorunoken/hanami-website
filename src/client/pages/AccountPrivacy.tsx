@@ -191,7 +191,7 @@ export default function AccountPrivacy() {
 
     return (
         <AccountPage>
-            <AccountLayout className="max-w-[1040px]">
+            <AccountLayout className="max-w-260">
                 <header className={accountHeadingClass}>
                     <Eyebrow>Account privacy</Eyebrow>
                     <h1>Deletion requests</h1>
@@ -217,7 +217,7 @@ export default function AccountPrivacy() {
                         <h2 id="your-identity">Identity used for this request</h2>
                         <p>Public usernames or numeric IDs alone do not verify a request.</p>
                     </div>
-                    <dl className="grid grid-cols-1 min-[601px]:grid-cols-2 [&_dd]:mt-[0.55rem] [&_dd]:mb-1 [&_dd]:text-[1.1rem] [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_span]:text-[0.78rem] [&_span]:leading-[1.6] [&_span]:text-muted [&>div]:min-h-[150px] [&>div]:border-b [&>div]:border-border [&>div]:py-6 min-[601px]:[&>div:first-child]:border-r min-[601px]:[&>div:first-child]:pr-8 min-[601px]:[&>div:last-child]:pl-8">
+                    <dl className="grid grid-cols-1 min-[601px]:grid-cols-2 [&_dd]:mt-[0.55rem] [&_dd]:mb-1 [&_dd]:text-[1.1rem] [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_span]:text-[0.78rem] [&_span]:leading-[1.6] [&_span]:text-muted [&>div]:min-h-37.5 [&>div]:border-b [&>div]:border-border [&>div]:py-6 min-[601px]:[&>div:first-child]:border-r min-[601px]:[&>div:first-child]:pr-8 min-[601px]:[&>div:last-child]:pl-8">
                         <div>
                             <dt>Discord sign-in</dt>
                             <dd>{session.user.name || "Discord user"}</dd>
