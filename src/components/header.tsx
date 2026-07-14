@@ -1,72 +1,155 @@
-import { Button } from "@/components/ui/button";
-import { LogOut, MessageCircle } from "lucide-react";
-import { SiOsu } from "react-icons/si";
-import { Link, useLocation } from "react-router-dom";
-import { signIn, signOut, useSession } from "../client/lib/auth";
+import { House, Menu, UserRound, X } from "lucide-react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+
+import { routes } from "@/client/routes/paths";
+import { PrefetchLink } from "@/components/navigation/prefetch-link";
+import { accountActionClass } from "@/components/navigation/styles";
+import { navigation, siteConfig } from "@/data/site-config";
+
+const ProfileAction = lazy(
+  () => import("@/components/navigation/profile-action"),
+);
 
 export default function Header() {
-    const { data: session, isPending } = useSession();
-    const location = useLocation();
-    const isProfilePage = location.pathname === "/profile";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  const isProfile = pathname.startsWith("/profile");
 
-    return (
-        <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/8 bg-black/35 backdrop-blur-xl">
-            <nav className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5">
-                <Link to="/" className="flex items-center gap-3 text-sm font-semibold text-white">
-                    <img src="/hanami-transparent.png" className="size-10" alt="" />
-                    <span>Hanami</span>
-                </Link>
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
-                {/* Show navigation links only on the homepage */}
-                {!isProfilePage && (
-                    <div className="hidden items-center gap-6 text-sm text-zinc-400 sm:flex">
-                        <a href="#commands" className="transition-colors hover:text-white">
-                            Commands
-                        </a>
-                        <a href="#source" className="transition-colors hover:text-white">
-                            Source
-                        </a>
-                        <a href="#support" className="transition-colors hover:text-white">
-                            Support
-                        </a>
-                    </div>
-                )}
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
 
-                {!isPending && (
-                    <div className="flex items-center gap-2">
-                        {isProfilePage ? (
-                            session && (
-                                <Button
-                                    onClick={() =>
-                                        signOut({
-                                            fetchOptions: {
-                                                onSuccess: () => {
-                                                    window.location.href = "/";
-                                                },
-                                            },
-                                        })
-                                    }
-                                    variant="ghost"
-                                    className="h-10 rounded-lg px-2 text-red-200 hover:bg-red-500/12 hover:text-red-100 sm:px-3"
-                                    aria-label="Log out"
-                                >
-                                    <LogOut className="size-4" />
-                                    <span className="hidden sm:inline">Log out</span>
-                                </Button>
-                            )
-                        ) : session ? (
-                            <Button asChild className="h-10 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200">
-                                <Link to="/profile">Dashboard</Link>
-                            </Button>
-                        ) : (
-                            <Button onClick={() => signIn.social({ provider: "discord", callbackURL: "/profile" })} className="h-10 rounded-lg bg-[#5865F2] text-white hover:bg-[#4752C4]">
-                                <MessageCircle className="size-4" />
-                                Login
-                            </Button>
-                        )}
-                    </div>
-                )}
-            </nav>
-        </header>
-    );
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, []);
+
+  return (
+    <header className="sticky top-0 isolate z-50 h-[72px] border-b border-border bg-[rgba(10,9,12,0.88)] backdrop-blur-2xl print:hidden">
+      <div className="mx-auto flex h-full w-[min(calc(100%_-_1.5rem),1400px)] items-center gap-8 sm:w-[min(calc(100%_-_clamp(2rem,6vw,6rem)),1400px)]">
+        <PrefetchLink
+          to={routes.home}
+          prefetch="none"
+          className="inline-flex shrink-0 items-center gap-[0.65rem] text-base font-extrabold tracking-[-0.02em] text-white no-underline"
+          aria-label="Hanami home"
+        >
+          <img
+            className="size-[38px] object-contain"
+            src="/hanami-transparent.png"
+            alt=""
+            width="42"
+            height="42"
+          />
+          <span>Hanami</span>
+        </PrefetchLink>
+
+        <nav
+          className="ml-auto hidden items-center gap-[clamp(1rem,2.2vw,2rem)] min-[1081px]:flex"
+          aria-label="Primary navigation"
+        >
+          {navigation.map((item) => (
+            <PrefetchLink
+              key={item.to}
+              to={item.to}
+              prefetch="intent"
+              aria-current={pathname === item.to ? "page" : undefined}
+              className="relative py-6 text-[0.82rem] font-semibold whitespace-nowrap text-muted no-underline transition-colors duration-[160ms] after:absolute after:inset-x-0 after:bottom-[0.95rem] after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-[160ms] hover:text-white hover:after:scale-x-100 aria-[current=page]:text-white aria-[current=page]:after:scale-x-100"
+            >
+              {item.label}
+            </PrefetchLink>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-2 min-[1081px]:ml-0">
+          {isProfile ? (
+            <Suspense fallback={<HomeAction />}>
+              <ProfileAction />
+            </Suspense>
+          ) : (
+            <PrefetchLink
+              className={accountActionClass}
+              to={routes.profile}
+              prefetch="intent"
+            >
+              <UserRound aria-hidden="true" />
+              <span>Account</span>
+            </PrefetchLink>
+          )}
+          <button
+            className="inline-flex min-h-10 w-[42px] items-center justify-center border-0 bg-transparent text-white min-[1081px]:hidden [&_svg]:size-[18px]"
+            type="button"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
+            aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
+
+      <nav
+        id="mobile-navigation"
+        className="absolute inset-x-0 top-[72px] min-h-[calc(100svh-72px)] border-b border-border bg-[rgba(10,9,12,0.98)] px-[clamp(1.25rem,5vw,3rem)] py-8 motion-safe:animate-[nav-in_180ms_ease_both] min-[1081px]:hidden"
+        aria-label="Mobile navigation"
+        hidden={!menuOpen}
+      >
+        <div className="grid">
+          <PrefetchLink
+            className="grid min-h-16 grid-cols-1 items-center border-b border-border text-[clamp(1.15rem,5vw,1.55rem)] font-bold text-white no-underline"
+            to={routes.home}
+            prefetch="none"
+          >
+            Ecosystem
+          </PrefetchLink>
+          {navigation.map((item, index) => (
+            <PrefetchLink
+              className="grid min-h-16 grid-cols-[2.5rem_1fr] items-center border-b border-border text-[clamp(1.15rem,5vw,1.55rem)] font-bold text-white no-underline"
+              key={item.to}
+              to={item.to}
+              prefetch="intent"
+            >
+              <span className="font-mono text-[0.7rem] font-medium text-quiet">
+                0{index + 1}
+              </span>
+              {item.label}
+            </PrefetchLink>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-4 pt-8 [&_a]:text-[0.85rem] [&_a]:text-muted">
+          <PrefetchLink to={routes.profile} prefetch="intent">
+            Manage account
+          </PrefetchLink>
+          <a href={siteConfig.links.community} target="_blank" rel="noreferrer">
+            Community
+          </a>
+          <a
+            href={siteConfig.links.organization}
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+        </div>
+      </nav>
+    </header>
+  );
+}
+
+function HomeAction() {
+  return (
+    <PrefetchLink
+      className={accountActionClass}
+      to={routes.home}
+      prefetch="none"
+    >
+      <House aria-hidden="true" />
+      <span>Home</span>
+    </PrefetchLink>
+  );
 }
