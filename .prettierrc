@@ -1,0 +1,18 @@
+{
+    "$schema": "https://json.schemastore.org/prettierrc",
+    "printWidth": 140,
+    "tabWidth": 4,
+    "useTabs": false,
+    "semi": true,
+    "singleQuote": false,
+    "jsxSingleQuote": false,
+    "trailingComma": "all",
+    "bracketSpacing": true,
+    "bracketSameLine": false,
+    "arrowParens": "always",
+    "endOfLine": "lf",
+
+    "plugins": ["prettier-plugin-tailwindcss"],
+    "tailwindStylesheet": "./src/client/globals.css",
+    "tailwindFunctions": ["cn", "clsx", "cva"]
+}

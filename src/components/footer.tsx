@@ -7,149 +7,96 @@ import { products, siteConfig } from "@/data/site-config";
 import { cn } from "@/lib/utils";
 
 const footerLinkClass =
-  "inline-flex items-center gap-[0.3rem] text-[0.78rem] text-muted no-underline transition-colors hover:text-white [&_svg]:size-[13px]";
+    "inline-flex items-center gap-[0.3rem] text-[0.78rem] text-muted no-underline transition-colors hover:text-white [&_svg]:size-[13px]";
 
 export default function Footer() {
-  return (
-    <footer className="border-t border-border bg-[#08070a] print:hidden">
-      <div
-        className={cn(
-          siteContainerClass,
-          "grid gap-16 py-[clamp(3.5rem,6vw,5.5rem)] min-[1081px]:grid-cols-[minmax(240px,0.8fr)_minmax(430px,1fr)]",
-        )}
-      >
-        <div>
-          <PrefetchLink
-            className="inline-flex items-center gap-3 text-xl font-extrabold no-underline"
-            to={routes.home}
-            prefetch="none"
-            aria-label="Hanami home"
-          >
-            <img
-              className="size-12 object-contain"
-              src="/hanami-transparent.png"
-              alt=""
-              width="54"
-              height="54"
-            />
-            <span>Hanami</span>
-          </PrefetchLink>
-          <p className="mt-4 max-w-[35ch] text-[0.82rem] leading-[1.65] text-muted">
-            Open-source osu! tools, a browser game, and work in progress.
-          </p>
-        </div>
+    return (
+        <footer className="border-t border-border bg-[#08070a] print:hidden">
+            <div
+                className={cn(
+                    siteContainerClass,
+                    "grid gap-16 py-[clamp(3.5rem,6vw,5.5rem)] min-[1081px]:grid-cols-[minmax(240px,0.8fr)_minmax(430px,1fr)]",
+                )}
+            >
+                <div>
+                    <PrefetchLink
+                        className="inline-flex items-center gap-3 text-xl font-extrabold no-underline"
+                        to={routes.home}
+                        prefetch="none"
+                        aria-label="Hanami home"
+                    >
+                        <img className="size-12 object-contain" src="/hanami-transparent.png" alt="" width="54" height="54" />
+                        <span>Hanami</span>
+                    </PrefetchLink>
+                    <p className="mt-4 max-w-[35ch] text-[0.82rem] leading-[1.65] text-muted">
+                        Open-source osu! tools, a browser game, and work in progress.
+                    </p>
+                </div>
 
-        <div className="grid grid-cols-2 gap-8 min-[601px]:grid-cols-3 [&>div]:flex [&>div]:flex-col [&>div]:items-start [&>div]:gap-3">
-          <div>
-            <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">
-              Projects
-            </h2>
-            {products.map((product) => (
-              <PrefetchLink
-                className={footerLinkClass}
-                key={product.route}
-                to={product.route}
-                prefetch="intent"
-              >
-                {product.name}
-              </PrefetchLink>
-            ))}
-          </div>
-          <div>
-            <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">
-              Hanami
-            </h2>
-            <a
-              className={footerLinkClass}
-              href={siteConfig.links.organization}
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub <ArrowUpRight aria-hidden="true" />
-            </a>
-            <a
-              className={footerLinkClass}
-              href={siteConfig.links.community}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Community <ArrowUpRight aria-hidden="true" />
-            </a>
-            <a
-              className={footerLinkClass}
-              href={siteConfig.links.support}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Support <ArrowUpRight aria-hidden="true" />
-            </a>
-          </div>
-          <div>
-            <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">
-              Legal
-            </h2>
-            <PrefetchLink
-              className={footerLinkClass}
-              to={routes.legal}
-              prefetch="intent"
-            >
-              Legal center
-            </PrefetchLink>
-            <PrefetchLink
-              className={footerLinkClass}
-              to={routes.legalPrivacy}
-              prefetch="intent"
-            >
-              Privacy
-            </PrefetchLink>
-            <PrefetchLink
-              className={footerLinkClass}
-              to={routes.legalTerms}
-              prefetch="intent"
-            >
-              Terms
-            </PrefetchLink>
-            <PrefetchLink
-              className={footerLinkClass}
-              to={routes.legalCookies}
-              prefetch="intent"
-            >
-              Cookies
-            </PrefetchLink>
-            <PrefetchLink
-              className={footerLinkClass}
-              to={routes.legalDataDeletion}
-              prefetch="intent"
-            >
-              Data deletion
-            </PrefetchLink>
-          </div>
-        </div>
-      </div>
+                <div className="grid grid-cols-2 gap-8 min-[601px]:grid-cols-3 [&>div]:flex [&>div]:flex-col [&>div]:items-start [&>div]:gap-3">
+                    <div>
+                        <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">Projects</h2>
+                        {products.map((product) => (
+                            <PrefetchLink className={footerLinkClass} key={product.route} to={product.route} prefetch="intent">
+                                {product.name}
+                            </PrefetchLink>
+                        ))}
+                    </div>
+                    <div>
+                        <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">Hanami</h2>
+                        <a className={footerLinkClass} href={siteConfig.links.organization} target="_blank" rel="noreferrer">
+                            GitHub <ArrowUpRight aria-hidden="true" />
+                        </a>
+                        <a className={footerLinkClass} href={siteConfig.links.community} target="_blank" rel="noreferrer">
+                            Community <ArrowUpRight aria-hidden="true" />
+                        </a>
+                        <a className={footerLinkClass} href={siteConfig.links.support} target="_blank" rel="noreferrer">
+                            Support <ArrowUpRight aria-hidden="true" />
+                        </a>
+                    </div>
+                    <div>
+                        <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">Legal</h2>
+                        <PrefetchLink className={footerLinkClass} to={routes.legal} prefetch="intent">
+                            Legal center
+                        </PrefetchLink>
+                        <PrefetchLink className={footerLinkClass} to={routes.legalPrivacy} prefetch="intent">
+                            Privacy
+                        </PrefetchLink>
+                        <PrefetchLink className={footerLinkClass} to={routes.legalTerms} prefetch="intent">
+                            Terms
+                        </PrefetchLink>
+                        <PrefetchLink className={footerLinkClass} to={routes.legalCookies} prefetch="intent">
+                            Cookies
+                        </PrefetchLink>
+                        <PrefetchLink className={footerLinkClass} to={routes.legalDataDeletion} prefetch="intent">
+                            Data deletion
+                        </PrefetchLink>
+                    </div>
+                </div>
+            </div>
 
-      <div
-        className={cn(
-          siteContainerClass,
-          "grid grid-cols-1 items-center gap-y-[0.6rem] border-t border-border py-[1.35rem] text-[0.68rem] leading-[1.5] text-quiet min-[821px]:grid-cols-[auto_1fr_auto] min-[821px]:gap-x-8",
-        )}
-      >
-        <span>© {new Date().getFullYear()} Hanami</span>
-        <span className="min-[821px]:text-center">
-          An independent community project. Not affiliated with or endorsed by
-          osu! or ppy Pty Ltd.
-        </span>
-        <div className="flex gap-4 [&_a]:text-muted [&_a]:underline-offset-[0.2em]">
-          <PrefetchLink to={routes.legalPrivacy} prefetch="intent">
-            Privacy
-          </PrefetchLink>
-          <PrefetchLink to={routes.legalTerms} prefetch="intent">
-            Terms
-          </PrefetchLink>
-          <PrefetchLink to={routes.legalCookies} prefetch="intent">
-            Cookies
-          </PrefetchLink>
-        </div>
-      </div>
-    </footer>
-  );
+            <div
+                className={cn(
+                    siteContainerClass,
+                    "grid grid-cols-1 items-center gap-y-[0.6rem] border-t border-border py-[1.35rem] text-[0.68rem] leading-[1.5] text-quiet min-[821px]:grid-cols-[auto_1fr_auto] min-[821px]:gap-x-8",
+                )}
+            >
+                <span>© {new Date().getFullYear()} Hanami</span>
+                <span className="min-[821px]:text-center">
+                    An independent community project. Not affiliated with or endorsed by osu! or ppy Pty Ltd.
+                </span>
+                <div className="flex gap-4 [&_a]:text-muted [&_a]:underline-offset-[0.2em]">
+                    <PrefetchLink to={routes.legalPrivacy} prefetch="intent">
+                        Privacy
+                    </PrefetchLink>
+                    <PrefetchLink to={routes.legalTerms} prefetch="intent">
+                        Terms
+                    </PrefetchLink>
+                    <PrefetchLink to={routes.legalCookies} prefetch="intent">
+                        Cookies
+                    </PrefetchLink>
+                </div>
+            </div>
+        </footer>
+    );
 }
