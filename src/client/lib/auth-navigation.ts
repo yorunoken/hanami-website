@@ -1,6 +1,17 @@
 import { routes } from "@/client/routes/paths";
 
 const unsafeReturnPrefixes = [`${routes.login}/`, "/api/auth/"];
+const developmentLoopbackAliases = new Set(["127.0.0.1", "0.0.0.0", "[::1]"]);
+
+export function getCanonicalDevelopmentAuthURL(currentURL: string, isDevelopment: boolean): string | null {
+    if (!isDevelopment) return null;
+
+    const url = new URL(currentURL);
+    if (!developmentLoopbackAliases.has(url.hostname)) return null;
+
+    url.hostname = "localhost";
+    return url.toString();
+}
 
 export function validateReturnTo(value: string | null | undefined, fallback: string = routes.profile): string {
     if (!value || value !== value.trim() || !hasValidEncoding(value) || hasControlCharacters(value)) return fallback;
@@ -69,6 +80,7 @@ export function describeOAuthError(code: string | null): string | null {
         case "state_not_found":
         case "state_invalid":
         case "state_mismatch":
+        case "state_security_mismatch":
         case "invalid_state":
             return "That sign-in request expired or could not be verified. Please start again.";
         case "email_not_found":

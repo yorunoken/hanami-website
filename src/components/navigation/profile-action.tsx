@@ -117,9 +117,10 @@ export function ProfileActionView({
         }
     }
 
-    function openMenu(focus: "first" | "last" = "first") {
+    function openMenu(focus?: "first" | "last") {
         onMenuOpen?.();
         setMenuOpen(true);
+        if (!focus) return;
         requestAnimationFrame(() => {
             const items = getMenuItems(menuRef.current);
             (focus === "last" ? items.at(-1) : items[0])?.focus();

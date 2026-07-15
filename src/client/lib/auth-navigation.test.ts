@@ -5,6 +5,7 @@ import {
     createProtectedLoginPath,
     describeOAuthError,
     getAuthenticatedLoginDestination,
+    getCanonicalDevelopmentAuthURL,
     readReturnTo,
     validateReturnTo,
 } from "./auth-navigation";
@@ -52,8 +53,18 @@ describe("post-authentication destinations", () => {
     it("uses a safe fallback and human-readable OAuth errors", () => {
         expect(readReturnTo("")).toBe("/profile");
         expect(describeOAuthError("access_denied")).toContain("cancelled");
+        expect(describeOAuthError("state_security_mismatch")).toContain("could not be verified");
         expect(describeOAuthError("unable_to_create_session")).not.toContain("unable_to_create_session");
         expect(describeOAuthError("raw-provider-stack")).toBe("Discord sign-in did not complete. Please try again.");
+    });
+
+    it("keeps the development auth flow on the callback hostname", () => {
+        expect(getCanonicalDevelopmentAuthURL("http://127.0.0.1:5173/profile?tab=osu#identity", true)).toBe(
+            "http://localhost:5173/profile?tab=osu#identity",
+        );
+        expect(getCanonicalDevelopmentAuthURL("http://[::1]:5173/login", true)).toBe("http://localhost:5173/login");
+        expect(getCanonicalDevelopmentAuthURL("http://localhost:5173/profile", true)).toBeNull();
+        expect(getCanonicalDevelopmentAuthURL("https://hanami.yorunoken.com/profile", false)).toBeNull();
     });
 
     it("redirects an authenticated login visit without exposing the form", () => {

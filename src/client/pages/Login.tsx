@@ -18,6 +18,7 @@ export default function Login() {
     const navigate = useNavigate();
     const returnTo = useMemo(() => readReturnTo(location.search), [location.search]);
     const oauthError = useMemo(() => readOAuthError(location.search), [location.search]);
+    const accountDeleted = useMemo(() => new URLSearchParams(location.search).get("deleted") === "1", [location.search]);
     const initiationPending = useRef(false);
     const [isRedirecting, setIsRedirecting] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
@@ -53,7 +54,12 @@ export default function Login() {
 
     return (
         <LoginScene>
-            <LoginPanel error={localError || oauthError} isRedirecting={isRedirecting} onSignIn={handleSignIn} />
+            <LoginPanel
+                error={localError || oauthError}
+                status={accountDeleted ? "Your Hanami account was deleted." : null}
+                isRedirecting={isRedirecting}
+                onSignIn={handleSignIn}
+            />
         </LoginScene>
     );
 }
@@ -74,16 +80,18 @@ function LoginScene({ children }: { children: ReactNode }) {
                 >
                     {children}
                     <div
-                        className="pointer-events-none relative h-full min-h-125 self-end overflow-hidden border-l border-border max-[900px]:absolute max-[900px]:-right-24 max-[900px]:bottom-0 max-[900px]:h-96 max-[900px]:min-h-0 max-[900px]:w-90 max-[900px]:border-0 max-[900px]:opacity-14 max-[600px]:-right-32 max-[600px]:h-80 max-[600px]:w-80"
+                        className="pointer-events-none relative h-full min-h-125 self-end overflow-hidden max-[900px]:absolute max-[900px]:-right-24 max-[900px]:bottom-0 max-[900px]:h-96 max-[900px]:min-h-0 max-[900px]:w-90 max-[900px]:border-0 max-[900px]:opacity-14 max-[600px]:-right-32 max-[600px]:h-80 max-[600px]:w-80"
                         aria-hidden="true"
                     >
-                        <img
-                            className="absolute right-[-8%] bottom-[-5%] h-auto w-[min(35vw,500px)] max-w-none opacity-68 max-[900px]:right-0 max-[900px]:bottom-[-8%] max-[900px]:w-full max-[900px]:opacity-100"
-                            src="/hanami-transparent.png"
-                            alt=""
-                            width="565"
-                            height="542"
-                        />
+                        <div className="relative size-full motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both]">
+                            <img
+                                className="absolute right-[-8%] bottom-[-5%] h-auto w-[min(35vw,500px)] max-w-none opacity-68 max-[900px]:right-0 max-[900px]:bottom-[-8%] max-[900px]:w-full max-[900px]:opacity-100"
+                                src="/hanami-transparent.png"
+                                alt=""
+                                width="565"
+                                height="542"
+                            />
+                        </div>
                     </div>
                 </div>
             </main>
@@ -91,7 +99,17 @@ function LoginScene({ children }: { children: ReactNode }) {
     );
 }
 
-export function LoginPanel({ error, isRedirecting, onSignIn }: { error: string | null; isRedirecting: boolean; onSignIn: () => void }) {
+export function LoginPanel({
+    error,
+    status = null,
+    isRedirecting,
+    onSignIn,
+}: {
+    error: string | null;
+    status?: string | null;
+    isRedirecting: boolean;
+    onSignIn: () => void;
+}) {
     return (
         <section
             className="relative z-10 max-w-155 motion-safe:animate-[reveal-up_420ms_60ms_cubic-bezier(0.2,0.7,0.2,1)_both]"
@@ -107,6 +125,13 @@ export function LoginPanel({ error, isRedirecting, onSignIn }: { error: string |
             <p className="mt-6 max-w-[54ch] text-[clamp(1rem,1.5vw,1.12rem)] leading-[1.7] text-muted">
                 Discord is Hanami’s sign-in provider. We use your account ID and the profile details Discord makes available.
             </p>
+
+            {status && (
+                <div className="mt-7 border-l-2 border-success py-1 pl-4" role="status">
+                    <p className="font-mono text-[0.65rem] tracking-[0.08em] text-success uppercase">Account deleted</p>
+                    <p className="mt-1.5 max-w-[54ch] text-[0.84rem] leading-[1.6] text-[#d6cfd7]">{status}</p>
+                </div>
+            )}
 
             {error && (
                 <div className="mt-7 border-l-2 border-danger py-1 pl-4" role="alert">
@@ -132,12 +157,6 @@ export function LoginPanel({ error, isRedirecting, onSignIn }: { error: string |
             <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4 border-t border-border pt-5">
                 <PrefetchLink className={textButtonClass} to={routes.home} prefetch="none">
                     <ArrowLeft aria-hidden="true" /> Back to the public site
-                </PrefetchLink>
-                <PrefetchLink
-                    className="text-[0.8rem] font-bold text-muted underline decoration-border-strong underline-offset-4 transition-colors duration-160 hover:text-white"
-                    to={routes.legalPrivacy}
-                >
-                    Privacy policy
                 </PrefetchLink>
             </div>
         </section>
