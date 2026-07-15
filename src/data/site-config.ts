@@ -18,7 +18,6 @@ export type ProductKey = "bot" | "osuguessr" | "companion" | "map-analyzer";
 
 export interface ProductSummary {
     key: ProductKey;
-    index: string;
     name: string;
     shortName: string;
     route: InternalRoutePath;
@@ -38,7 +37,6 @@ export interface ProductSummary {
 export const products: readonly ProductSummary[] = [
     {
         key: "bot",
-        index: "01",
         name: "Hanami Bot",
         shortName: "Bot",
         route: routes.bot,
@@ -56,7 +54,6 @@ export const products: readonly ProductSummary[] = [
     },
     {
         key: "osuguessr",
-        index: "02",
         name: "osu!guessr",
         shortName: "osu!guessr",
         route: routes.osuguessr,
@@ -73,7 +70,6 @@ export const products: readonly ProductSummary[] = [
     },
     {
         key: "companion",
-        index: "03",
         name: "Hanami Companion",
         shortName: "Companion",
         route: routes.companion,
@@ -90,7 +86,6 @@ export const products: readonly ProductSummary[] = [
     },
     {
         key: "map-analyzer",
-        index: "04",
         name: "Map Analyzer",
         shortName: "Analyzer",
         route: routes.mapAnalyzer,
@@ -161,7 +156,7 @@ export const routeMetadata = {
     },
     "/legal/data-deletion": {
         title: "Data deletion — Hanami",
-        description: "How account unlinking, sign-out, and data-deletion requests differ in Hanami.",
+        description: "How sign-out, unlinking, immediate account deletion, and other privacy requests differ in Hanami.",
     },
     "/privacy": {
         title: "Privacy policy — Hanami",
@@ -185,11 +180,11 @@ export const routeMetadata = {
     },
     "/profile/privacy": {
         title: "Account privacy and deletion — Hanami",
-        description: "Submit, track, or cancel an authenticated Hanami account deletion request.",
+        description: "Review the signed-in identity or permanently delete website and Hanami Bot account data.",
     },
     "/profile/privacy/confirm": {
-        title: "Confirm deletion request — Hanami",
-        description: "Confirm a Hanami account deletion request after fresh Discord authentication.",
+        title: "Confirm account deletion — Hanami",
+        description: "Permanently delete website and Hanami Bot account data after fresh Discord authentication.",
     },
     "/login": {
         title: "Sign in — Hanami",

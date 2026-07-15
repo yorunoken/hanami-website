@@ -4,22 +4,20 @@ import { legalContacts } from "@/data/legal";
 import { LegalDocument, LegalSection, LegalTable, OwnerConfirmation, type TocItem } from "./legal-document";
 
 const toc: readonly TocItem[] = [
-    { id: "differences", label: "What each action does" },
-    { id: "signed-in", label: "Signed-in requests" },
-    { id: "email", label: "Email fallback" },
-    { id: "status", label: "Status and cancellation" },
-    { id: "provider", label: "Discord and osu! data" },
-    { id: "limits", label: "Current operational limits" },
+    { id: "differences", label: "Account controls" },
+    { id: "immediate", label: "Immediate deletion" },
+    { id: "other", label: "Other privacy requests" },
+    { id: "limits", label: "Scope and limits" },
 ];
 
 export default function DataDeletion() {
     return (
         <LegalDocument
             title="Data deletion and account controls"
-            summary="How to submit and track a Hanami deletion request, and how that differs from sign-out, unlinking, and provider deletion."
+            summary="What Hanami deletes immediately from the signed-in account, what remains separate, and how to request help with other data."
             toc={toc}
         >
-            <LegalSection id="differences" title="1. What each action does">
+            <LegalSection id="differences" title="1. Account controls">
                 <LegalTable>
                     <thead>
                         <tr>
@@ -31,104 +29,69 @@ export default function DataDeletion() {
                     <tbody>
                         <tr>
                             <td>Sign out</td>
-                            <td>Ends a Hanami website session.</td>
+                            <td>Ends the current Hanami website session.</td>
                             <td>Does not remove account or product data.</td>
                         </tr>
                         <tr>
                             <td>Disconnect osu!</td>
                             <td>Clears the Discord-to-osu! ID link used by Hanami Bot.</td>
-                            <td>Does not delete Hanami records or either provider account.</td>
+                            <td>Does not delete other account data or either provider account.</td>
                         </tr>
                         <tr>
-                            <td>Request Hanami account deletion</td>
-                            <td>Records a verified request for coordinated review across relevant Hanami services.</td>
-                            <td>Processing is manual and does not erase every record immediately.</td>
-                        </tr>
-                        <tr>
-                            <td>Delete a Discord or osu! account</td>
-                            <td>Must be done through the relevant provider.</td>
-                            <td>Provider deletion does not automatically remove copies or associations previously stored by Hanami.</td>
+                            <td>Delete Hanami account</td>
+                            <td>Immediately removes the website identity and Discord-keyed Bot account data described below.</td>
+                            <td>Does not delete provider accounts, a separate osu!guessr profile, logs, or backups.</td>
                         </tr>
                     </tbody>
                 </LegalTable>
             </LegalSection>
 
-            <LegalSection id="signed-in" title="2. Signed-in requests">
+            <LegalSection id="immediate" title="2. Immediate signed-in deletion">
                 <ol>
                     <li>
-                        Open <Link to="/profile/privacy">account privacy and deletion</Link>.
+                        Open <Link to="/profile/privacy">account privacy</Link> and review the signed-in identity.
                     </li>
-                    <li>Review the Discord identity and linked osu! identity shown in the account area.</li>
+                    <li>Choose delete account. Hanami requires a Discord sign-in from approximately the last 15 minutes.</li>
                     <li>
-                        Start a deletion request. Hanami requires Discord authentication from approximately the last 15 minutes and sends
-                        you through Discord OAuth again when the current session is older.
+                        Type <code>DELETE MY HANAMI ACCOUNT</code> on the final confirmation screen.
                     </li>
-                    <li>
-                        Type <code>DELETE MY HANAMI ACCOUNT</code> on the final confirmation screen. A single-click request is not accepted.
-                    </li>
-                    <li>
-                        Keep the random request reference. Submission revokes current Hanami website sessions; it does not delete the Better
-                        Auth identity or any cross-service data at that moment.
-                    </li>
+                    <li>After confirmation, deletion runs immediately and signs the account out.</li>
                 </ol>
-                <p>
-                    The request is then reviewed across relevant website records, Hanami Bot settings, osu!guessr data, temporary Redis
-                    state, reports, logs, Discord error-channel messages where practical, analytics or advertising data limitations, and
-                    backups. A record may be deleted, anonymized, or temporarily retained where a justified security, abuse-prevention,
-                    legal, or backup reason applies.
-                </p>
-            </LegalSection>
-
-            <LegalSection id="email" title="3. Email fallback and other privacy requests">
-                <p>
-                    Email <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> if you cannot sign in, lost access to
-                    Discord, only used Hanami Bot without a web account, believe Hanami holds data not visible in your account, or want
-                    access, correction, restriction, portability, or objection rather than deletion.
-                </p>
-                <p>You may provide:</p>
+                <p>The immediate action deletes:</p>
                 <ul>
-                    <li>your Discord user ID and the linked Discord account;</li>
-                    <li>your osu! ID or username, if relevant;</li>
-                    <li>which Hanami services you used; and</li>
-                    <li>the type and scope of request.</li>
+                    <li>the Better Auth website user, Discord provider link, and all website sessions;</li>
+                    <li>the Hanami Bot user row keyed to that Discord account, including its linked osu! ID and saved preferences; and</li>
+                    <li>short-lived deletion reauthentication records and any legacy deletion-request record tied to the website user.</li>
                 </ul>
                 <p>
-                    Do not send passwords, OAuth access or refresh tokens, cookies, session tokens, API keys, backup codes, or government
-                    identity documents. Public usernames and numeric provider IDs alone are not sufficient identity verification. Additional
-                    proportionate verification may be required. The lost-account verification process and final response period are{" "}
-                    <OwnerConfirmation />.
+                    If Hanami cannot reach the linked Bot database, the website account is kept and the action reports a temporary failure
+                    instead of claiming that deletion completed.
                 </p>
             </LegalSection>
 
-            <LegalSection id="status" title="4. Request status and cancellation">
+            <LegalSection id="other" title="3. Other privacy requests">
                 <p>
-                    Signed-in users can view the reference, submission date, current status, last update, and any user-facing next step in
-                    the account privacy area. Internal operator notes and raw processing failures are not shown.
+                    Email <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> if you cannot sign in, lost Discord
+                    access, used osu!guessr separately, believe Hanami holds data outside the immediate deletion scope, or want access,
+                    correction, restriction, portability, or objection rather than deletion.
                 </p>
                 <p>
-                    A request can be cancelled online while it is <em>pending</em> or <em>in review</em>. It cannot be cancelled after
-                    processing begins or after it reaches a terminal state. Email{" "}
-                    <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> with the request reference if you need help.
-                </p>
-            </LegalSection>
-
-            <LegalSection id="provider" title="5. Data held by Discord and osu!">
-                <p>
-                    Hanami cannot delete Discord or osu! accounts, provider-side authentication logs, or other records those providers
-                    independently control. Use their account and privacy controls for provider-side data. A Hanami request covers copies and
-                    associations controlled by Hanami, subject to verified identity and applicable retention requirements.
+                    Include the relevant Discord or osu! ID and which Hanami service you used. Do not send passwords, OAuth tokens, cookies,
+                    API keys, backup codes, or government identity documents. Additional proportionate verification may be required. The
+                    expected response period is <OwnerConfirmation />.
                 </p>
             </LegalSection>
 
-            <LegalSection id="limits" title="6. Current operational limits">
+            <LegalSection id="limits" title="4. Scope and limits">
                 <p>
-                    <strong>Full automatic cross-service deletion is not implemented.</strong> The in-app workflow securely records and
-                    tracks a request; an operator coordinates the actual work manually. Better Auth user and account rows are not deleted
-                    when a request is submitted, and the incomplete osu!guessr user-delete action is not treated as ecosystem-wide deletion.
+                    Hanami cannot delete Discord or osu! provider accounts or provider-side records. The immediate website action also does
+                    not authenticate against or delete a separate osu!guessr profile. Those records must be handled through the relevant
+                    service or privacy contact.
                 </p>
                 <p>
-                    Retention of completed request records, backup expiry, records that must be anonymized rather than removed, the response
-                    deadline, and the behavior of future sign-ins after completed deletion are <OwnerConfirmation />.
+                    Operational logs, private error-channel messages, abuse-prevention records, analytics limitations, and backup copies may
+                    require separate review or temporary retention for justified security, legal, or recovery reasons. Future Discord
+                    sign-in may create a new Hanami website account after deletion.
                 </p>
             </LegalSection>
         </LegalDocument>

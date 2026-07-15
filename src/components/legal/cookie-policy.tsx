@@ -60,7 +60,7 @@ export default function CookiePolicy() {
                     a database-backed configuration, OAuth state is stored in the verification table rather than an OAuth-state cookie.
                 </p>
                 <p>
-                    A deletion request may require a new Discord OAuth round trip. It uses Better Auth’s existing necessary OAuth/session
+                    Account deletion may require a new Discord OAuth round trip. It uses Better Auth’s existing necessary OAuth/session
                     mechanisms plus a short-lived server-side challenge whose random browser value is removed from the address after the
                     confirmation page reads it. The workflow does not add an analytics, advertising, or consent cookie.
                 </p>

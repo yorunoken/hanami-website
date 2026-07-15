@@ -7,7 +7,6 @@
         "build": "vite build",
         "start": "bun src/server/index.ts",
         "db:migrate": "bun src/scripts/migrate.ts",
-        "deletion-requests:list": "bun src/scripts/list-deletion-requests.ts",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint .",

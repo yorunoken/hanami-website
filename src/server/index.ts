@@ -1,7 +1,8 @@
 import { Elysia } from "elysia";
 
 import { apiRoutes } from "./api";
-import { auth } from "./auth";
+import { auth, webDatabase } from "./auth";
+import { runWebMigrations } from "./migrations";
 
 const PORT = process.env.PORT ?? 3000;
 const legacyLegalRoutes = new Map([
@@ -42,6 +43,7 @@ export default app;
 
 // Only listen if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
+    await runWebMigrations(webDatabase);
     app.listen(PORT);
     console.log(`🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`);
 }

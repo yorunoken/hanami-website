@@ -40,8 +40,8 @@ export default function TermsOfService() {
                 </p>
                 <p>
                     Hanami provides osu!-related lookups, Discord commands, a beatmap guessing game, account-linking and preference tools,
-                    public rankings, issue-reporting features, and a manual account-deletion request workflow described on the current
-                    product and legal pages.
+                    public rankings, issue-reporting features, immediate deletion for the website and Discord-keyed Bot account data, and a
+                    privacy-contact path for other records.
                 </p>
             </LegalSection>
 
@@ -104,9 +104,9 @@ export default function TermsOfService() {
                     retire products and integrations, with reasonable notice where practical.
                 </p>
                 <p>
-                    Account-deletion requests are recorded and coordinated manually across relevant services. Submission does not promise
-                    immediate or fully automatic deletion, and justified records may be anonymized or retained temporarily as described in
-                    the privacy and deletion notices.
+                    Signed-in account deletion immediately removes the website identity and Discord-keyed Hanami Bot account data described
+                    in the privacy notice. Separate osu!guessr profiles, provider-side records, logs, and backups may require separate
+                    action or temporary retention as described in the privacy and deletion notices.
                 </p>
             </LegalSection>
 

@@ -1,25 +1,19 @@
-import { ShieldCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { reauthenticateWithDiscord } from "@/client/lib/auth";
 import { readOAuthError } from "@/client/lib/auth-navigation";
+import { clearPendingDeletionChallenge, prepareDeletionReauthentication, readPendingDeletionChallenge } from "@/client/lib/deletion-reauth";
 import { fetchJson } from "@/client/lib/fetch-json";
 import { routes } from "@/client/routes/paths";
-import { AccountLayout, AccountPage, accountHeadingClass, sectionHeadingClass } from "@/components/account/account-shell";
+import { AccountLayout, AccountPage, profileHeadingClass, sectionHeadingClass } from "@/components/account/account-shell";
 import { useAuthenticatedSession } from "@/components/account/authenticated-route";
-import { ActionDefinition, ConfirmationPage, DeletionReceipt, ErrorMessage, RequestStatus } from "@/components/account/privacy-views";
+import { ConfirmationPage, ErrorMessage } from "@/components/account/privacy-views";
 import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import { dangerOutlineActionClass, primaryActionClass } from "@/components/ui/action-styles";
-import { cn } from "@/lib/utils";
 import { legalContacts } from "@/data/legal";
-import type { PublicDeletionRequest } from "@/server/deletion-requests/domain";
-
-interface AccountSummary {
-    discordAccountId: string | null;
-    request: PublicDeletionRequest | null;
-}
+import { cn } from "@/lib/utils";
 
 interface OsuLinkStatus {
     linked: boolean;
@@ -37,23 +31,23 @@ export default function AccountPrivacy() {
     const location = useLocation();
     const navigate = useNavigate();
     const isConfirmation = location.pathname.endsWith("/confirm");
-    const [challenge, setChallenge] = useState<string | null>(() => readChallengeFromHash(location.hash));
-    const [summary, setSummary] = useState<AccountSummary | null>(null);
+    const [challenge, setChallenge] = useState<string | null>(
+        () => readChallengeFromHash(location.hash) ?? (isConfirmation ? readPendingDeletionChallenge() : null),
+    );
     const [osuLink, setOsuLink] = useState<OsuLinkStatus | null>(null);
     const [osuLinkUnavailable, setOsuLinkUnavailable] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [action, setAction] = useState<"starting" | "verifying" | "submitting" | "cancelling" | null>(null);
+    const [action, setAction] = useState<"starting" | "verifying" | "deleting" | null>(null);
     const [confirmationReady, setConfirmationReady] = useState(false);
     const [typedPhrase, setTypedPhrase] = useState("");
     const [error, setError] = useState<string | null>(null);
-    const [receipt, setReceipt] = useState<PublicDeletionRequest | null>(null);
-    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         const hashChallenge = readChallengeFromHash(location.hash);
         if (hashChallenge) setChallenge(hashChallenge);
+        if (isConfirmation && (hashChallenge || challenge)) clearPendingDeletionChallenge();
         if (location.hash) window.history.replaceState(null, "", location.pathname);
-    }, [location.hash, location.pathname]);
+    }, [challenge, isConfirmation, location.hash, location.pathname]);
 
     useEffect(() => {
         if (isConfirmation) {
@@ -63,26 +57,13 @@ export default function AccountPrivacy() {
 
         const controller = new AbortController();
         setLoading(true);
-        setError(null);
-        Promise.allSettled([
-            fetchJson<AccountSummary>("/api/deletion-requests", controller.signal),
-            fetchJson<OsuLinkStatus>("/api/osu-link/status", controller.signal),
-        ]).then(([summaryResult, osuResult]) => {
-            if (controller.signal.aborted) return;
-            if (summaryResult.status === "fulfilled") {
-                setSummary(summaryResult.value);
-            } else {
-                setError("Your deletion-request status could not be loaded.");
-            }
-            if (osuResult.status === "fulfilled") {
-                setOsuLink(osuResult.value);
+        fetchJson<OsuLinkStatus>("/api/osu-link/status", controller.signal)
+            .then((result) => {
+                setOsuLink(result);
                 setOsuLinkUnavailable(false);
-            } else {
-                setOsuLinkUnavailable(true);
-            }
-            setLoading(false);
-        });
-
+            })
+            .catch(() => setOsuLinkUnavailable(true))
+            .finally(() => setLoading(false));
         return () => controller.abort();
     }, [isConfirmation, session.user.id]);
 
@@ -90,6 +71,7 @@ export default function AccountPrivacy() {
         const oauthError = readOAuthError(location.search);
         if (!oauthError || !new URLSearchParams(location.search).has("reauth")) return;
 
+        clearPendingDeletionChallenge();
         setError(oauthError);
         navigate(routes.profilePrivacy, { replace: true });
     }, [location.search, navigate]);
@@ -99,12 +81,12 @@ export default function AccountPrivacy() {
         let active = true;
         setAction("verifying");
         setError(null);
-        fetchJson<{ ready: boolean }>("/api/deletion-requests/reauth/complete", undefined, jsonRequest({ challenge }))
+        fetchJson<{ ready: boolean }>("/api/account-deletion/reauth/complete", undefined, jsonRequest({ challenge }))
             .then(() => {
                 if (active) setConfirmationReady(true);
             })
             .catch(() => {
-                if (active) setError("Fresh Discord authentication could not be confirmed. Start the request again.");
+                if (active) setError("Fresh Discord authentication could not be confirmed. Start again from account privacy.");
             })
             .finally(() => {
                 if (active) setAction(null);
@@ -114,90 +96,70 @@ export default function AccountPrivacy() {
         };
     }, [challenge, confirmationReady, isConfirmation, session.user.id]);
 
-    async function startDeletionRequest() {
+    async function startAccountDeletion() {
         setAction("starting");
         setError(null);
         try {
-            const result = await fetchJson<StartResponse>("/api/deletion-requests/reauth/start", undefined, jsonRequest({}));
+            const result = await fetchJson<StartResponse>("/api/account-deletion/reauth/start", undefined, jsonRequest({}));
             if (result.reauthenticationRequired) {
-                await reauthenticateWithDiscord(result.confirmationPath, `${routes.profilePrivacy}?reauth=1`);
+                const callbackURL = prepareDeletionReauthentication(result.confirmationPath);
+                try {
+                    await reauthenticateWithDiscord(callbackURL, `${routes.profilePrivacy}?reauth=1`);
+                } catch (reauthenticationError) {
+                    clearPendingDeletionChallenge();
+                    throw reauthenticationError;
+                }
                 return;
             }
             navigate(result.confirmationPath);
         } catch (requestError) {
-            setError(requestError instanceof Error ? requestError.message : "The deletion request could not be started.");
+            setError(requestError instanceof Error ? requestError.message : "Account deletion could not be started.");
             setAction(null);
         }
     }
 
-    async function submitDeletionRequest(event: FormEvent<HTMLFormElement>) {
+    async function deleteAccount(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!challenge) return;
-        setAction("submitting");
+        setAction("deleting");
         setError(null);
         try {
-            const result = await fetchJson<{
-                request: PublicDeletionRequest;
-                sessionsRevoked: boolean;
-            }>("/api/deletion-requests", undefined, jsonRequest({ challenge, confirmationPhrase: typedPhrase }));
-            setReceipt(result.request);
+            await fetchJson<{ deleted: true }>(
+                "/api/account-deletion",
+                undefined,
+                jsonRequest({ challenge, confirmationPhrase: typedPhrase }, "DELETE"),
+            );
+            window.location.replace(`${routes.login}?deleted=1`);
         } catch (requestError) {
-            setError(requestError instanceof Error ? requestError.message : "The deletion request could not be submitted.");
-        } finally {
+            setError(requestError instanceof Error ? requestError.message : "The account could not be deleted.");
             setAction(null);
         }
     }
 
-    async function cancelDeletionRequest() {
-        if (!window.confirm("Cancel this deletion request? No deletion work will continue from this request.")) return;
-        setAction("cancelling");
-        setError(null);
-        try {
-            const result = await fetchJson<{ request: PublicDeletionRequest }>("/api/deletion-requests/cancel", undefined, jsonRequest({}));
-            setSummary((current) => (current ? { ...current, request: result.request } : current));
-        } catch (requestError) {
-            setError(requestError instanceof Error ? requestError.message : "The request could not be cancelled.");
-        } finally {
-            setAction(null);
-        }
-    }
-
-    if (receipt)
-        return (
-            <DeletionReceipt
-                request={receipt}
-                copied={copied}
-                onCopy={() => {
-                    void navigator.clipboard.writeText(receipt.requestReference).then(() => setCopied(true));
-                }}
-            />
-        );
-    if (isConfirmation)
+    if (isConfirmation) {
         return (
             <ConfirmationPage
                 ready={confirmationReady}
                 verifying={action === "verifying"}
-                submitting={action === "submitting"}
+                deleting={action === "deleting"}
                 challengePresent={Boolean(challenge)}
                 phrase={typedPhrase}
                 error={error}
                 onPhraseChange={setTypedPhrase}
-                onSubmit={submitDeletionRequest}
+                onSubmit={deleteAccount}
             />
         );
+    }
 
     return (
         <AccountPage>
-            <AccountLayout className="max-w-260">
-                <header className={accountHeadingClass}>
-                    <Eyebrow>Account privacy</Eyebrow>
-                    <h1>Deletion requests</h1>
-                    <p>
-                        Submit and track one coordinated request for data Hanami controls. This is separate from signing out or
-                        disconnecting osu!.
-                    </p>
+            <AccountLayout className="max-w-260 py-[clamp(3rem,6vw,5rem)]">
+                <header className={profileHeadingClass}>
+                    <Eyebrow>Account</Eyebrow>
+                    <h1>Privacy and account</h1>
+                    <p>Review the identity attached to this account or permanently delete the data this website can remove directly.</p>
                     <nav
-                        className="mt-6 flex flex-wrap gap-x-6 gap-y-[0.65rem] text-[0.82rem] [&_a]:text-muted [&_a]:underline-offset-[0.25em]"
+                        className="mt-6 flex flex-wrap gap-x-6 gap-y-[0.65rem] text-[0.82rem] [&_a]:text-muted [&_a]:underline [&_a]:decoration-white/40 [&_a]:underline-offset-[0.25em]"
                         aria-label="Account sections"
                     >
                         <PrefetchLink to={routes.profile}>Account and preferences</PrefetchLink>
@@ -209,110 +171,73 @@ export default function AccountPrivacy() {
 
                 {error && <ErrorMessage>{error}</ErrorMessage>}
 
-                <section className="mt-16" aria-labelledby="your-identity">
+                <section className="mt-12" aria-labelledby="identity-title">
                     <div className={sectionHeadingClass}>
-                        <h2 id="your-identity">Identity used for this request</h2>
-                        <p>Public usernames or numeric IDs alone do not verify a request.</p>
+                        <h2 id="identity-title">Signed-in identity</h2>
+                        <p>This is the account affected by deletion.</p>
                     </div>
-                    <dl className="grid grid-cols-1 min-[601px]:grid-cols-2 [&_dd]:mt-[0.55rem] [&_dd]:mb-1 [&_dd]:text-[1.1rem] [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_span]:text-[0.78rem] [&_span]:leading-[1.6] [&_span]:text-muted [&>div]:min-h-37.5 [&>div]:border-b [&>div]:border-border [&>div]:py-6 min-[601px]:[&>div:first-child]:border-r min-[601px]:[&>div:first-child]:pr-8 min-[601px]:[&>div:last-child]:pl-8">
+                    <dl className="grid grid-cols-1 min-[601px]:grid-cols-2 [&_dd]:mt-2 [&_dd]:text-base [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_small]:mt-1 [&_small]:block [&_small]:text-[0.78rem] [&_small]:leading-[1.55] [&_small]:text-muted [&>div]:border-b [&>div]:border-border [&>div]:py-6 min-[601px]:[&>div:first-child]:border-r min-[601px]:[&>div:first-child]:pr-8 min-[601px]:[&>div:last-child]:pl-8">
                         <div>
                             <dt>Discord sign-in</dt>
                             <dd>{session.user.name || "Discord user"}</dd>
-                            <span>
-                                {loading
-                                    ? "Checking account ID…"
-                                    : summary?.discordAccountId
-                                      ? `Discord ID ${summary.discordAccountId}`
-                                      : "Discord account ID unavailable"}
-                            </span>
+                            <small>Hanami website identity and sessions</small>
                         </div>
                         <div>
-                            <dt>Linked osu! account</dt>
+                            <dt>Hanami Bot osu! link</dt>
                             <dd>
-                                {osuLinkUnavailable
-                                    ? "Status unavailable"
-                                    : osuLink?.linked
-                                      ? osuLink.username || `osu! ID ${osuLink.banchoId}`
-                                      : "Not linked"}
+                                {loading
+                                    ? "Checking…"
+                                    : osuLinkUnavailable
+                                      ? "Status unavailable"
+                                      : osuLink?.linked
+                                        ? osuLink.username || `osu! ID ${osuLink.banchoId}`
+                                        : "Not linked"}
                             </dd>
-                            <span>
-                                {osuLinkUnavailable
-                                    ? "The bot database could not be reached; this does not prevent a deletion request."
-                                    : osuLink?.linked
-                                      ? `osu! ID ${osuLink.banchoId}`
-                                      : "Disconnecting an osu! link is not account deletion."}
-                            </span>
+                            <small>{osuLink?.linked ? `osu! ID ${osuLink.banchoId}` : "Stored against the Discord account"}</small>
                         </div>
                     </dl>
                 </section>
 
-                {summary?.request ? (
-                    <RequestStatus request={summary.request} cancelling={action === "cancelling"} onCancel={cancelDeletionRequest} />
-                ) : (
-                    <section
-                        className="mt-16 grid grid-cols-1 items-end gap-x-12 gap-y-5 border-y border-border-strong py-10 min-[821px]:grid-cols-[minmax(0,1fr)_auto]"
-                        aria-labelledby="request-title"
-                    >
-                        <div>
-                            <Eyebrow>Manual coordinated processing</Eyebrow>
-                            <h2 className="text-2xl tracking-[-0.035em]" id="request-title">
-                                Request account deletion
-                            </h2>
-                            <p className="max-w-[68ch] text-[0.88rem] leading-[1.7] text-muted">
-                                Hanami will record the request and an operator will review data held across the website, Hanami Bot,
-                                osu!guessr, temporary Redis state, logs, diagnostics, analytics, and backups where applicable. Full
-                                automatic cross-service deletion is not implemented.
-                            </p>
-                            <ul className="mt-5 grid grid-cols-1 gap-x-8 gap-y-[0.55rem] pl-[1.1rem] text-[0.78rem] leading-[1.55] text-muted min-[601px]:grid-cols-2">
-                                <li>Hanami website identity, provider link, and sessions</li>
-                                <li>Hanami Bot account link, settings, caches, and relevant logs</li>
-                                <li>osu!guessr profile, games, reports, badges, and API keys</li>
-                                <li>Temporary Redis state and service rate-limit records</li>
-                                <li>Identifiable diagnostics, Discord error messages, analytics limitations, and backups</li>
-                            </ul>
-                        </div>
-                        <button
-                            className={cn(primaryActionClass, dangerOutlineActionClass, "min-[821px]:w-fit")}
-                            type="button"
-                            onClick={startDeletionRequest}
-                            disabled={loading || action === "starting"}
-                        >
-                            <ShieldCheck aria-hidden="true" />
-                            {action === "starting" ? "Preparing verification…" : "Request account deletion"}
-                        </button>
-                        <p className="text-[0.78rem] leading-[1.6] text-muted min-[821px]:col-span-2">
-                            A Discord sign-in from the last 15 minutes is required. Submitting revokes your Hanami website sessions, but it
-                            does not delete your Discord or osu! accounts.
-                        </p>
-                    </section>
-                )}
-
                 <section
-                    className="mt-16 [&>p]:max-w-[68ch] [&>p]:text-[0.88rem] [&>p]:leading-[1.7] [&>p]:text-muted [&>p_a]:text-white [&>p_a]:underline-offset-[0.25em]"
-                    aria-labelledby="actions-title"
+                    className="mt-12 grid grid-cols-1 items-end gap-x-12 gap-y-6 border-b border-border-strong pb-10 min-[821px]:grid-cols-[minmax(0,1fr)_auto]"
+                    aria-labelledby="delete-title"
                 >
-                    <div className={sectionHeadingClass}>
-                        <h2 id="actions-title">What each action does</h2>
+                    <div>
+                        <Eyebrow>Permanent action</Eyebrow>
+                        <h2 className="text-2xl tracking-[-0.035em]" id="delete-title">
+                            Delete account
+                        </h2>
+                        <p className="mt-3 max-w-[68ch] text-[0.88rem] leading-[1.7] text-muted">
+                            Immediately deletes your Hanami website identity, provider link, and sessions, plus the Hanami Bot osu! link and
+                            preferences stored for this Discord account. This cannot be undone.
+                        </p>
                     </div>
-                    <dl>
-                        <ActionDefinition term="Sign out" detail="Ends a Hanami web session. It does not remove account or product data." />
-                        <ActionDefinition
-                            term="Disconnect osu!"
-                            detail="Clears the Discord-to-osu! link used by Hanami Bot. It does not delete stored Hanami data or either provider account."
-                        />
-                        <ActionDefinition
-                            term="Request Hanami deletion"
-                            detail="Starts manual review of the web identity, Bot settings, osu!guessr data, temporary state, and relevant logs. Records may be deleted or anonymized; justified security, legal, and backup copies may remain temporarily."
-                        />
-                        <ActionDefinition
-                            term="Delete provider data"
-                            detail="Discord and osu! control their own accounts and provider-side records. Use their privacy controls for that data."
-                        />
-                    </dl>
-                    <p>
-                        Cannot sign in, lost Discord access, or need access, correction, restriction, or objection instead? Email{" "}
-                        <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. Additional verification may be required;
-                        never send passwords, tokens, cookies, API keys, or backup codes.
+                    <button
+                        className={cn(primaryActionClass, dangerOutlineActionClass, "min-[821px]:w-fit")}
+                        type="button"
+                        onClick={startAccountDeletion}
+                        disabled={loading || action === "starting"}
+                    >
+                        {action === "starting" ? "Preparing verification…" : "Delete account"}
+                    </button>
+                    <p className="max-w-[80ch] text-[0.78rem] leading-[1.6] text-muted min-[821px]:col-span-2">
+                        This does not delete your Discord or osu! provider accounts, a separate osu!guessr profile, or records that must
+                        remain temporarily in logs or backups. A Discord sign-in from the last 15 minutes and typed confirmation are
+                        required.
+                    </p>
+                </section>
+
+                <section className="mt-12 grid grid-cols-1 gap-4 pb-8 min-[821px]:grid-cols-2 min-[821px]:gap-10">
+                    <div>
+                        <h2 className="text-lg tracking-[-0.025em]">Other privacy requests</h2>
+                        <p className="mt-2 text-[0.82rem] leading-[1.6] text-muted">
+                            Access, correction, restriction, objection, or lost access.
+                        </p>
+                    </div>
+                    <p className="text-[0.82rem] leading-[1.65] text-muted [&_a]:text-white [&_a]:underline [&_a]:decoration-white/45 [&_a]:underline-offset-[0.22em]">
+                        Email <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> if you cannot sign in or need help
+                        with data outside the immediate deletion scope. Never send passwords, tokens, cookies, API keys, or backup codes.
+                        See the <PrefetchLink to={routes.legalDataDeletion}>data deletion details</PrefetchLink>.
                     </p>
                 </section>
             </AccountLayout>
@@ -320,9 +245,9 @@ export default function AccountPrivacy() {
     );
 }
 
-function jsonRequest(body: Record<string, unknown>): RequestInit {
+function jsonRequest(body: Record<string, unknown>, method: "POST" | "DELETE" = "POST"): RequestInit {
     return {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     };

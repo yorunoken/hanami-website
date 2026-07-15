@@ -81,25 +81,20 @@ export default function PrivacyPolicy() {
                     </li>
                 </ul>
 
-                <h3>Deletion-request workflow</h3>
+                <h3>Immediate account deletion</h3>
                 <ul>
                     <li>
-                        A signed-in user may create a deletion request after a Discord sign-in from approximately the last 15 minutes and
-                        deliberate typed confirmation.
-                    </li>
-                    <li>
-                        The request record contains an internal ID and user ID, a random user-facing reference, status, request,
-                        reauthentication and update dates, optional completion or cancellation dates, and operator-only note or sanitized
-                        failure fields.
+                        A signed-in user may delete the website account and Discord-keyed Hanami Bot user data after a Discord sign-in from
+                        approximately the last 15 minutes and deliberate typed confirmation.
                     </li>
                     <li>
                         A short-lived reauthentication challenge stores the Hanami user ID, a SHA-256 hash of a random challenge token,
                         creation and expiry dates, and reauthentication and consumption dates. OAuth tokens and session cookies are not
-                        stored in the deletion request.
+                        stored in that record.
                     </li>
                     <li>
-                        Signed-in users can see their own reference, status and dates. They do not receive operator notes or raw internal
-                        errors. Submission revokes the user’s Hanami website sessions.
+                        Successful deletion removes the Better Auth user, provider link and sessions, then removes the Hanami Bot user row
+                        keyed to the same Discord account. Separate osu!guessr profiles are not deleted by this action.
                     </li>
                 </ul>
 
@@ -189,7 +184,7 @@ export default function PrivacyPolicy() {
                             <td>Legitimate interests in operating and protecting the services.</td>
                         </tr>
                         <tr>
-                            <td>Verify, record, coordinate, and document privacy and deletion requests.</td>
+                            <td>Verify immediate account deletion and handle other privacy requests.</td>
                             <td>
                                 Compliance with applicable legal obligations and legitimate interests in accurate, secure request handling.
                             </td>
@@ -259,10 +254,7 @@ export default function PrivacyPolicy() {
                         completed osu!guessr games, reports, API-key metadata, analytics, advertising data, infrastructure logs, and backups
                         is <OwnerConfirmation />.
                     </li>
-                    <li>
-                        The deletion-request record remains after submission so operators can coordinate status, partial failures, and
-                        completion. Retention of completed, cancelled, rejected, or failed request records is <OwnerConfirmation />.
-                    </li>
+                    <li>Short-lived account-deletion reauthentication challenges expire after approximately 15 minutes.</li>
                 </ul>
             </LegalSection>
 
@@ -282,14 +274,14 @@ export default function PrivacyPolicy() {
                     confirmed controller and governing law.
                 </p>
                 <p>
-                    Signing out only ends a session. Disconnecting osu! only clears the Discord-to-osu! link. Neither action deletes data
-                    held by Discord or osu!, and neither is a complete Hanami deletion. Signed-in users may submit and track a request from
-                    the <a href="/profile/privacy">account privacy area</a>. Processing remains manual across services; the request itself
-                    does not automatically delete every record. See the <a href="/legal/data-deletion">data deletion page</a> for details.
+                    Signing out only ends a session. Disconnecting osu! only clears the Discord-to-osu! link. Signed-in users can
+                    immediately delete the website identity and Discord-keyed Hanami Bot account data from the{" "}
+                    <a href="/profile/privacy">account privacy area</a>. Separate osu!guessr profiles and provider-side data are outside
+                    that action. See the <a href="/legal/data-deletion">data deletion page</a> for details.
                 </p>
                 <p>
-                    In-app deletion requests use fresh Discord OAuth authentication bound to the signed-in Hanami user and a short-lived,
-                    single-use challenge. Users who cannot sign in may email{" "}
+                    In-app deletion uses fresh Discord OAuth authentication bound to the signed-in Hanami user and a short-lived, single-use
+                    challenge. Users who cannot sign in or need deletion outside the immediate scope may email{" "}
                     <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. Public usernames or numeric provider IDs alone
                     are not sufficient; proportionate additional verification may be required. The lost-account procedure and expected
                     response period are <OwnerConfirmation />.

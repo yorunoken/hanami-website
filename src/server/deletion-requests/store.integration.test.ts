@@ -1,19 +1,30 @@
-import { afterAll, beforeEach, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 
+import { runWebMigrations } from "../migrations";
 import { createChallengeToken, hashChallengeToken } from "./domain";
-import { DeletionRequestStoreError, MySqlDeletionRequestStore } from "./store";
+import { MySqlAccountDeletionStore } from "./store";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 const pool = testDatabaseUrl ? mysql.createPool({ uri: testDatabaseUrl, timezone: "Z" }) : null;
-const store = pool ? new MySqlDeletionRequestStore(pool) : null;
+const deletedBotAccounts: string[] = [];
+const store = pool
+    ? new MySqlAccountDeletionStore(pool, async (discordAccountId) => {
+          deletedBotAccounts.push(discordAccountId);
+      })
+    : null;
 const now = new Date("2026-07-14T18:00:00.000Z");
 
-describeDatabase("MySQL account deletion request store", () => {
+describeDatabase("MySQL immediate account deletion store", () => {
+    beforeAll(async () => {
+        if (!pool) throw new Error("TEST_DATABASE_URL is required");
+        await runWebMigrations(pool);
+    });
+
     beforeEach(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
-        await pool.execute("DELETE FROM accountDeletionRequest");
+        deletedBotAccounts.length = 0;
         await pool.execute("DELETE FROM accountDeletionReauthChallenge");
         await pool.execute("DELETE FROM session");
         await pool.execute("DELETE FROM account");
@@ -25,131 +36,38 @@ describeDatabase("MySQL account deletion request store", () => {
         await pool?.end();
     });
 
-    it("creates a durable request, consumes reauthentication, and revokes sessions", async () => {
-        if (!pool || !store) throw new Error("Database test store is unavailable");
-        const challenge = createChallengeToken();
-        const tokenHash = await hashChallengeToken(challenge);
-        await store.startReauthentication({
-            userId: "user-1",
-            tokenHash,
-            now,
-            alreadyFresh: true,
-        });
-
-        const request = await store.createRequest({
-            userId: "user-1",
-            tokenHash,
-            now: new Date(now.getTime() + 1_000),
-        });
-        expect(request.status).toBe("pending");
-        expect(request.requestReference).toMatch(/^HAN-[A-Za-z0-9_-]{20}$/);
-
-        const [sessionRows] = await pool.execute<RowDataPacket[]>("SELECT id FROM session WHERE userId = ?", ["user-1"]);
-        const [challengeRows] = await pool.execute<Array<RowDataPacket & { consumedAt: Date | null }>>(
-            "SELECT consumedAt FROM accountDeletionReauthChallenge WHERE userId = ?",
-            ["user-1"],
-        );
-        expect(sessionRows).toHaveLength(0);
-        expect(challengeRows[0]?.consumedAt).toBeInstanceOf(Date);
-    });
-
-    it("rejects stale sessions and consumed challenge replay", async () => {
-        if (!store) throw new Error("Database test store is unavailable");
-        const staleChallenge = createChallengeToken();
-        const staleHash = await hashChallengeToken(staleChallenge);
-        await store.startReauthentication({
-            userId: "user-1",
-            tokenHash: staleHash,
-            now,
-            alreadyFresh: false,
-        });
-        await expect(
-            store.completeReauthentication({
-                userId: "user-1",
-                tokenHash: staleHash,
-                sessionCreatedAt: new Date(now.getTime() - 60_000),
-                now: new Date(now.getTime() + 1_000),
-            }),
-        ).rejects.toMatchObject({ code: "challenge_stale" });
-
-        await store.startReauthentication({
-            userId: "user-1",
-            tokenHash: staleHash,
-            now,
-            alreadyFresh: true,
-        });
-        await store.createRequest({
-            userId: "user-1",
-            tokenHash: staleHash,
-            now: new Date(now.getTime() + 1_000),
-        });
-        await expect(
-            store.createRequest({
-                userId: "user-1",
-                tokenHash: staleHash,
-                now: new Date(now.getTime() + 2_000),
-            }),
-        ).rejects.toMatchObject({ code: "challenge_invalid" });
-    });
-
-    it("enforces one active request and user-scoped reads", async () => {
-        if (!store) throw new Error("Database test store is unavailable");
-        const firstHash = await hashChallengeToken(createChallengeToken());
-        await store.startReauthentication({
-            userId: "user-1",
-            tokenHash: firstHash,
-            now,
-            alreadyFresh: true,
-        });
-        await store.createRequest({
-            userId: "user-1",
-            tokenHash: firstHash,
-            now: new Date(now.getTime() + 1_000),
-        });
-
-        const secondHash = await hashChallengeToken(createChallengeToken());
-        await store.startReauthentication({
-            userId: "user-1",
-            tokenHash: secondHash,
-            now: new Date(now.getTime() + 2_000),
-            alreadyFresh: true,
-        });
-        await expect(
-            store.createRequest({
-                userId: "user-1",
-                tokenHash: secondHash,
-                now: new Date(now.getTime() + 3_000),
-            }),
-        ).rejects.toBeInstanceOf(DeletionRequestStoreError);
-
-        await seedUser("user-2", "discord-2", "session-2");
-        const userOne = await store.getAccountSummary("user-1");
-        const userTwo = await store.getAccountSummary("user-2");
-        expect(userOne.discordAccountId).toBe("discord-1");
-        expect(userOne.request?.status).toBe("pending");
-        expect(userTwo.discordAccountId).toBe("discord-2");
-        expect(userTwo.request).toBeNull();
-    });
-
-    it("cancels only before processing", async () => {
+    it("deletes the Bot record and Better Auth user after verified confirmation", async () => {
         if (!pool || !store) throw new Error("Database test store is unavailable");
         const tokenHash = await hashChallengeToken(createChallengeToken());
-        await store.startReauthentication({
-            userId: "user-1",
-            tokenHash,
-            now,
-            alreadyFresh: true,
-        });
-        await store.createRequest({
-            userId: "user-1",
-            tokenHash,
-            now: new Date(now.getTime() + 1_000),
-        });
-        const cancelled = await store.cancelRequest("user-1", new Date(now.getTime() + 2_000));
-        expect(cancelled.status).toBe("cancelled");
+        await store.startReauthentication({ userId: "user-1", tokenHash, now, alreadyFresh: true });
+        await store.deleteAccount({ userId: "user-1", tokenHash, now: new Date(now.getTime() + 1_000) });
 
-        await pool.execute("UPDATE accountDeletionRequest SET status = 'processing', cancelledAt = NULL WHERE userId = ?", ["user-1"]);
-        await expect(store.cancelRequest("user-1", new Date(now.getTime() + 3_000))).rejects.toMatchObject({ code: "not_cancellable" });
+        expect(deletedBotAccounts).toEqual(["discord-1"]);
+        const [users] = await pool.execute<RowDataPacket[]>("SELECT id FROM user WHERE id = ?", ["user-1"]);
+        const [accounts] = await pool.execute<RowDataPacket[]>("SELECT id FROM account WHERE userId = ?", ["user-1"]);
+        const [sessions] = await pool.execute<RowDataPacket[]>("SELECT id FROM session WHERE userId = ?", ["user-1"]);
+        const [challenges] = await pool.execute<RowDataPacket[]>("SELECT id FROM accountDeletionReauthChallenge WHERE userId = ?", [
+            "user-1",
+        ]);
+        expect(users).toHaveLength(0);
+        expect(accounts).toHaveLength(0);
+        expect(sessions).toHaveLength(0);
+        expect(challenges).toHaveLength(0);
+    });
+
+    it("keeps the web account when linked-service deletion fails", async () => {
+        if (!pool) throw new Error("Database test store is unavailable");
+        const failingStore = new MySqlAccountDeletionStore(pool, async () => {
+            throw new Error("Bot database unavailable");
+        });
+        const tokenHash = await hashChallengeToken(createChallengeToken());
+        await failingStore.startReauthentication({ userId: "user-1", tokenHash, now, alreadyFresh: true });
+
+        await expect(failingStore.deleteAccount({ userId: "user-1", tokenHash, now: new Date(now.getTime() + 1_000) })).rejects.toThrow(
+            "Bot database unavailable",
+        );
+        const [users] = await pool.execute<RowDataPacket[]>("SELECT id FROM user WHERE id = ?", ["user-1"]);
+        expect(users).toHaveLength(1);
     });
 });
 

@@ -1,8 +1,9 @@
 import { Elysia } from "elysia";
+import mysql from "mysql2/promise";
 
 import { auth, trustedOrigins, webDatabase } from "../auth";
 import { createChallengeToken, hashChallengeToken, isFreshAuthentication, isValidConfirmationPhrase } from "./domain";
-import { DeletionRequestStoreError, MySqlDeletionRequestStore, type DeletionRequestStore } from "./store";
+import { AccountDeletionStoreError, MySqlAccountDeletionStore, type AccountDeletionStore } from "./store";
 
 interface AuthenticatedSession {
     session: {
@@ -13,44 +14,27 @@ interface AuthenticatedSession {
     };
 }
 
-interface DeletionRequestRouteDependencies {
+interface AccountDeletionRouteDependencies {
     getSession(headers: Headers): Promise<AuthenticatedSession | null>;
-    store: DeletionRequestStore;
+    store: AccountDeletionStore;
     now(): Date;
 }
 
-const productionDependencies: DeletionRequestRouteDependencies = {
+const productionDependencies: AccountDeletionRouteDependencies = {
     getSession: (headers) => auth.api.getSession({ headers }),
-    store: new MySqlDeletionRequestStore(webDatabase),
+    store: new MySqlAccountDeletionStore(webDatabase, deleteBotAccountData),
     now: () => new Date(),
 };
 
-export function createDeletionRequestRoutes(dependencies: DeletionRequestRouteDependencies = productionDependencies) {
-    return new Elysia({ prefix: "/deletion-requests" })
-        .get("/", async ({ request, set }) => {
-            set.headers["Cache-Control"] = "no-store";
-            const session = await dependencies.getSession(request.headers);
-            if (!session) return fail(set, 401, "Sign in to view deletion requests.");
-
-            try {
-                return await dependencies.store.getAccountSummary(session.user.id);
-            } catch (error) {
-                logFailure("read an account deletion request", error);
-                return fail(set, 500, "The request status could not be loaded.");
-            }
-        })
+export function createAccountDeletionRoutes(dependencies: AccountDeletionRouteDependencies = productionDependencies) {
+    return new Elysia({ prefix: "/account-deletion" })
         .post("/reauth/start", async ({ request, set }) => {
             set.headers["Cache-Control"] = "no-store";
             const session = await dependencies.getSession(request.headers);
             if (!session) return fail(set, 401, "Sign in before continuing.");
-            if (!hasValidOrigin(request)) return fail(set, 403, "This request could not be verified.");
+            if (!hasValidOrigin(request)) return fail(set, 403, "This action could not be verified.");
 
             try {
-                const summary = await dependencies.store.getAccountSummary(session.user.id);
-                if (summary.request && ["pending", "in_review", "processing"].includes(summary.request.status)) {
-                    return fail(set, 409, "An active account deletion request already exists.");
-                }
-
                 const now = dependencies.now();
                 const challenge = createChallengeToken();
                 const alreadyFresh = isFreshAuthentication(new Date(session.session.createdAt), now.getTime());
@@ -61,13 +45,12 @@ export function createDeletionRequestRoutes(dependencies: DeletionRequestRouteDe
                     alreadyFresh,
                 });
 
-                const confirmationPath = `/profile/privacy/confirm#challenge=${encodeURIComponent(challenge)}`;
                 return {
                     reauthenticationRequired: !alreadyFresh,
-                    confirmationPath,
+                    confirmationPath: `/profile/privacy/confirm#challenge=${encodeURIComponent(challenge)}`,
                 };
             } catch (error) {
-                logFailure("start deletion-request reauthentication", error);
+                logFailure("start account-deletion reauthentication", error);
                 return fail(set, 500, "Reauthentication could not be started.");
             }
         })
@@ -75,7 +58,7 @@ export function createDeletionRequestRoutes(dependencies: DeletionRequestRouteDe
             set.headers["Cache-Control"] = "no-store";
             const session = await dependencies.getSession(request.headers);
             if (!session) return fail(set, 401, "Sign in before continuing.");
-            if (!hasValidOrigin(request)) return fail(set, 403, "This request could not be verified.");
+            if (!hasValidOrigin(request)) return fail(set, 403, "This action could not be verified.");
 
             const challenge = readChallenge(body);
             if (!challenge) return fail(set, 400, "The reauthentication request is invalid.");
@@ -88,52 +71,53 @@ export function createDeletionRequestRoutes(dependencies: DeletionRequestRouteDe
                     sessionCreatedAt: new Date(session.session.createdAt),
                     now,
                 });
-                return {
-                    ready: true,
-                    reauthenticatedAt: reauthenticatedAt.toISOString(),
-                };
+                return { ready: true, reauthenticatedAt: reauthenticatedAt.toISOString() };
             } catch (error) {
-                return handleStoreFailure(set, error, "The reauthentication request could not be completed.");
+                return handleStoreFailure(set, error, "Reauthentication could not be completed.");
             }
         })
-        .post("/", async ({ request, body, set }) => {
+        .delete("/", async ({ request, body, set }) => {
             set.headers["Cache-Control"] = "no-store";
             const session = await dependencies.getSession(request.headers);
             if (!session) return fail(set, 401, "Sign in before continuing.");
-            if (!hasValidOrigin(request)) return fail(set, 403, "This request could not be verified.");
+            if (!hasValidOrigin(request)) return fail(set, 403, "This action could not be verified.");
 
-            const parsed = readCreationBody(body);
+            const parsed = readDeletionBody(body);
             if (!parsed.challenge) return fail(set, 400, "The reauthentication request is invalid.");
-            if (!isValidConfirmationPhrase(parsed.confirmationPhrase)) return fail(set, 400, "The confirmation phrase does not match.");
+            if (!isValidConfirmationPhrase(parsed.confirmationPhrase)) {
+                return fail(set, 400, "The confirmation phrase does not match.");
+            }
 
             try {
-                const deletionRequest = await dependencies.store.createRequest({
+                await dependencies.store.deleteAccount({
                     userId: session.user.id,
                     tokenHash: await hashChallengeToken(parsed.challenge),
                     now: dependencies.now(),
                 });
-                return { request: deletionRequest, sessionsRevoked: true };
+                return { deleted: true };
             } catch (error) {
-                return handleStoreFailure(set, error, "The account deletion request could not be submitted.");
-            }
-        })
-        .post("/cancel", async ({ request, set }) => {
-            set.headers["Cache-Control"] = "no-store";
-            const session = await dependencies.getSession(request.headers);
-            if (!session) return fail(set, 401, "Sign in before continuing.");
-            if (!hasValidOrigin(request)) return fail(set, 403, "This request could not be verified.");
-
-            try {
-                return {
-                    request: await dependencies.store.cancelRequest(session.user.id, dependencies.now()),
-                };
-            } catch (error) {
-                return handleStoreFailure(set, error, "The account deletion request could not be cancelled.");
+                return handleStoreFailure(set, error, "The account could not be deleted.");
             }
         });
 }
 
-export const deletionRequestRoutes = createDeletionRequestRoutes();
+export const accountDeletionRoutes = createAccountDeletionRoutes();
+
+async function deleteBotAccountData(discordAccountId: string): Promise<void> {
+    const databaseURL = process.env.BOT_DATABASE_URL;
+    if (!databaseURL) throw new AccountDeletionStoreError("service_unavailable");
+
+    const connection = await mysql.createConnection(databaseURL).catch(() => {
+        throw new AccountDeletionStoreError("service_unavailable");
+    });
+    try {
+        await connection.execute("DELETE FROM users WHERE id = ?", [discordAccountId]).catch(() => {
+            throw new AccountDeletionStoreError("service_unavailable");
+        });
+    } finally {
+        await connection.end();
+    }
+}
 
 function hasValidOrigin(request: Request): boolean {
     const origin = request.headers.get("origin");
@@ -148,10 +132,7 @@ function readChallenge(body: unknown): string | null {
     return challenge.length >= 32 && challenge.length <= 128 ? challenge : null;
 }
 
-function readCreationBody(body: unknown): {
-    challenge: string | null;
-    confirmationPhrase: unknown;
-} {
+function readDeletionBody(body: unknown): { challenge: string | null; confirmationPhrase: unknown } {
     if (!isRecord(body)) return { challenge: null, confirmationPhrase: null };
     return {
         challenge: readChallenge(body),
@@ -160,21 +141,19 @@ function readCreationBody(body: unknown): {
 }
 
 function handleStoreFailure(set: { status?: number | string }, error: unknown, fallbackMessage: string) {
-    if (error instanceof DeletionRequestStoreError) {
+    if (error instanceof AccountDeletionStoreError) {
         switch (error.code) {
             case "challenge_invalid":
             case "challenge_stale":
                 return fail(set, 403, "Fresh Discord authentication is required. Please start again.");
-            case "duplicate_active":
-                return fail(set, 409, "An active deletion request already exists.");
-            case "not_cancellable":
-                return fail(set, 409, "This request can no longer be cancelled online.");
-            case "not_found":
-                return fail(set, 404, "No deletion request was found.");
+            case "account_not_found":
+                return fail(set, 404, "The signed-in account could not be found.");
+            case "service_unavailable":
+                return fail(set, 503, "Account deletion is temporarily unavailable. No account data was deleted.");
         }
     }
 
-    logFailure("process an account deletion request", error);
+    logFailure("delete an account", error);
     return fail(set, 500, fallbackMessage);
 }
 
