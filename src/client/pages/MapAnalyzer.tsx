@@ -75,14 +75,11 @@ export default function MapAnalyzer() {
                     body="The same analysis can be consumed by a person in a terminal or by another program through Rust types and serialization."
                 />
                 <div className="border-t border-border-strong">
-                    {outputs.map(([Icon, title, description], index) => (
+                    {outputs.map(([Icon, title, description]) => (
                         <article
-                            className="grid grid-cols-[3rem_2rem_1fr] gap-5 border-b border-border py-[1.55rem] max-[600px]:grid-cols-[2rem_1.5rem_1fr] max-[600px]:gap-[0.8rem]"
+                            className="grid grid-cols-[2rem_1fr] gap-5 border-b border-border py-[1.55rem] max-[600px]:grid-cols-[1.5rem_1fr] max-[600px]:gap-[0.8rem]"
                             key={title}
                         >
-                            <span className="font-mono text-[0.7rem] text-quiet" aria-hidden="true">
-                                {String(index + 1).padStart(2, "0")}
-                            </span>
                             <Icon className="size-4.75 text-lime" aria-hidden="true" />
                             <div>
                                 <h3 className="text-base tracking-[-0.02em]">{title}</h3>

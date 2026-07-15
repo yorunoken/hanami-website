@@ -65,14 +65,11 @@ export default function Companion() {
                     body="The website separates working code from planned integration so the status is unambiguous."
                 />
                 <div className="grid grid-cols-1 border-t border-border-strong min-[821px]:grid-cols-3">
-                    {currentCapabilities.map(([title, description], index) => (
+                    {currentCapabilities.map(([title, description]) => (
                         <article
                             className="flex min-h-37.5 flex-col border-b border-border p-[1.6rem] min-[821px]:min-h-52.5 min-[821px]:border-r last:min-[821px]:border-r-0"
                             key={title}
                         >
-                            <span className="font-mono text-[0.7rem] text-quiet" aria-hidden="true">
-                                {String(index + 1).padStart(2, "0")}
-                            </span>
                             <h3 className="mt-auto text-base tracking-[-0.02em] text-[#c4f1f7]">{title}</h3>
                             <p className="mt-[0.35rem] max-w-[62ch] text-[0.9rem] leading-[1.65] text-muted">{description}</p>
                         </article>

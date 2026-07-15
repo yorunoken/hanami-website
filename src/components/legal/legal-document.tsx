@@ -6,7 +6,7 @@ import { legalMetadata } from "@/data/legal";
 import { cn } from "@/lib/utils";
 
 const legalProseClass =
-    "min-w-0 [&>section]:scroll-mt-26 [&>section+section]:mt-12 [&>section+section]:border-t [&>section+section]:border-border [&>section+section]:pt-12 [&_a]:text-white [&_a]:decoration-white/45 [&_a]:underline-offset-[0.22em] [&_code]:font-mono [&_code]:text-[0.86em] [&_code]:text-[#f0c9da] [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-base [&_h3]:text-[#e7e1e8] [&_li]:text-[0.93rem] [&_li]:leading-[1.78] [&_li]:text-[#c2bbc4] [&_li+li]:mt-[0.55rem] [&_ol]:my-[0.85rem] [&_ol]:pl-[1.4rem] [&_p]:my-[0.85rem] [&_p]:text-[0.93rem] [&_p]:leading-[1.78] [&_p]:text-[#c2bbc4] [&_ul]:my-[0.85rem] [&_ul]:pl-[1.4rem] print:max-w-none print:[&_a]:text-[#111] print:[&_h2]:text-[#111] print:[&_h3]:text-[#111] print:[&_li]:text-[#333] print:[&_p]:text-[#333]";
+    "min-w-0 [&>section]:scroll-mt-26 [&>section+section]:mt-12 [&>section+section]:border-t [&>section+section]:border-border [&>section+section]:pt-12 [&_a]:text-white [&_a]:underline [&_a]:decoration-white/45 [&_a]:underline-offset-[0.22em] [&_code]:font-mono [&_code]:text-[0.86em] [&_code]:text-[#f0c9da] [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:text-base [&_h3]:text-[#e7e1e8] [&_li]:text-[0.93rem] [&_li]:leading-[1.78] [&_li]:text-[#c2bbc4] [&_li+li]:mt-[0.55rem] [&_ol]:my-[0.85rem] [&_ol]:pl-[1.4rem] [&_p]:my-[0.85rem] [&_p]:text-[0.93rem] [&_p]:leading-[1.78] [&_p]:text-[#c2bbc4] [&_ul]:my-[0.85rem] [&_ul]:pl-[1.4rem] print:max-w-none print:[&_a]:text-[#111] print:[&_h2]:text-[#111] print:[&_h3]:text-[#111] print:[&_li]:text-[#333] print:[&_p]:text-[#333]";
 
 export interface TocItem {
     id: string;
@@ -30,7 +30,7 @@ export function LegalDocument({
                 <PrefetchLink
                     to={routes.legal}
                     prefetch="intent"
-                    className="mb-[1.4rem] inline-block text-[0.78rem] text-muted underline-offset-[0.3em] print:hidden"
+                    className="mb-[1.4rem] inline-block text-[0.78rem] text-muted underline decoration-white/40 underline-offset-[0.3em] print:hidden"
                 >
                     Legal center
                 </PrefetchLink>

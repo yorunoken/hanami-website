@@ -70,16 +70,13 @@ export default function Bot() {
                     body="These commands are present in the bot repository today. Options vary by command."
                 />
                 <div className="border-t border-border-strong" id="bot-commands-title">
-                    {commands.map(([command, title, description], index) => (
+                    {commands.map(([command, title, description]) => (
                         <article
-                            className="grid grid-cols-[3rem_9rem_1fr] items-start gap-6 border-b border-border py-[1.65rem] max-[600px]:grid-cols-[2rem_1fr] max-[600px]:gap-x-4 max-[600px]:gap-y-[0.6rem]"
+                            className="grid grid-cols-[9rem_1fr] items-start gap-6 border-b border-border py-[1.65rem] max-[600px]:grid-cols-1 max-[600px]:gap-y-[0.6rem]"
                             key={command}
                         >
-                            <span className="font-mono text-[0.7rem] text-quiet" aria-hidden="true">
-                                {String(index + 1).padStart(2, "0")}
-                            </span>
                             <code className="font-mono text-[0.86rem] text-accent-soft">{command}</code>
-                            <div className="max-[600px]:col-start-2">
+                            <div>
                                 <h3 className="text-base tracking-[-0.02em]">{title}</h3>
                                 <p className="mt-[0.35rem] max-w-[62ch] text-[0.9rem] leading-[1.65] text-muted">{description}</p>
                             </div>

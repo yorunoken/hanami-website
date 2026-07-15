@@ -89,16 +89,10 @@ export default function Home() {
                     <div className="border-t border-border-strong">
                         {products.map((product) => (
                             <article
-                                className="grid min-h-37.5 grid-cols-[3rem_minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 border-b border-border max-[1080px]:grid-cols-[2.5rem_minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-[2rem_1fr] max-[600px]:items-start max-[600px]:gap-x-4 max-[600px]:gap-y-3 max-[600px]:py-6"
+                                className="grid min-h-37.5 grid-cols-[minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 border-b border-border max-[1080px]:grid-cols-[minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-1 max-[600px]:items-start max-[600px]:gap-y-3 max-[600px]:py-6"
                                 key={product.key}
                             >
-                                <div
-                                    className="font-mono text-[0.72rem] text-quiet max-[1080px]:self-start max-[1080px]:pt-1"
-                                    aria-hidden="true"
-                                >
-                                    {product.index}
-                                </div>
-                                <div className="max-[600px]:col-start-2">
+                                <div>
                                     <p className="mb-[0.45rem] font-mono text-[0.68rem] tracking-[0.06em] text-quiet uppercase">
                                         {product.category} · {product.status}
                                     </p>
@@ -111,11 +105,9 @@ export default function Home() {
                                         {product.name}
                                     </h3>
                                 </div>
-                                <p className="max-w-[52ch] text-[0.96rem] leading-[1.65] text-muted max-[600px]:col-start-2">
-                                    {product.description}
-                                </p>
+                                <p className="max-w-[52ch] text-[0.96rem] leading-[1.65] text-muted">{product.description}</p>
                                 <TextLink
-                                    className="max-[1080px]:col-start-3 max-[1080px]:-mt-2 max-[1080px]:mb-6 max-[600px]:col-start-2 max-[600px]:mt-[0.6rem] max-[600px]:mb-0"
+                                    className="max-[1080px]:col-start-2 max-[1080px]:-mt-2 max-[1080px]:mb-6 max-[600px]:col-start-1 max-[600px]:mt-[0.6rem] max-[600px]:mb-0"
                                     href={product.route}
                                     prefetch="intent-and-viewport"
                                 >

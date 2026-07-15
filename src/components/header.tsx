@@ -80,14 +80,13 @@ export default function Header() {
                     >
                         Ecosystem
                     </PrefetchLink>
-                    {navigation.map((item, index) => (
+                    {navigation.map((item) => (
                         <PrefetchLink
-                            className="grid min-h-16 grid-cols-[2.5rem_1fr] items-center border-b border-border text-[clamp(1.15rem,5vw,1.55rem)] font-bold text-white no-underline"
+                            className="flex min-h-16 items-center border-b border-border text-[clamp(1.15rem,5vw,1.55rem)] font-bold text-white no-underline"
                             key={item.to}
                             to={item.to}
                             prefetch="intent"
                         >
-                            <span className="font-mono text-[0.7rem] font-medium text-quiet">0{index + 1}</span>
                             {item.label}
                         </PrefetchLink>
                     ))}

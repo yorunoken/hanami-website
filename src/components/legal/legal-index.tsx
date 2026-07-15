@@ -45,7 +45,7 @@ export default function LegalIndex() {
                 <h2 className="mb-4 text-xl" id="legal-contact-title">
                     Contact and requests
                 </h2>
-                <dl className="grid grid-cols-1 border-y border-border min-[821px]:grid-cols-3 [&_a]:text-[0.82rem] [&_a]:text-white [&_a]:underline-offset-[0.25em] [&_dd]:mt-[0.45rem] [&_dd]:wrap-anywhere [&_dt]:text-[0.72rem] [&_dt]:text-quiet [&>div]:border-b [&>div]:border-border [&>div]:py-4 last:[&>div]:border-b-0 min-[821px]:[&>div]:border-r min-[821px]:[&>div]:border-b-0 min-[821px]:[&>div]:p-[1.2rem] min-[821px]:[&>div:first-child]:pl-0 min-[821px]:[&>div:last-child]:border-r-0">
+                <dl className="grid grid-cols-1 border-y border-border min-[821px]:grid-cols-3 [&_a]:text-[0.82rem] [&_a]:text-white [&_a]:underline [&_a]:decoration-white/45 [&_a]:underline-offset-[0.25em] [&_dd]:mt-[0.45rem] [&_dd]:wrap-anywhere [&_dt]:text-[0.72rem] [&_dt]:text-quiet [&>div]:border-b [&>div]:border-border [&>div]:py-4 last:[&>div]:border-b-0 min-[821px]:[&>div]:border-r min-[821px]:[&>div]:border-b-0 min-[821px]:[&>div]:p-[1.2rem] min-[821px]:[&>div:first-child]:pl-0 min-[821px]:[&>div:last-child]:border-r-0">
                     <div>
                         <dt>Privacy and personal data</dt>
                         <dd>
@@ -59,7 +59,7 @@ export default function LegalIndex() {
                         </dd>
                     </div>
                     <div>
-                        <dt>Signed-in deletion requests</dt>
+                        <dt>Signed-in account deletion</dt>
                         <dd>
                             <PrefetchLink to={routes.profilePrivacy}>Open account privacy</PrefetchLink>
                         </dd>
@@ -67,16 +67,13 @@ export default function LegalIndex() {
                 </dl>
             </section>
             <div className="mt-16 max-w-260 border-t border-border-strong">
-                {documents.map(([title, to, description], index) => (
+                {documents.map(([title, to, description]) => (
                     <PrefetchLink
-                        className="group grid grid-cols-[2rem_1fr] items-center gap-6 border-b border-border py-[1.6rem] no-underline min-[601px]:grid-cols-[3rem_1fr_auto]"
+                        className="group grid grid-cols-[1fr_auto] items-center gap-6 border-b border-border py-[1.6rem] no-underline"
                         key={to}
                         to={to}
                         prefetch="intent"
                     >
-                        <span className="font-mono text-[0.68rem] text-quiet" aria-hidden="true">
-                            {String(index + 1).padStart(2, "0")}
-                        </span>
                         <div>
                             <h2 className="text-[1.3rem]">{title}</h2>
                             <p className="mt-[0.45rem] max-w-[70ch] text-[0.84rem] leading-[1.6] text-muted">{description}</p>

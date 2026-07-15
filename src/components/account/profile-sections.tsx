@@ -8,6 +8,7 @@ import {
     formMessageClass,
     loadingInlineClass,
     primaryActionClass,
+    secondaryActionClass,
     textButtonClass,
 } from "@/components/ui/action-styles";
 import { cn } from "@/lib/utils";
@@ -15,11 +16,11 @@ import { cn } from "@/lib/utils";
 import { sectionHeadingClass } from "./account-shell";
 
 const identityBlockClass =
-    "flex min-h-82.5 flex-col border-b border-border p-[clamp(1.5rem,4vw,2.5rem)] min-[821px]:min-h-92.5 min-[821px]:border-r last:min-[821px]:border-r-0";
+    "flex flex-col border-b border-border p-[clamp(1.35rem,3vw,2rem)] min-[821px]:border-r last:min-[821px]:border-r-0";
 const identityPersonClass =
     "flex items-center gap-[1.1rem] [&_h3]:text-xl [&_h3_a]:inline-flex [&_h3_a]:items-center [&_h3_a]:gap-[0.45rem] [&_h3_a]:no-underline [&_h3_svg]:size-3.75 [&_p]:mb-[0.3rem] [&_p]:font-mono [&_p]:text-[0.68rem] [&_p]:text-quiet [&_p]:uppercase [&_span:not(.account-avatar):not(.osu-mark)]:mt-1 [&_span:not(.account-avatar):not(.osu-mark)]:block [&_span:not(.account-avatar):not(.osu-mark)]:text-[0.78rem] [&_span:not(.account-avatar):not(.osu-mark)]:text-muted";
 const identityDetailsClass =
-    "mt-auto mb-6 pt-8 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-3 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
+    "mt-7 mb-5 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-2.5 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
 
 export interface LinkStatus {
     linked: boolean;
@@ -56,7 +57,7 @@ interface IdentitySectionProps {
 
 export function IdentitySection({ discordUser, linkStatus, loading, action, onLink, onUnlink }: IdentitySectionProps) {
     return (
-        <section className="mt-16" aria-labelledby="identity-title">
+        <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
                 <h2 id="identity-title">Identity</h2>
             </div>
@@ -177,7 +178,7 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
     const current = settings ?? defaultSettings;
 
     return (
-        <section className="mt-16" aria-labelledby="settings-title">
+        <section className="mt-12" aria-labelledby="settings-title">
             <div className={sectionHeadingClass}>
                 <h2 id="settings-title">Hanami Bot preferences</h2>
                 <p>These values are stored against your Discord ID in the bot database.</p>
@@ -186,8 +187,8 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
             {loading ? (
                 <LoadingInline label="Loading preferences" />
             ) : (
-                <form className="pt-8" onSubmit={onSubmit}>
-                    <div className="grid grid-cols-1 gap-x-12 gap-y-6 min-[601px]:grid-cols-2 min-[601px]:gap-y-8">
+                <form className="pt-6" onSubmit={onSubmit}>
+                    <div className="grid grid-cols-1 gap-x-10 gap-y-5 min-[601px]:grid-cols-2 min-[601px]:gap-y-6">
                         <SelectField
                             label="Default game mode"
                             value={current.mode}
@@ -239,7 +240,7 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
                             <option value="1">Lazer</option>
                         </SelectField>
                     </div>
-                    <div className="mt-10 flex items-center gap-6 border-t border-border pt-6 max-[600px]:flex-col max-[600px]:items-start">
+                    <div className="mt-8 flex items-center gap-6 border-t border-border pt-5 max-[600px]:flex-col max-[600px]:items-start">
                         <button className={cn(primaryActionClass, compactActionClass)} type="submit" disabled={action === "saving"}>
                             {action === "saving" ? "Saving…" : "Save preferences"}
                         </button>
@@ -258,10 +259,14 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
 
 export function AccountPrivacyAside() {
     return (
-        <aside className="mt-16 max-w-190 border-l-2 border-accent pl-6 [&_a]:text-[0.82rem] [&_a]:text-white [&_a]:underline-offset-[0.2em] [&_h2]:text-[1.1rem] [&_p]:my-[0.7rem] [&_p]:text-[0.84rem] [&_p]:leading-[1.65] [&_p]:text-muted">
-            <h2>Privacy and deletion requests</h2>
-            <p>Review what Hanami may hold, submit a verified deletion request, or check a request already in progress.</p>
-            <PrefetchLink to={routes.profilePrivacy}>Manage account privacy</PrefetchLink>
+        <aside className="mt-10 grid max-w-220 grid-cols-1 items-end gap-5 border-t border-border pt-6 min-[701px]:grid-cols-[minmax(0,1fr)_auto] [&_h2]:text-[1.05rem] [&_p]:mt-2 [&_p]:max-w-145 [&_p]:text-[0.82rem] [&_p]:leading-[1.6] [&_p]:text-muted">
+            <div>
+                <h2>Privacy and account</h2>
+                <p>Review the signed-in identity, get privacy help, or permanently delete website and Bot account data.</p>
+            </div>
+            <PrefetchLink className={cn(primaryActionClass, secondaryActionClass, compactActionClass)} to={routes.profilePrivacy}>
+                Open privacy settings
+            </PrefetchLink>
         </aside>
     );
 }
