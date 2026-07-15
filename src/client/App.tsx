@@ -12,6 +12,7 @@ import CompanionPage from "./pages/Companion";
 import HomePage from "./pages/Home";
 import LegalPage from "./pages/LegalPage";
 import LoginPage from "./pages/Login";
+import LinkErrorPage from "./pages/LinkError";
 import MapAnalyzerPage from "./pages/MapAnalyzer";
 import NotFoundPage from "./pages/NotFound";
 import OsuGuessrPage from "./pages/OsuGuessr";
@@ -78,6 +79,7 @@ export default function App() {
                         <Route path={routes.profilePrivacyConfirm} element={<AccountPrivacyPage />} />
                     </Route>
                     <Route path={routes.login} element={<LoginPage />} />
+                    <Route path={routes.linkError} element={<LinkErrorPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </div>

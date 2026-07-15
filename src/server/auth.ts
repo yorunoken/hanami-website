@@ -2,6 +2,10 @@ import { betterAuth } from "better-auth";
 import { createPool } from "mysql2/promise";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
+import { MySqlOAuthStateStore } from "./oauth-state";
+import { getOsuAuthorizationConfiguration } from "./osu-authorization";
+import { discordBotLinkPlugin } from "./discord-link/plugin";
+import { MySqlDiscordLinkTicketStore } from "./discord-link/tickets";
 
 if (!process.env.WEB_DATABASE_URL) {
     throw new Error("WEB_DATABASE_URL environment variable is not set. Please provide it in your environment.");
@@ -21,6 +25,9 @@ export const webDatabase = createPool({
     timezone: "Z",
 });
 
+export const discordLinkTicketStore = new MySqlDiscordLinkTicketStore(webDatabase);
+export const osuOAuthStateStore = new MySqlOAuthStateStore(webDatabase);
+
 export const auth = betterAuth({
     database: webDatabase,
     baseURL,
@@ -28,6 +35,13 @@ export const auth = betterAuth({
     session: {
         freshAge: 15 * 60,
     },
+    plugins: [
+        discordBotLinkPlugin({
+            ticketStore: discordLinkTicketStore,
+            oauthStateStore: osuOAuthStateStore,
+            getOsuConfiguration: getOsuAuthorizationConfiguration,
+        }),
+    ],
     socialProviders: {
         discord: {
             clientId: process.env.DISCORD_CLIENT_ID as string,

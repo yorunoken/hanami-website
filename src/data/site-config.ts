@@ -190,4 +190,8 @@ export const routeMetadata = {
         title: "Sign in — Hanami",
         description: "Continue to Discord to access your Hanami account.",
     },
+    "/link-error": {
+        title: "Link unavailable — Hanami",
+        description: "The Discord account link expired or was already used.",
+    },
 } as const;

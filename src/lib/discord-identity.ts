@@ -1,4 +1,5 @@
-const discordPlaceholderDomain = "discord.invalid";
+const discordPlaceholderDomain = "users.hanami.invalid";
+const legacyDiscordPlaceholderDomain = "discord.invalid";
 
 export interface DiscordIdentityProfile {
     id: string;
@@ -22,7 +23,8 @@ export function mapDiscordProfileToUser(profile: DiscordIdentityProfile): { emai
 }
 
 export function isDiscordPlaceholderEmail(email: string | null | undefined): boolean {
-    return Boolean(email?.toLowerCase().endsWith(`@${discordPlaceholderDomain}`));
+    const normalized = email?.toLowerCase();
+    return Boolean(normalized?.endsWith(`@${discordPlaceholderDomain}`) || normalized?.endsWith(`@${legacyDiscordPlaceholderDomain}`));
 }
 
 export function getDiscordContactEmail(email: string | null | undefined): string | null {

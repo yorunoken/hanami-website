@@ -13,6 +13,7 @@ dist
 
 # environment
 .env*
+!.env.example
 
 
 # typescript

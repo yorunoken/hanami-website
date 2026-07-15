@@ -1,8 +1,9 @@
 import { Elysia } from "elysia";
-import mysql, { type Connection, type RowDataPacket } from "mysql2/promise";
+import mysql, { type RowDataPacket } from "mysql2/promise";
 
-import { auth } from "../auth";
-import { validateOAuthState } from "../oauth-state";
+import { auth, osuOAuthStateStore, webDatabase } from "../auth";
+import { consumeOAuthState } from "../oauth-state";
+import { logSafeFailure } from "../security/http";
 
 interface DiscordAccountRow extends RowDataPacket {
     accountId: string;
@@ -17,11 +18,10 @@ interface OsuIdentity {
 }
 
 export const callbackRoute = new Elysia().get("/callback", async ({ request, query, set, redirect }) => {
+    set.headers["Cache-Control"] = "no-store";
     const botDatabaseUrl = process.env.BOT_DATABASE_URL;
-    const webDatabaseUrl = process.env.WEB_DATABASE_URL;
-    const stateSecret = process.env.BETTER_AUTH_SECRET;
 
-    if (!botDatabaseUrl || !webDatabaseUrl || !stateSecret) {
+    if (!botDatabaseUrl) {
         set.status = 500;
         return { success: false, message: "Server configuration error" };
     }
@@ -46,7 +46,19 @@ export const callbackRoute = new Elysia().get("/callback", async ({ request, que
         };
     }
 
-    if (!(await validateOAuthState(state, session.user.id, stateSecret))) {
+    let validState: boolean;
+    try {
+        validState = await consumeOAuthState(osuOAuthStateStore, state, {
+            userId: session.user.id,
+            sessionId: session.session.id,
+        });
+    } catch (error) {
+        logSafeFailure("verify osu! authorization state", error);
+        set.status = 502;
+        return { success: false, message: "The osu! authorization could not be verified. Please start again." };
+    }
+
+    if (!validState) {
         set.status = 400;
         return {
             success: false,
@@ -54,12 +66,10 @@ export const callbackRoute = new Elysia().get("/callback", async ({ request, que
         };
     }
 
-    let webDb: Connection | null = null;
-    let botDb: Connection | null = null;
+    let botDb: Awaited<ReturnType<typeof mysql.createConnection>> | null = null;
 
     try {
-        webDb = await mysql.createConnection(webDatabaseUrl);
-        const [accounts] = await webDb.execute<DiscordAccountRow[]>(
+        const [accounts] = await webDatabase.execute<DiscordAccountRow[]>(
             "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord'",
             [session.user.id],
         );
@@ -139,17 +149,13 @@ export const callbackRoute = new Elysia().get("/callback", async ({ request, que
 
         return redirect("/profile");
     } catch (error) {
-        console.error(
-            "osu! account linking failed",
-            error instanceof Error ? { name: error.name, message: error.message } : { type: typeof error },
-        );
+        logSafeFailure("link an osu! account", error);
         set.status = 502;
         return {
             success: false,
             message: "The account link could not be completed. Please try again.",
         };
     } finally {
-        await webDb?.end();
         await botDb?.end();
     }
 });

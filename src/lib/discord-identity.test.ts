@@ -20,7 +20,7 @@ describe("Discord profile mapping", () => {
         const second = mapDiscordProfileToUser({ id: "123456789012345678", verified: true });
 
         expect(first).toEqual(second);
-        expect(first.email).toBe("discord-123456789012345678@discord.invalid");
+        expect(first.email).toBe("discord-123456789012345678@users.hanami.invalid");
         expect(first.emailVerified).toBe(false);
         expect(isDiscordPlaceholderEmail(first.email)).toBe(true);
     });
@@ -28,6 +28,7 @@ describe("Discord profile mapping", () => {
     it("never exposes a generated placeholder as contact information", () => {
         const placeholder = createDiscordPlaceholderEmail("123456789012345678");
         expect(getDiscordContactEmail(placeholder)).toBeNull();
+        expect(getDiscordContactEmail("discord-123456789012345678@discord.invalid")).toBeNull();
         expect(getDiscordContactEmail("player@example.com")).toBe("player@example.com");
     });
 });

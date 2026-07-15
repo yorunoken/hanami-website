@@ -53,12 +53,16 @@ export default function PrivacyPolicy() {
                 <ul>
                     <li>
                         Discord account ID, display name, avatar URL, provider scope, and an email address when Discord supplies one. For a
-                        phone-only Discord account, Hanami stores a stable non-deliverable <code>discord.invalid</code> placeholder required
-                        by the authentication schema; it is not treated as verified contact information or used for mail.
+                        phone-only Discord account, Hanami stores a stable non-deliverable address under the reserved <code>.invalid</code>{" "}
+                        domain required by the authentication schema; it is not treated as verified contact information or used for mail.
                     </li>
                     <li>OAuth account records, which may include Discord access or refresh tokens when Better Auth receives them.</li>
                     <li>Web session token, session dates, IP address, and user-agent string stored by Better Auth.</li>
                     <li>Short-lived OAuth verification values used to complete authentication safely.</li>
+                    <li>
+                        Bot-issued account links store the Discord ID, supplied name and avatar snapshot, a SHA-256 ticket hash, and
+                        creation, expiry, consumption, or invalidation dates. The URL token itself is not stored.
+                    </li>
                     <li>
                         Requests made to this site and infrastructure logs, if retained by the host or proxy. The exact fields and retention
                         are <OwnerConfirmation />.
@@ -78,6 +82,10 @@ export default function PrivacyPolicy() {
                     <li>
                         The one-time osu! authorization token is used to call <code>/api/v2/me</code>; the audited callback does not persist
                         that token in Hanami’s bot database.
+                    </li>
+                    <li>
+                        osu! authorization state is stored as a SHA-256 hash bound to the Hanami user and browser session, with creation,
+                        expiry, and consumption dates.
                     </li>
                 </ul>
 
@@ -255,6 +263,10 @@ export default function PrivacyPolicy() {
                         is <OwnerConfirmation />.
                     </li>
                     <li>Short-lived account-deletion reauthentication challenges expire after approximately 15 minutes.</li>
+                    <li>
+                        Bot-issued account links expire after approximately five minutes; osu! authorization state expires after ten
+                        minutes.
+                    </li>
                 </ul>
             </LegalSection>
 

@@ -13,6 +13,7 @@ export const routes = {
     profilePrivacy: "/profile/privacy",
     profilePrivacyConfirm: "/profile/privacy/confirm",
     login: "/login",
+    linkError: "/link-error",
 } as const;
 
 export type InternalRoutePath = (typeof routes)[keyof typeof routes];

@@ -1,18 +1,16 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
-import { auth } from "./auth";
+import { auth, osuOAuthStateStore } from "./auth";
 import app from "./index";
-import { validateOAuthState } from "./oauth-state";
+import { hashToken } from "./security/tokens";
 
 const originalClientId = process.env.OSU_CLIENT_ID;
 const originalCallbackUrl = process.env.OSU_CALLBACK_URL;
-const originalAuthSecret = process.env.BETTER_AUTH_SECRET;
 
 afterEach(() => {
     mock.restore();
     restoreEnvironment("OSU_CLIENT_ID", originalClientId);
     restoreEnvironment("OSU_CALLBACK_URL", originalCallbackUrl);
-    restoreEnvironment("BETTER_AUTH_SECRET", originalAuthSecret);
 });
 
 describe("Auth Endpoint", () => {
@@ -42,7 +40,7 @@ describe("Auth Endpoint", () => {
         mockAuthenticatedSession();
         process.env.OSU_CLIENT_ID = "12345";
         process.env.OSU_CALLBACK_URL = "http://localhost:3000/api/callback";
-        process.env.BETTER_AUTH_SECRET = "test-secret-that-is-long-enough-for-hmac";
+        const createState = spyOn(osuOAuthStateStore, "create").mockResolvedValue();
 
         const request = new Request("http://localhost/api/auth?state=teststate");
         const response = await app.handle(request);
@@ -54,7 +52,12 @@ describe("Auth Endpoint", () => {
         const state = new URL(data.url).searchParams.get("state");
         expect(state).toBeTruthy();
         expect(state).not.toBe("teststate");
-        expect(await validateOAuthState(state!, "test-user", process.env.BETTER_AUTH_SECRET)).toBe(true);
+        expect(createState).toHaveBeenCalledTimes(1);
+        expect(createState.mock.calls[0]?.[0]).toMatchObject({
+            userId: "test-user",
+            sessionId: "test-session",
+            stateHash: await hashToken(state!),
+        });
     });
 });
 
@@ -94,7 +97,7 @@ function mockAuthenticatedSession() {
     });
 }
 
-function restoreEnvironment(key: "OSU_CLIENT_ID" | "OSU_CALLBACK_URL" | "BETTER_AUTH_SECRET", value: string | undefined) {
+function restoreEnvironment(key: "OSU_CLIENT_ID" | "OSU_CALLBACK_URL", value: string | undefined) {
     if (value === undefined) {
         delete process.env[key];
         return;
