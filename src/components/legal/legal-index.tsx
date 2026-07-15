@@ -19,9 +19,13 @@ const documents = [
     [
         "Cookie policy",
         "/legal/cookies",
-        "Authentication cookies, browser storage, external fonts, analytics, and advertising found in code.",
+        "Authentication cookies, browser storage, third-party scripts, analytics, and advertising found in code.",
     ],
-    ["Data deletion", "/legal/data-deletion", "The difference between sign-out, unlinking, provider deletion, and a full Hanami request."],
+    [
+        "Data deletion",
+        "/legal/data-deletion",
+        "The difference between sign-out, unlinking, signed-in deletion, provider deletion, and other privacy requests.",
+    ],
 ] as const;
 
 export default function LegalIndex() {

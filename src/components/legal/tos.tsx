@@ -35,8 +35,8 @@ export default function TermsOfService() {
             <LegalSection id="scope" title="2. Service scope">
                 <p>
                     The hosted services include this website and account area, Hanami Bot on Discord, and osu!guessr. Hanami Companion is an
-                    unfinished local prototype and Map Analyzer is a separately distributed local library and command-line tool. Repository
-                    code, locally run copies, and third-party platforms are subject to their own licenses and terms.
+                    unreleased local prototype and Map Analyzer is a separately distributed Rust library. Repository code, locally run
+                    copies, and third-party platforms are subject to their own licenses and terms.
                 </p>
                 <p>
                     Hanami provides osu!-related lookups, Discord commands, a beatmap guessing game, account-linking and preference tools,
@@ -107,14 +107,15 @@ export default function TermsOfService() {
                 </p>
                 <p>
                     Signed-in account deletion immediately removes the website identity and Discord-keyed Hanami Bot account data described
-                    in the privacy notice. Separate osu!guessr profiles, provider-side records, logs, and backups may require separate
-                    action or temporary retention as described in the privacy and deletion notices.
+                    in the privacy notice. Separate osu!guessr profiles, provider-side records, and operational logs may require separate
+                    action or temporary retention as described in the privacy and deletion notices. The repositories do not document a
+                    production backup-retention schedule.
                 </p>
             </LegalSection>
 
             <LegalSection id="content" title="7. Reports, feedback, and contributions">
                 <p>
-                    osu!guessr supports user-submitted catalog reports with an optional description. You keep any rights you have in the
+                    osu!guessr supports user-submitted catalog reports with a free-text description. You keep any rights you have in the
                     text you submit and grant the operator a non-exclusive, worldwide, royalty-free license to store, review, reproduce, and
                     share it only as reasonably needed to investigate and resolve the report, operate the service, and maintain an audit
                     trail.
@@ -132,9 +133,9 @@ export default function TermsOfService() {
 
             <LegalSection id="ip" title="8. Intellectual property and open-source software">
                 <p>
-                    Yorunoken and the relevant contributors—not “Hanami Bot” as a software object—hold rights in original branding,
-                    artwork, hosted-service presentation, and code to the extent those rights exist. Hanami does not claim that a name or
-                    mark is registered unless it is expressly identified as registered.
+                    Yorunoken and the relevant contributors—not “Hanami Bot” as a software object—hold rights in original branding, artwork,
+                    hosted-service presentation, and code to the extent those rights exist. Hanami does not claim that a name or mark is
+                    registered unless it is expressly identified as registered.
                 </p>
                 <p>
                     Source code published in a repository is licensed under the license in that repository. Map Analyzer, for example, is

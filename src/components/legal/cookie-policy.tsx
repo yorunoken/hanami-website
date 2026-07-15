@@ -192,11 +192,19 @@ export default function CookiePolicy() {
                             <td>Prevents repeated reloads after a deployment/action mismatch.</td>
                             <td>Browser-tab session.</td>
                         </tr>
+                        <tr>
+                            <td>
+                                <code>hanami.account-deletion.challenge</code>
+                            </td>
+                            <td>Hanami website session storage</td>
+                            <td>Short-lived account-deletion reauthentication challenge copied from the callback fragment.</td>
+                            <td>Removed after confirmation or failure; otherwise the browser-tab session.</td>
+                        </tr>
                     </tbody>
                 </LegalTable>
                 <p>
-                    No application use of IndexedDB was found in the audited Hanami web or osu!guessr source. No local or session storage
-                    was found in the main Hanami website source.
+                    No application use of IndexedDB was found in the audited Hanami web or osu!guessr source. Apart from the deletion
+                    challenge above, no local or session storage use was found in the main Hanami website source.
                 </p>
             </LegalSection>
 
@@ -205,6 +213,17 @@ export default function CookiePolicy() {
                     Account views can request Discord or osu! avatar images. These requests disclose ordinary network metadata to the
                     relevant host but do not require a Hanami consent cookie. The main website uses system fonts and does not request an
                     external font stylesheet.
+                </p>
+                <p>
+                    Both public sites are proxied through Cloudflare. Depending on the security and traffic features triggered for a
+                    request, Cloudflare may set strictly necessary cookies such as <code>__cf_bm</code> for bot protection or{" "}
+                    <code>cf_clearance</code> after a challenge. Cloudflare documents <code>__cf_bm</code> as expiring after 30 minutes of
+                    inactivity; challenge-cookie lifetime depends on the configured protection. These cookies are conditional and were not
+                    present in the ordinary live responses checked during this audit. See{" "}
+                    <a href={siteConfig.links.cloudflareCookies} target="_blank" rel="noreferrer">
+                        Cloudflare’s cookie documentation
+                    </a>
+                    .
                 </p>
                 <p>
                     osu!guessr loads self-hosted Umami from <code>umami.yorunoken.com</code> for aggregate analytics and Google AdSense for
@@ -220,19 +239,22 @@ export default function CookiePolicy() {
 
             <LegalSection id="choices" title="6. Choices and consent">
                 <p>
-                    The main Hanami website uses code-defined authentication and security cookies only. Users can decline them by not
-                    signing in, or clear them by signing out and using browser controls; authentication will not work without the session
-                    cookie.
+                    The main Hanami application defines authentication and security cookies only. Cloudflare’s conditional edge-security
+                    cookies are described above. Users can decline the application cookies by not signing in, or clear them by signing out
+                    and using browser controls; authentication will not work without the session cookie.
                 </p>
                 <p>
                     osu!guessr’s analytics and advertising scripts are non-essential and currently load after the production page starts.
-                    Where applicable law requires consent, advertising cookies and personalized ads must follow the consent choice offered
-                    for that region. You can also manage ad personalization through{" "}
+                    The audited repository does not delay those scripts behind its own consent control. Google may present a consent message
+                    through publisher-account configuration, which is not visible in the repository. Google requires publishers serving ads
+                    in the EEA, UK, or Switzerland to use a certified consent-management platform for personalized ads. You can also manage
+                    ad personalization through{" "}
                     <a href={siteConfig.links.googleAdsSettings} target="_blank" rel="noreferrer">
                         Google Ads Settings
                     </a>{" "}
                     and block or clear storage through browser controls. Blocking these scripts can prevent ads and aggregate analytics but
-                    should not prevent the core game from working.
+                    should not prevent the core game from working. This inventory describes the implementation; it is not evidence that a
+                    deployment-level consent configuration is complete.
                 </p>
             </LegalSection>
 

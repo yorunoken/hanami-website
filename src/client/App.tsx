@@ -22,6 +22,14 @@ import { legacyRedirects, routes } from "./routes/paths";
 export default function App() {
     return (
         <BrowserRouter>
+            <AppContent />
+        </BrowserRouter>
+    );
+}
+
+export function AppContent() {
+    return (
+        <>
             <SiteMeta />
             <div className="min-h-screen">
                 <Routes>
@@ -83,6 +91,6 @@ export default function App() {
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </div>
-        </BrowserRouter>
+        </>
     );
 }

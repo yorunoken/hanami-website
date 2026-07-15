@@ -222,8 +222,8 @@ export default function AccountPrivacy() {
                     </button>
                     <p className="max-w-[80ch] text-[0.78rem] leading-[1.6] text-muted min-[821px]:col-span-2">
                         This does not delete your Discord or osu! provider accounts, a separate osu!guessr profile, or records that must
-                        remain temporarily in logs or backups. A Discord sign-in from the last 15 minutes and typed confirmation are
-                        required.
+                        remain temporarily in operational logs where justified. The repositories do not document a production backup
+                        schedule. A Discord sign-in from the last 15 minutes and typed confirmation are required.
                     </p>
                 </section>
 

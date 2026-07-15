@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-import { routeMetadata, siteConfig } from "@/data/site-config";
-
-type MetadataPath = keyof typeof routeMetadata;
+import { getPageSeo } from "@/lib/seo";
 
 function setMeta(selector: string, attribute: "name" | "property", key: string, content: string) {
     let element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -21,26 +19,25 @@ export default function SiteMeta() {
     const { pathname } = useLocation();
 
     useEffect(() => {
-        const metadata = routeMetadata[pathname as MetadataPath] ?? {
-            title: "Page not found — Hanami",
-            description: siteConfig.description,
-        };
-        const canonicalUrl = new URL(pathname, siteConfig.url).toString();
-        const socialImage = new URL("/hanami.webp", siteConfig.url).toString();
+        const seo = getPageSeo(pathname);
 
-        document.title = metadata.title;
+        document.title = seo.metadata.title;
         document.documentElement.lang = "en";
 
-        setMeta('meta[name="description"]', "name", "description", metadata.description);
-        setMeta('meta[property="og:title"]', "property", "og:title", metadata.title);
-        setMeta('meta[property="og:description"]', "property", "og:description", metadata.description);
-        setMeta('meta[property="og:url"]', "property", "og:url", canonicalUrl);
+        setMeta('meta[name="description"]', "name", "description", seo.metadata.description);
+        setMeta('meta[name="robots"]', "name", "robots", seo.robots);
+        setMeta('meta[property="og:site_name"]', "property", "og:site_name", "Hanami");
+        setMeta('meta[property="og:locale"]', "property", "og:locale", "en_US");
+        setMeta('meta[property="og:title"]', "property", "og:title", seo.metadata.title);
+        setMeta('meta[property="og:description"]', "property", "og:description", seo.metadata.description);
+        setMeta('meta[property="og:url"]', "property", "og:url", seo.canonicalUrl);
         setMeta('meta[property="og:type"]', "property", "og:type", "website");
-        setMeta('meta[property="og:image"]', "property", "og:image", socialImage);
+        setMeta('meta[property="og:image"]', "property", "og:image", seo.socialImageUrl);
+        setMeta('meta[property="og:image:alt"]', "property", "og:image:alt", "Hanami project artwork");
         setMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary");
-        setMeta('meta[name="twitter:title"]', "name", "twitter:title", metadata.title);
-        setMeta('meta[name="twitter:description"]', "name", "twitter:description", metadata.description);
-        setMeta('meta[name="twitter:image"]', "name", "twitter:image", socialImage);
+        setMeta('meta[name="twitter:title"]', "name", "twitter:title", seo.metadata.title);
+        setMeta('meta[name="twitter:description"]', "name", "twitter:description", seo.metadata.description);
+        setMeta('meta[name="twitter:image"]', "name", "twitter:image", seo.socialImageUrl);
 
         let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
         if (!canonical) {
@@ -48,10 +45,30 @@ export default function SiteMeta() {
             canonical.rel = "canonical";
             document.head.appendChild(canonical);
         }
-        canonical.href = canonicalUrl;
+        canonical.href = seo.canonicalUrl;
+
+        updateStructuredData(seo.structuredData);
 
         window.scrollTo({ top: 0, behavior: "auto" });
     }, [pathname]);
 
     return null;
+}
+
+function updateStructuredData(value: Record<string, unknown> | null) {
+    let element = document.head.querySelector<HTMLScriptElement>("#hanami-structured-data");
+
+    if (!value) {
+        element?.remove();
+        return;
+    }
+
+    if (!element) {
+        element = document.createElement("script");
+        element.id = "hanami-structured-data";
+        element.type = "application/ld+json";
+        document.head.appendChild(element);
+    }
+
+    element.textContent = JSON.stringify(value);
 }

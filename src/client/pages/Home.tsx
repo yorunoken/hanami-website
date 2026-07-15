@@ -138,8 +138,8 @@ export default function Home() {
                                 Useful on its own. Connected only when it helps.
                             </h2>
                             <p className="mt-5 max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">
-                                Hanami’s code, issues, and project history are public. Live products, published tools, and prototypes are
-                                labeled separately.
+                                Published Hanami code, issues, and project history are public. Live products and released tools are labeled
+                                separately from development work whose application source is not yet published.
                             </p>
                             <TextLink className="mt-[1.8rem]" href={siteConfig.links.organization} external>
                                 Browse the repositories

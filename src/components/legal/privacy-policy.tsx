@@ -25,8 +25,12 @@ export default function PrivacyPolicy() {
         >
             <LegalSection id="controller" title="1. Who operates Hanami">
                 <p>
-                    Hanami is an independent community project operated by Yorunoken from Türkiye. In this policy, “Hanami”, “we”, “us”,
-                    and “the operator” refer to the operator of the hosted Hanami services described below.
+                    Hanami is an independent community project operated by Yorunoken from Türkiye. In this policy, “Hanami”, “we”, “us”, and
+                    “the operator” refer to the operator of the hosted Hanami services described below.
+                </p>
+                <p>
+                    The operator is based in Türkiye. Hanami-controlled production infrastructure is hosted in Germany, so the operator’s
+                    location and the location of the servers are not the same.
                 </p>
                 <p>
                     Privacy and personal-data requests can be sent to{" "}
@@ -42,9 +46,10 @@ export default function PrivacyPolicy() {
                     later.
                 </p>
                 <p>
-                    Map Analyzer is currently a local Rust library and command-line tool. It reads files and writes output where the user
-                    directs it; the audited implementation does not send beatmap data to Hanami. Companion is currently a local prototype
-                    whose score-upload request is mocked and commented out.
+                    Map Analyzer 0.2.9 is a separately distributed Rust library. The published crate parses local files and has no network
+                    client dependency or command-line binary. Broader CLI and dataset work exists only in an unpublished development
+                    worktree. Companion is also unreleased: its public repository currently contains only a license, while the local
+                    prototype’s Hanami score-upload request is mocked and commented out.
                 </p>
             </LegalSection>
 
@@ -64,8 +69,8 @@ export default function PrivacyPolicy() {
                         creation, expiry, consumption, or invalidation dates. The URL token itself is not stored.
                     </li>
                     <li>
-                        Requests made to this site and infrastructure logs retained by the host or proxy. These may include an IP address,
-                        requested path, response status, user-agent string, and timestamps used for security and diagnostics.
+                        Ordinary request metadata processed by Cloudflare in front of the public sites, including IP address, request and
+                        device information, and security signals described in Cloudflare’s privacy policy.
                     </li>
                 </ul>
 
@@ -141,8 +146,8 @@ export default function PrivacyPolicy() {
                         and play times. Profiles and leaderboards make some of this information public.
                     </li>
                     <li>
-                        Problem reports containing osu! user ID, mapset ID, report category, optional free-text description, status, and
-                        timestamps. Report content may also be sent to a configured Discord webhook.
+                        Problem reports containing osu! user ID, mapset ID, report category, free-text description, status, and timestamps.
+                        Report content may also be sent to a configured Discord webhook.
                     </li>
                     <li>
                         API-key name, creation and last-used dates, and a SHA-256 hash of the key. The raw key is returned once to the user.
@@ -157,8 +162,8 @@ export default function PrivacyPolicy() {
                     </li>
                     <li>
                         Production pages load self-hosted Umami for aggregate analytics and Google AdSense for advertising. Umami is
-                        intended to operate without analytics cookies. Google and its advertising partners may use cookies or local
-                        storage and process device, network, page, and ad-interaction data under their own settings and policies.
+                        intended to operate without analytics cookies. Google and its advertising partners may use cookies or local storage
+                        and process device, network, page, and ad-interaction data under their own settings and policies.
                     </li>
                 </ul>
 
@@ -209,15 +214,15 @@ export default function PrivacyPolicy() {
             <LegalSection id="sharing" title="5. Third parties and international processing">
                 <p>
                     Data is transmitted as needed to Discord for sign-in, bot operation, webhooks, and error reporting; to osu! for sign-in
-                    and API lookups; to hosting, database, Redis, proxy, DNS, and backup providers used by the operator; and to Umami
-                    hosting and Google AdSense on osu!guessr.
+                    and API lookups; to Cloudflare as the public sites’ proxy and network provider; and to Google AdSense on osu!guessr.
+                    Hanami-controlled application, database, Redis, and self-hosted Umami infrastructure is hosted in Germany.
                 </p>
                 <p>
-                    Processing may cross national borders because Discord, osu!, Google, and infrastructure providers operate
-                    internationally. Access to Hanami-controlled systems is limited to the operator and maintainers who need it to operate,
-                    secure, or support the services. Third-party providers process data under their published terms and safeguards. Where
-                    applicable law requires a particular international-transfer safeguard, Hanami will use a provider’s contractual or
-                    other lawful transfer mechanism.
+                    The operator manages the services from Türkiye while Hanami-controlled production data is processed on infrastructure in
+                    Germany. Processing may also cross other national borders because Discord, osu!, Google, and some service providers
+                    operate internationally. Third-party handling is governed by each provider’s own terms, privacy notice, and applicable
+                    transfer mechanisms. The public repositories do not establish the physical location of every provider request or the
+                    operator’s production-access roster.
                 </p>
                 <p>
                     See the providers’ own notices, including{" "}
@@ -232,6 +237,10 @@ export default function PrivacyPolicy() {
                     <a href={siteConfig.links.googlePrivacy} target="_blank" rel="noreferrer">
                         Google’s privacy policy
                     </a>
+                    , and{" "}
+                    <a href={siteConfig.links.cloudflarePrivacy} target="_blank" rel="noreferrer">
+                        Cloudflare’s privacy policy
+                    </a>
                     . Those notices do not replace Hanami’s responsibilities for its own processing.
                 </p>
             </LegalSection>
@@ -244,8 +253,8 @@ export default function PrivacyPolicy() {
                     </li>
                     <li>
                         Bot file logging keeps at most 30 <code>.log</code> files in the configured directory and removes older named files
-                        when a new log file is selected. Infrastructure and console logs are retained only while reasonably needed for
-                        security, diagnostics, or incident handling. Backup copies remain until overwritten through normal backup rotation.
+                        when a new log file is selected. No repository-backed retention period was found for container, host, Cloudflare,
+                        Discord error-channel, or other operational logs.
                     </li>
                     <li>
                         Bot pagination state is configured for one hour. osu!guessr game state and item sets are configured for one hour;
@@ -260,7 +269,8 @@ export default function PrivacyPolicy() {
                         Account, provider-link, preference, guild, completed-game, report, and API-key metadata remain while the related
                         account or feature is active, until the user deletes or revokes them where a control exists, or until Hanami no
                         longer needs them for the service, security, or a legal obligation. Cached scores and maps are refreshed or
-                        overwritten as the services operate. Analytics and advertising providers apply their own retention settings.
+                        overwritten as the services operate. The source does not define a general automatic deletion schedule for these
+                        database rows. Analytics and advertising providers apply their own retention settings.
                     </li>
                     <li>Short-lived account-deletion reauthentication challenges expire after approximately 15 minutes.</li>
                     <li>
@@ -274,9 +284,9 @@ export default function PrivacyPolicy() {
                 <p>
                     Hanami uses measures visible in the audited code, including HTTP-only same-site session cookies, hashed osu!guessr API
                     keys, OAuth state or verification records, parameterized database queries, rate limits, and log redaction for common
-                    secret patterns. Production access is limited to the operator and authorized maintainers, and application secrets are
-                    supplied through environment configuration rather than committed to source. No online service can guarantee absolute
-                    security.
+                    secret patterns. Application configuration expects secrets in environment variables, and the repositories instruct
+                    contributors not to commit production credentials. Repository inspection cannot verify every deployment control or
+                    guarantee absolute security.
                 </p>
             </LegalSection>
 
@@ -300,9 +310,20 @@ export default function PrivacyPolicy() {
                     Hanami will explain any additional information needed and normally respond within 30 days.
                 </p>
                 <p>
-                    Some records may be anonymized rather than deleted, and justified security, abuse-prevention, legal, or backup records
-                    may remain temporarily. Discord and osu! independently control provider-side data, which must be managed through those
-                    providers.
+                    The privacy email is an operational contact channel. Under Türkiye’s formal KVKK application rules, an ordinary email
+                    qualifies only when it was previously provided to and recorded by the controller; the rules also permit written, KEP,
+                    secure-electronic-signature, mobile-signature, and purpose-built application routes. Formal KVKK applications must be
+                    made in Turkish and contain the information required by the applicable communiqué. Contact Hanami first if you need an
+                    appropriate formal route, and review the{" "}
+                    <a href={siteConfig.links.kvkkRequests} target="_blank" rel="noreferrer">
+                        KVKK application procedure
+                    </a>
+                    .
+                </p>
+                <p>
+                    Some records may be anonymized rather than deleted, and justified security, abuse-prevention, or legal records may
+                    remain temporarily. No source-backed backup retention schedule was found. Discord and osu! independently control
+                    provider-side data, which must be managed through those providers.
                 </p>
             </LegalSection>
 
@@ -325,9 +346,9 @@ export default function PrivacyPolicy() {
 
             <LegalSection id="contact" title="11. Contact and complaints">
                 <p>
-                    Privacy and personal-data requests: <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>
-                    . Hanami is operated from Türkiye and does not publish a separate postal office. Formal correspondence can be initiated
-                    through the privacy address, and a postal route will be provided where legally required. You may also complain to the{" "}
+                    Privacy and personal-data requests: <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. Hanami is
+                    operated from Türkiye and does not publish a separate postal office. The email can be used to obtain a suitable formal
+                    route; it does not replace the application methods required by law. You may also complain to the{" "}
                     <a href={siteConfig.links.kvkk} target="_blank" rel="noreferrer">
                         Turkish Personal Data Protection Authority
                     </a>{" "}

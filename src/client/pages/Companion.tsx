@@ -32,15 +32,15 @@ export default function Companion() {
             <ProductHero className="bg-[linear-gradient(130deg,rgba(128,215,232,0.08),transparent_42%),#0b0c0f]">
                 <div className={productHeroCopyClass}>
                     <Eyebrow>Desktop prototype</Eyebrow>
-                    <StatusLine status={product.status} detail="Source only; no packaged release" tone={product.tone} />
+                    <StatusLine status={product.status} detail="No public application source or packaged release" tone={product.tone} />
                     <h1 className={productTitleClass}>{product.name}</h1>
                     <h2 className={productSubtitleClass}>A local bridge for ideas that do not belong in a browser.</h2>
                     <p className={productBodyClass}>
-                        The current Tauri prototype can manage tosu and observe local osu! state. Hanami account connection and score upload
-                        are still mocked in code.
+                        A local development worktree explores a Tauri shell that can manage tosu and observe local osu! state. The public
+                        repository currently contains only its license, and Hanami account connection and score upload remain mocked.
                     </p>
                     <ActionLink className="mt-8" href={product.links.primary} external>
-                        <Github aria-hidden="true" /> Inspect the prototype
+                        <Github aria-hidden="true" /> View the project repository
                     </ActionLink>
                 </div>
 
@@ -62,7 +62,7 @@ export default function Companion() {
                 <SectionIntro
                     eyebrow="Implemented now"
                     title="A narrow local prototype."
-                    body="The website separates working code from planned integration so the status is unambiguous."
+                    body="These capabilities were verified in the local development worktree. They are not yet available as public source or a release."
                 />
                 <div className="grid grid-cols-1 border-t border-border-strong min-[821px]:grid-cols-3">
                     {currentCapabilities.map(([title, description]) => (
@@ -104,7 +104,7 @@ export default function Companion() {
 
             <ProductFootnote className="[&>svg]:text-cyan">
                 <MonitorDot aria-hidden="true" />
-                <p>No release download is offered because the repository is still a development prototype.</p>
+                <p>No release download is offered, and the application source has not yet been published to the public repository.</p>
             </ProductFootnote>
         </ProductPage>
     );

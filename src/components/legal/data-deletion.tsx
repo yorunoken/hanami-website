@@ -40,7 +40,7 @@ export default function DataDeletion() {
                         <tr>
                             <td>Delete Hanami account</td>
                             <td>Immediately removes the website identity and Discord-keyed Bot account data described below.</td>
-                            <td>Does not delete provider accounts, a separate osu!guessr profile, logs, or backups.</td>
+                            <td>Does not delete provider accounts, a separate osu!guessr profile, or operational logs.</td>
                         </tr>
                     </tbody>
                 </LegalTable>
@@ -80,6 +80,11 @@ export default function DataDeletion() {
                     API keys, backup codes, or government identity documents. Additional proportionate verification may be required. The
                     operator will explain any additional information needed and normally respond within 30 days.
                 </p>
+                <p>
+                    Email is the practical contact path, but formal applications under Türkiye’s KVKK must follow the legally prescribed
+                    method and content requirements. Hanami will provide an appropriate route when a request needs to be treated as a formal
+                    KVKK application.
+                </p>
             </LegalSection>
 
             <LegalSection id="limits" title="4. Scope and limits">
@@ -89,9 +94,9 @@ export default function DataDeletion() {
                     service or privacy contact.
                 </p>
                 <p>
-                    Operational logs, private error-channel messages, abuse-prevention records, analytics limitations, and backup copies may
-                    require separate review or temporary retention for justified security, legal, or recovery reasons. Future Discord
-                    sign-in may create a new Hanami website account after deletion.
+                    Operational logs, private error-channel messages, abuse-prevention records, and analytics limitations may require
+                    separate review or temporary retention for justified security or legal reasons. The repositories do not document a
+                    production backup-retention schedule. Future Discord sign-in may create a new Hanami website account after deletion.
                 </p>
             </LegalSection>
         </LegalDocument>

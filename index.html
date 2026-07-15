@@ -4,38 +4,68 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#09080b" />
-        <meta
-            name="description"
-            content="A Discord bot, browser game, desktop prototype, and Rust analysis toolkit for the osu! community."
-        />
-
-        <title>Hanami — osu! tools, games, and open-source projects</title>
-        <link rel="canonical" href="https://hanami.yorunoken.com/" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/hanami.webp" />
 
+        <!-- SEO_HEAD_START -->
+        <title>Hanami — osu! tools, games, and community projects</title>
+        <meta
+            name="description"
+            content="Explore Hanami Bot, osu!guessr, Hanami Companion, and Map Analyzer—four osu!-related tools and experiences in one independent ecosystem."
+        />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <link rel="canonical" href="https://hanami.yorunoken.com/" />
+
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Hanami" />
-        <meta property="og:title" content="Hanami — osu! tools, games, and open-source projects" />
-        <meta property="og:description" content="Explore the Hanami ecosystem." />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:title" content="Hanami — osu! tools, games, and community projects" />
+        <meta
+            property="og:description"
+            content="Explore Hanami Bot, osu!guessr, Hanami Companion, and Map Analyzer—four osu!-related tools and experiences in one independent ecosystem."
+        />
         <meta property="og:url" content="https://hanami.yorunoken.com/" />
         <meta property="og:image" content="https://hanami.yorunoken.com/hanami.webp" />
-        <meta property="og:image:alt" content="Hanami mascot artwork" />
+        <meta property="og:image:alt" content="Hanami project artwork" />
 
         <meta name="twitter:card" content="summary" />
-        <meta name="twitter:title" content="Hanami — osu! tools, games, and open-source projects" />
-        <meta name="twitter:description" content="Explore the Hanami ecosystem." />
+        <meta name="twitter:title" content="Hanami — osu! tools, games, and community projects" />
+        <meta
+            name="twitter:description"
+            content="Explore Hanami Bot, osu!guessr, Hanami Companion, and Map Analyzer—four osu!-related tools and experiences in one independent ecosystem."
+        />
         <meta name="twitter:image" content="https://hanami.yorunoken.com/hanami.webp" />
 
-        <script type="application/ld+json">
+        <script id="hanami-structured-data" type="application/ld+json">
             {
                 "@context": "https://schema.org",
-                "@type": "WebSite",
-                "name": "Hanami",
-                "url": "https://hanami.yorunoken.com/",
-                "description": "A Discord bot, browser game, desktop prototype, and Rust analysis toolkit for the osu! community."
+                "@graph": [
+                    {
+                        "@type": "Organization",
+                        "@id": "https://hanami.yorunoken.com/#organization",
+                        "name": "Hanami",
+                        "url": "https://hanami.yorunoken.com/",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": "https://hanami.yorunoken.com/hanami.webp",
+                            "width": 565,
+                            "height": 542
+                        },
+                        "sameAs": ["https://github.com/hanami-osu"]
+                    },
+                    {
+                        "@type": "WebSite",
+                        "@id": "https://hanami.yorunoken.com/#website",
+                        "name": "Hanami",
+                        "url": "https://hanami.yorunoken.com/",
+                        "description": "Open-source tools, services, and games built for the osu! community.",
+                        "publisher": { "@id": "https://hanami.yorunoken.com/#organization" },
+                        "inLanguage": "en"
+                    }
+                ]
             }
         </script>
+        <!-- SEO_HEAD_END -->
     </head>
     <body>
         <div id="root"></div>

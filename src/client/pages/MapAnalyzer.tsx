@@ -1,4 +1,4 @@
-import { Braces, CheckCircle2, FileJson2, Github, Package, TerminalSquare } from "lucide-react";
+import { Activity, Github, Package, Route } from "lucide-react";
 
 import { ActionLink, Eyebrow, SectionIntro, StatusLine } from "@/components/marketing";
 import {
@@ -17,10 +17,8 @@ import {
 import { getProduct } from "@/data/site-config";
 
 const outputs = [
-    [TerminalSquare, "Readable reports", "Compact terminal output by default, with grouped detail on request."],
-    [Braces, "Rust types", "Structured timing, object, rhythm, stream, aim, speed, slider, and section results."],
-    [FileJson2, "Dataset exports", "JSON, JSONL, and CSV paths for analysis and labeling workflows."],
-    [CheckCircle2, "Validation", "Structural and numerical checks with separate passes, warnings, and errors."],
+    [Activity, "Stream analysis", "Confidence, stream counts and lengths, density, and BPM consistency."],
+    [Route, "Jump analysis", "Confidence, jump counts and lengths, density, and BPM consistency."],
 ] as const;
 
 export default function MapAnalyzer() {
@@ -30,13 +28,13 @@ export default function MapAnalyzer() {
         <ProductPage>
             <ProductHero className="bg-[linear-gradient(rgba(180,218,122,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(180,218,122,0.045)_1px,transparent_1px),#0a0d0a] bg-size-[48px_48px]">
                 <div className={productHeroCopyClass}>
-                    <Eyebrow>Rust library and CLI</Eyebrow>
+                    <Eyebrow>Rust library</Eyebrow>
                     <StatusLine status={product.status} detail="Crate version 0.2.9" tone={product.tone} />
                     <h1 className={productTitleClass}>{product.name}</h1>
-                    <h2 className={productSubtitleClass}>Turn a local .osu file into inspectable structure.</h2>
+                    <h2 className={productSubtitleClass}>Inspect stream and jump patterns in a local .osu file.</h2>
                     <p className={productBodyClass}>
-                        A Rust library and command-line tool for local beatmap analysis, human-readable reports, validation, and dataset
-                        export. The analyzer itself makes no network requests.
+                        The published crate parses local beatmaps with rosu-map and exposes separate stream and jump analyzers. Version
+                        0.2.9 is a library package; it does not publish a standalone command-line program.
                     </p>
                     <HeroActions>
                         <ActionLink href={product.links.primary} external>
@@ -50,19 +48,19 @@ export default function MapAnalyzer() {
 
                 <figure className="border-l-2 border-lime py-[1.4rem] pl-[clamp(1.2rem,3vw,2.2rem)] motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both]">
                     <figcaption className="mb-[1.2rem] font-mono text-[0.7rem] tracking-[0.08em] text-lime uppercase">
-                        Compact report format
+                        Library usage
                     </figcaption>
                     <pre className="max-w-full overflow-x-auto font-mono text-[clamp(0.7rem,1.2vw,0.84rem)] leading-[1.8] whitespace-pre-wrap text-[#d8ded1]">
                         <code>
-                            <span className="text-lime">$</span> osu-map-analyzer map.osu
-                            {"\n\n"}
-                            Artist — Title{"\n"}
-                            Mapped by Creator [Difficulty]{"\n"}
-                            Mods: NM Rate: 1x{"\n"}
-                            Star rating · Objects · Length{"\n"}
-                            BPM range · Density · Object mix{"\n"}
-                            Tags{"\n"}
-                            Highlights: streams, spacing, pressure
+                            <span className="text-lime">use</span> std::path::Path;{"\n"}
+                            <span className="text-lime">use</span> osu_map_analyzer::{"{"}analyze, rosu_map{"}"};{"\n\n"}
+                            let path = Path::new("map.osu");{"\n"}
+                            {"let map = rosu_map::from_path::<rosu_map::Beatmap>(path).unwrap();"}
+                            {"\n"}
+                            let mut stream = analyze::Stream::new(map.clone());{"\n"}
+                            let streams = stream.analyze();{"\n"}
+                            let mut jump = analyze::Jump::new(map);{"\n"}
+                            let jumps = jump.analyze();
                         </code>
                     </pre>
                 </figure>
@@ -71,8 +69,8 @@ export default function MapAnalyzer() {
             <ProductSection>
                 <SectionIntro
                     eyebrow="Output"
-                    title="Readable first, structured when needed."
-                    body="The same analysis can be consumed by a person in a terminal or by another program through Rust types and serialization."
+                    title="Two focused analyzers in the published crate."
+                    body="The release exposes classification-oriented stream and jump results as Rust values. Broader reports and dataset tooling are development work, not part of version 0.2.9."
                 />
                 <div className="border-t border-border-strong">
                     {outputs.map(([Icon, title, description]) => (
@@ -93,8 +91,11 @@ export default function MapAnalyzer() {
             <ProductSplit>
                 <div>
                     <Eyebrow>Install</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Use the CLI or add the crate.</h2>
-                    <p className={sectionBodyClass}>The published package is Apache-2.0 licensed and built on rosu-map and rosu-pp.</p>
+                    <h2 className={sectionHeadingClass}>Add the library to a Rust project.</h2>
+                    <p className={sectionBodyClass}>
+                        The published package is Apache-2.0 licensed and depends on rosu-map. It does not contain a binary target, so
+                        <code className="mx-1">cargo install</code> is not an installation path for this release.
+                    </p>
                     <ActionLink className="mt-[1.8rem]" href={product.links.crate ?? product.links.primary} external>
                         <Package aria-hidden="true" /> Open on crates.io
                     </ActionLink>
@@ -104,13 +105,10 @@ export default function MapAnalyzer() {
                     aria-label="Map Analyzer installation commands"
                 >
                     <code>
-                        <span>$</span> cargo install osu-map-analyzer
+                        <span>$</span> cargo add osu-map-analyzer@0.2.9
                     </code>
                     <code>
-                        <span>$</span> osu-map-analyzer map.osu
-                    </code>
-                    <code>
-                        <span>$</span> osu-map-analyzer --json map.osu
+                        <span>toml</span> osu-map-analyzer = "0.2.9"
                     </code>
                 </div>
             </ProductSplit>
