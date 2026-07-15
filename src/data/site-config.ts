@@ -11,6 +11,8 @@ export const siteConfig = {
         discordPrivacy: "https://discord.com/privacy",
         osuPrivacy: "https://osu.ppy.sh/legal/en/Privacy",
         googlePrivacy: "https://policies.google.com/privacy",
+        googleAdsSettings: "https://adssettings.google.com/",
+        kvkk: "https://www.kvkk.gov.tr/",
     },
 } as const;
 

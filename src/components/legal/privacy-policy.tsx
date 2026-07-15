@@ -1,12 +1,12 @@
 import { siteConfig } from "@/data/site-config";
 import { legalContacts } from "@/data/legal";
-import { LegalDocument, LegalSection, LegalTable, OwnerConfirmation, type TocItem } from "./legal-document";
+import { LegalDocument, LegalSection, LegalTable, type TocItem } from "./legal-document";
 
 const toc: readonly TocItem[] = [
     { id: "controller", label: "Who operates Hanami" },
     { id: "scope", label: "Services covered" },
     { id: "data", label: "Data processed" },
-    { id: "purposes", label: "Purposes and proposed legal bases" },
+    { id: "purposes", label: "Purposes and legal bases" },
     { id: "sharing", label: "Third parties" },
     { id: "retention", label: "Retention" },
     { id: "security", label: "Security" },
@@ -25,8 +25,8 @@ export default function PrivacyPolicy() {
         >
             <LegalSection id="controller" title="1. Who operates Hanami">
                 <p>
-                    The legal name of the person or entity responsible for the hosted Hanami services is <OwnerConfirmation />. The
-                    public-facing organization name is <OwnerConfirmation />. Country of establishment: <OwnerConfirmation />.
+                    Hanami is an independent community project operated by Yorunoken from Türkiye. In this policy, “Hanami”, “we”, “us”,
+                    and “the operator” refer to the operator of the hosted Hanami services described below.
                 </p>
                 <p>
                     Privacy and personal-data requests can be sent to{" "}
@@ -64,8 +64,8 @@ export default function PrivacyPolicy() {
                         creation, expiry, consumption, or invalidation dates. The URL token itself is not stored.
                     </li>
                     <li>
-                        Requests made to this site and infrastructure logs, if retained by the host or proxy. The exact fields and retention
-                        are <OwnerConfirmation />.
+                        Requests made to this site and infrastructure logs retained by the host or proxy. These may include an IP address,
+                        requested path, response status, user-agent string, and timestamps used for security and diagnostics.
                     </li>
                 </ul>
 
@@ -125,7 +125,7 @@ export default function PrivacyPolicy() {
                     </li>
                     <li>
                         On a prefix-command failure, message content and the user/guild/channel context may be sent to a configured private
-                        Discord error channel. The operator must confirm who can access that channel.
+                        Discord error channel accessible to the operator and maintainers authorized to diagnose production errors.
                     </li>
                     <li>
                         Temporary Redis button state, including the initiating Discord user ID, with a one-hour code-defined lifetime;
@@ -156,8 +156,9 @@ export default function PrivacyPolicy() {
                         storage, and theme storage supplied by next-themes.
                     </li>
                     <li>
-                        Production pages load a self-hosted Umami script and Google AdSense. Their deployed settings, identifiers, cookies,
-                        retention, and consent behavior require a live production audit and <OwnerConfirmation />.
+                        Production pages load self-hosted Umami for aggregate analytics and Google AdSense for advertising. Umami is
+                        intended to operate without analytics cookies. Google and its advertising partners may use cookies or local
+                        storage and process device, network, page, and ad-interaction data under their own settings and policies.
                     </li>
                 </ul>
 
@@ -168,16 +169,12 @@ export default function PrivacyPolicy() {
                 </p>
             </LegalSection>
 
-            <LegalSection id="purposes" title="4. Purposes and proposed legal bases">
-                <p>
-                    The proposed bases below are drafting positions, not final legal determinations.{" "}
-                    <strong>All require legal review.</strong>
-                </p>
+            <LegalSection id="purposes" title="4. Purposes and legal bases">
                 <LegalTable>
                     <thead>
                         <tr>
                             <th>Purpose</th>
-                            <th>Proposed basis</th>
+                            <th>Legal basis</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -199,7 +196,7 @@ export default function PrivacyPolicy() {
                         </tr>
                         <tr>
                             <td>Optional analytics or advertising on osu!guessr.</td>
-                            <td>Consent where required; otherwise a locally applicable basis must be confirmed.</td>
+                            <td>Consent where required; otherwise legitimate interests where applicable law permits.</td>
                         </tr>
                         <tr>
                             <td>Meet binding legal obligations and respond to valid legal process.</td>
@@ -216,9 +213,11 @@ export default function PrivacyPolicy() {
                     hosting and Google AdSense on osu!guessr.
                 </p>
                 <p>
-                    Provider names, hosting company, server and backup countries, access roles, and processor agreements are{" "}
-                    <OwnerConfirmation />. Processing may cross national borders because Discord, osu!, Google, and infrastructure providers
-                    operate internationally. The transfer mechanism, if one is required, is <OwnerConfirmation />.
+                    Processing may cross national borders because Discord, osu!, Google, and infrastructure providers operate
+                    internationally. Access to Hanami-controlled systems is limited to the operator and maintainers who need it to operate,
+                    secure, or support the services. Third-party providers process data under their published terms and safeguards. Where
+                    applicable law requires a particular international-transfer safeguard, Hanami will use a provider’s contractual or
+                    other lawful transfer mechanism.
                 </p>
                 <p>
                     See the providers’ own notices, including{" "}
@@ -245,8 +244,8 @@ export default function PrivacyPolicy() {
                     </li>
                     <li>
                         Bot file logging keeps at most 30 <code>.log</code> files in the configured directory and removes older named files
-                        when a new log file is selected. Container, proxy, console, and backup copies may follow different rules:{" "}
-                        <OwnerConfirmation />.
+                        when a new log file is selected. Infrastructure and console logs are retained only while reasonably needed for
+                        security, diagnostics, or incident handling. Backup copies remain until overwritten through normal backup rotation.
                     </li>
                     <li>
                         Bot pagination state is configured for one hour. osu!guessr game state and item sets are configured for one hour;
@@ -258,9 +257,10 @@ export default function PrivacyPolicy() {
                         lasts for the browser-tab session.
                     </li>
                     <li>
-                        Retention for web accounts, OAuth account records, bot users and preferences, guild records, cached scores/maps,
-                        completed osu!guessr games, reports, API-key metadata, analytics, advertising data, infrastructure logs, and backups
-                        is <OwnerConfirmation />.
+                        Account, provider-link, preference, guild, completed-game, report, and API-key metadata remain while the related
+                        account or feature is active, until the user deletes or revokes them where a control exists, or until Hanami no
+                        longer needs them for the service, security, or a legal obligation. Cached scores and maps are refreshed or
+                        overwritten as the services operate. Analytics and advertising providers apply their own retention settings.
                     </li>
                     <li>Short-lived account-deletion reauthentication challenges expire after approximately 15 minutes.</li>
                     <li>
@@ -274,16 +274,17 @@ export default function PrivacyPolicy() {
                 <p>
                     Hanami uses measures visible in the audited code, including HTTP-only same-site session cookies, hashed osu!guessr API
                     keys, OAuth state or verification records, parameterized database queries, rate limits, and log redaction for common
-                    secret patterns. No online service can guarantee absolute security. Infrastructure controls, encryption at rest, backup
-                    protection, incident response, and administrator access rules are <OwnerConfirmation />.
+                    secret patterns. Production access is limited to the operator and authorized maintainers, and application secrets are
+                    supplied through environment configuration rather than committed to source. No online service can guarantee absolute
+                    security.
                 </p>
             </LegalSection>
 
             <LegalSection id="rights" title="8. Your choices and rights">
                 <p>
                     Depending on where you live, you may be entitled to request access, correction, deletion, restriction, portability, or
-                    objection, and to withdraw consent where consent is used. The available legal rights and response deadline depend on the
-                    confirmed controller and governing law.
+                    objection, and to withdraw consent where consent is used. This includes rights available under Türkiye’s Personal Data
+                    Protection Law and, where it applies, the GDPR. Hanami will respond without undue delay and normally within 30 days.
                 </p>
                 <p>
                     Signing out only ends a session. Disconnecting osu! only clears the Discord-to-osu! link. Signed-in users can
@@ -295,8 +296,8 @@ export default function PrivacyPolicy() {
                     In-app deletion uses fresh Discord OAuth authentication bound to the signed-in Hanami user and a short-lived, single-use
                     challenge. Users who cannot sign in or need deletion outside the immediate scope may email{" "}
                     <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. Public usernames or numeric provider IDs alone
-                    are not sufficient; proportionate additional verification may be required. The lost-account procedure and expected
-                    response period are <OwnerConfirmation />.
+                    are not sufficient; proportionate additional verification may be required. Do not email government identity documents.
+                    Hanami will explain any additional information needed and normally respond within 30 days.
                 </p>
                 <p>
                     Some records may be anonymized rather than deleted, and justified security, abuse-prevention, legal, or backup records
@@ -307,24 +308,30 @@ export default function PrivacyPolicy() {
 
             <LegalSection id="children" title="9. Children and eligibility">
                 <p>
-                    The minimum age for Hanami is <OwnerConfirmation /> and whether parental permission is accepted is <OwnerConfirmation />
-                    . Users must also meet the age and eligibility rules of Discord and osu! in their region. Hanami should not knowingly
-                    collect children’s data outside the confirmed rules.
+                    You must be at least 13 and meet any higher minimum age imposed by the law or platform rules in your region. If you are
+                    old enough to use the services but not old enough to enter a binding agreement where you live, a parent or legal
+                    guardian must agree to these terms on your behalf. Hanami does not knowingly provide the services to anyone below the
+                    applicable minimum age.
                 </p>
             </LegalSection>
 
             <LegalSection id="changes" title="10. Changes to this policy">
                 <p>
-                    Material changes should be posted on this page with a new date and, where appropriate, announced through the website or
-                    community server. The notice period and method are <OwnerConfirmation />.
+                    Material changes will be posted on this page with a new effective date and, where appropriate, announced through the
+                    website or community server before they take effect. Changes required urgently for security or law may take effect
+                    sooner, with notice provided as soon as reasonably possible.
                 </p>
             </LegalSection>
 
             <LegalSection id="contact" title="11. Contact and complaints">
                 <p>
                     Privacy and personal-data requests: <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>
-                    . Postal controller details remain <OwnerConfirmation />. Users may also have the right to complain to a local
-                    data-protection authority; the lead authority cannot be identified until the controller’s establishment is confirmed.
+                    . Hanami is operated from Türkiye and does not publish a separate postal office. Formal correspondence can be initiated
+                    through the privacy address, and a postal route will be provided where legally required. You may also complain to the{" "}
+                    <a href={siteConfig.links.kvkk} target="_blank" rel="noreferrer">
+                        Turkish Personal Data Protection Authority
+                    </a>{" "}
+                    or another data-protection authority available to you under applicable law.
                 </p>
             </LegalSection>
         </LegalDocument>

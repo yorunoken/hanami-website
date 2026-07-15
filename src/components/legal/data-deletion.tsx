@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { legalContacts } from "@/data/legal";
-import { LegalDocument, LegalSection, LegalTable, OwnerConfirmation, type TocItem } from "./legal-document";
+import { LegalDocument, LegalSection, LegalTable, type TocItem } from "./legal-document";
 
 const toc: readonly TocItem[] = [
     { id: "differences", label: "Account controls" },
@@ -78,7 +78,7 @@ export default function DataDeletion() {
                 <p>
                     Include the relevant Discord or osu! ID and which Hanami service you used. Do not send passwords, OAuth tokens, cookies,
                     API keys, backup codes, or government identity documents. Additional proportionate verification may be required. The
-                    expected response period is <OwnerConfirmation />.
+                    operator will explain any additional information needed and normally respond within 30 days.
                 </p>
             </LegalSection>
 

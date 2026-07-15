@@ -46,10 +46,6 @@ export function LegalDocument({
                         <dd className="text-[0.8rem] text-[#d6d0d7] print:text-[#333]">{legalMetadata.lastUpdated}</dd>
                     </div>
                 </dl>
-                <p className="mt-[1.8rem] max-w-[76ch] border-l-2 border-accent pl-4 text-[0.82rem] leading-[1.65] text-[#c9c1ca] [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:font-semibold [&_code]:text-[#ffd0e3]">
-                    <strong>Draft notice:</strong> unresolved facts are marked <code>REQUIRES OWNER CONFIRMATION</code>. This text must be
-                    reviewed before publication as an effective policy.
-                </p>
             </header>
 
             <div className="mt-16 grid grid-cols-1 items-start gap-10 min-[821px]:grid-cols-[210px_minmax(0,760px)] min-[821px]:gap-[clamp(3rem,8vw,7rem)] print:mt-8 print:block">
@@ -82,14 +78,6 @@ export function LegalSection({ id, title, children }: { id: string; title: strin
             </h2>
             {children}
         </section>
-    );
-}
-
-export function OwnerConfirmation({ children }: { children?: ReactNode }) {
-    return (
-        <span className="font-mono text-[0.88em] font-semibold text-[#ffd0e3]">
-            REQUIRES OWNER CONFIRMATION{children ? <> — {children}</> : null}
-        </span>
     );
 }
 

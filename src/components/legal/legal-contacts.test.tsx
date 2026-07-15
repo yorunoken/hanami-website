@@ -7,6 +7,7 @@ import DataDeletion from "./data-deletion";
 import LegalIndex from "./legal-index";
 import PrivacyPolicy from "./privacy-policy";
 import TermsOfService from "./tos";
+import { legalMetadata } from "@/data/legal";
 
 describe("legal contacts and request links", () => {
     it("uses the confirmed privacy contact on privacy, deletion, and cookie pages", () => {
@@ -27,6 +28,16 @@ describe("legal contacts and request links", () => {
         expect(html).toContain('href="/profile/privacy"');
         expect(html).toContain("privacy@yorunoken.com");
         expect(html).toContain("legal@yorunoken.com");
+    });
+
+    it("publishes effective documents without unresolved owner markers", () => {
+        expect(legalMetadata.effectiveDate).toBe("July 16, 2026");
+
+        for (const Component of [LegalIndex, PrivacyPolicy, TermsOfService, CookiePolicy, DataDeletion]) {
+            const html = render(Component);
+            expect(html).not.toContain("REQUIRES OWNER CONFIRMATION");
+            expect(html).not.toContain("Draft notice");
+        }
     });
 });
 

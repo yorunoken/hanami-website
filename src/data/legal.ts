@@ -4,6 +4,6 @@ export const legalContacts = {
 } as const;
 
 export const legalMetadata = {
-    lastUpdated: "July 14, 2026",
-    effectiveDate: "Not yet effective — pending owner and legal review",
+    lastUpdated: "July 16, 2026",
+    effectiveDate: "July 16, 2026",
 } as const;

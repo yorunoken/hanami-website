@@ -1,5 +1,6 @@
-import { LegalDocument, LegalSection, LegalTable, OwnerConfirmation, type TocItem } from "./legal-document";
 import { legalContacts } from "@/data/legal";
+import { siteConfig } from "@/data/site-config";
+import { LegalDocument, LegalSection, LegalTable, type TocItem } from "./legal-document";
 
 const toc: readonly TocItem[] = [
     { id: "meaning", label: "What this notice covers" },
@@ -56,8 +57,9 @@ export default function CookiePolicy() {
                     </tbody>
                 </LegalTable>
                 <p>
-                    The current configuration does not enable Better Auth’s optional session-data cookie cache or account-data cookie. With
-                    a database-backed configuration, OAuth state is stored in the verification table rather than an OAuth-state cookie.
+                    The current configuration does not enable Better Auth’s optional session-data cookie cache or account-data cookie.
+                    Hanami’s osu! linking state and bot-issued account links are stored server-side rather than in an OAuth-state cookie.
+                    Better Auth may use its server-side verification records during Discord sign-in.
                 </p>
                 <p>
                     Account deletion may require a new Discord OAuth round trip. It uses Better Auth’s existing necessary OAuth/session
@@ -205,10 +207,10 @@ export default function CookiePolicy() {
                     external font stylesheet.
                 </p>
                 <p>
-                    osu!guessr loads Umami from <code>umami.yorunoken.com</code> and Google AdSense in production. Whether the deployed
-                    Umami instance is cookieless, which AdSense cookies or local-storage values are set, regional consent mode,
-                    personalized-ad settings, script blocking before consent, and provider retention are <OwnerConfirmation />. A live
-                    production storage audit is required before the policy becomes effective.
+                    osu!guessr loads self-hosted Umami from <code>umami.yorunoken.com</code> for aggregate analytics and Google AdSense for
+                    advertising in production. Umami is intended to operate without analytics cookies or personal-data collection. Google
+                    and its advertising partners may use cookies or local storage and receive device, network, page, and ad-interaction
+                    data. The exact names and lifetimes can vary by region, consent choice, browser, and Google’s current configuration.
                 </p>
                 <p>
                     No tracking pixel or third-party iframe was found in the audited source. Google AdSense can make additional network
@@ -218,15 +220,19 @@ export default function CookiePolicy() {
 
             <LegalSection id="choices" title="6. Choices and consent">
                 <p>
-                    The main Hanami website uses code-defined authentication and security cookies only, so this draft does not add a
-                    decorative consent banner. Users can decline them by not signing in, or clear them by signing out and using browser
-                    controls; authentication will not work without the session cookie.
+                    The main Hanami website uses code-defined authentication and security cookies only. Users can decline them by not
+                    signing in, or clear them by signing out and using browser controls; authentication will not work without the session
+                    cookie.
                 </p>
                 <p>
-                    osu!guessr’s production analytics and advertising scripts are non-essential. Whether they require prior consent, an
-                    opt-out, or a consent-management platform depends on deployment settings and applicable law. That decision and any
-                    implementation are <OwnerConfirmation /> and require legal review. Browser blocking can affect ads, analytics, sign-in,
-                    and game recovery.
+                    osu!guessr’s analytics and advertising scripts are non-essential and currently load after the production page starts.
+                    Where applicable law requires consent, advertising cookies and personalized ads must follow the consent choice offered
+                    for that region. You can also manage ad personalization through{" "}
+                    <a href={siteConfig.links.googleAdsSettings} target="_blank" rel="noreferrer">
+                        Google Ads Settings
+                    </a>{" "}
+                    and block or clear storage through browser controls. Blocking these scripts can prevent ads and aggregate analytics but
+                    should not prevent the core game from working.
                 </p>
             </LegalSection>
 

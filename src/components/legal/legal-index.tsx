@@ -9,7 +9,7 @@ const documents = [
     [
         "Privacy policy",
         "/legal/privacy",
-        "What information each Hanami service processes, why, where it goes, and which facts still need owner review.",
+        "What information each Hanami service processes, why it is used, where it goes, and how long it is kept.",
     ],
     [
         "Terms of service",
@@ -35,10 +35,6 @@ export default function LegalIndex() {
                 <p className="mt-[1.35rem] max-w-[68ch] text-base leading-[1.7] text-muted">
                     These documents cover the Hanami website, Hanami Bot, osu!guessr, and the current boundaries of Companion and Map
                     Analyzer.
-                </p>
-                <p className="mt-[1.8rem] max-w-[76ch] border-l-2 border-accent pl-4 text-[0.82rem] leading-[1.65] text-[#c9c1ca] [&_code]:font-mono [&_code]:text-[0.88em] [&_code]:font-semibold [&_code]:text-[#ffd0e3]">
-                    <strong>Draft notice:</strong> the documents are not ready to become effective until the operator resolves every{" "}
-                    <code>REQUIRES OWNER CONFIRMATION</code> item and obtains appropriate legal review.
                 </p>
             </header>
             <section className="mt-12 max-w-260" aria-labelledby="legal-contact-title">

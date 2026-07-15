@@ -1,5 +1,5 @@
 import { legalContacts } from "@/data/legal";
-import { LegalDocument, LegalSection, OwnerConfirmation, type TocItem } from "./legal-document";
+import { LegalDocument, LegalSection, type TocItem } from "./legal-document";
 
 const toc: readonly TocItem[] = [
     { id: "acceptance", label: "Acceptance" },
@@ -21,14 +21,14 @@ export default function TermsOfService() {
     return (
         <LegalDocument
             title="Terms of service"
-            summary="Terms drafted for the hosted Hanami website, Hanami Bot, and osu!guessr service, with clear boundaries for open-source code and prototypes."
+            summary="Terms for the hosted Hanami website, Hanami Bot, and osu!guessr service, with clear boundaries for open-source code and prototypes."
             toc={toc}
         >
             <LegalSection id="acceptance" title="1. Acceptance">
                 <p>
-                    These terms form an agreement between you and <OwnerConfirmation>the legal operator of Hanami</OwnerConfirmation>. By
-                    using a hosted Hanami service after these terms become effective, you agree to them. If you do not agree, do not use the
-                    hosted services.
+                    These terms form an agreement between you and Yorunoken, the independent operator of Hanami in Türkiye. By using a
+                    hosted Hanami service after these terms become effective, you agree to them. If you do not agree, do not use the hosted
+                    services.
                 </p>
             </LegalSection>
 
@@ -47,8 +47,10 @@ export default function TermsOfService() {
 
             <LegalSection id="eligibility" title="3. Eligibility and linked accounts">
                 <p>
-                    The minimum age and any parental-permission rule are <OwnerConfirmation />. You must be legally able to accept these
-                    terms and must satisfy Discord’s and osu!’s eligibility requirements for any feature using those platforms.
+                    You must be at least 13 and meet any higher minimum age imposed by law or the platform rules in your region. If you are
+                    old enough to use the services but not old enough to enter a binding agreement where you live, your parent or legal
+                    guardian must agree to these terms on your behalf. You must also satisfy Discord’s and osu!’s eligibility requirements
+                    for features that use those platforms.
                 </p>
                 <p>
                     You are responsible for the security of your Discord and osu! accounts and any osu!guessr API key. You may link only
@@ -130,9 +132,9 @@ export default function TermsOfService() {
 
             <LegalSection id="ip" title="8. Intellectual property and open-source software">
                 <p>
-                    The actual operator or relevant contributors—not “Hanami Bot” as a software object—hold rights in original branding,
-                    artwork, hosted-service presentation, and code to the extent those rights exist. Operator identity and any registered
-                    marks are <OwnerConfirmation />.
+                    Yorunoken and the relevant contributors—not “Hanami Bot” as a software object—hold rights in original branding,
+                    artwork, hosted-service presentation, and code to the extent those rights exist. Hanami does not claim that a name or
+                    mark is registered unless it is expressly identified as registered.
                 </p>
                 <p>
                     Source code published in a repository is licensed under the license in that repository. Map Analyzer, for example, is
@@ -170,30 +172,33 @@ export default function TermsOfService() {
             <LegalSection id="liability" title="11. Limitation of liability">
                 <p>
                     To the extent permitted by applicable law, the operator will not be liable for indirect or consequential losses arising
-                    from use of or inability to use the services, loss of data, provider outages, or unauthorized account use. Any financial
-                    cap, exclusions, treatment of gross negligence or intent, and consumer-law carve-outs require legal drafting based on
-                    the operator’s jurisdiction: <OwnerConfirmation />.
+                    from use of or inability to use the services, loss of data, provider outages, or unauthorized account use. Nothing in
+                    these terms excludes or limits liability that cannot lawfully be excluded or limited, including liability for fraud,
+                    intentional misconduct, or mandatory consumer protections.
                 </p>
             </LegalSection>
 
             <LegalSection id="law" title="12. Governing law and disputes">
                 <p>
-                    Governing law: <OwnerConfirmation />. Courts or dispute venue: <OwnerConfirmation />. Any informal resolution process,
-                    arbitration term, consumer venue protection, or statutory complaint route is <OwnerConfirmation /> and requires legal
-                    review.
+                    These terms are governed by the laws of Türkiye. Before filing a claim, please contact{" "}
+                    <a href={`mailto:${legalContacts.legal}`}>{legalContacts.legal}</a> so the parties can try to resolve the issue
+                    informally. Subject to any mandatory consumer venue or other protections available where you live, disputes will be
+                    submitted to the competent courts of Istanbul, Türkiye. These terms do not require arbitration.
                 </p>
             </LegalSection>
 
             <LegalSection id="changes" title="13. Changes and contact">
                 <p>
-                    Material changes should be posted with a new effective date and announced through the website or community server where
-                    appropriate. Notice period and acceptance mechanism: <OwnerConfirmation />.
+                    Material changes will be posted with a new effective date and, where appropriate, announced through the website or
+                    community server before they take effect. Security- or law-driven changes may take effect sooner. Continued use after
+                    the new effective date means you accept the updated terms; if you object, stop using the hosted services.
                 </p>
                 <p>
                     Terms questions and general legal notices: <a href={`mailto:${legalContacts.legal}`}>{legalContacts.legal}</a>.
                     Personal-data and privacy requests must instead be sent to{" "}
                     <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. The Discord community server is not an official
-                    legal or privacy request channel. The operator address remains <OwnerConfirmation />.
+                    legal or privacy request channel. Hanami is operated from Türkiye and does not publish a separate postal office. Formal
+                    correspondence can be initiated through the legal address, and a postal route will be provided where legally required.
                 </p>
             </LegalSection>
         </LegalDocument>
