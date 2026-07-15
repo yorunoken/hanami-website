@@ -1,26 +1,24 @@
 import { AlertCircle } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { useSession } from "@/client/lib/auth";
 import { fetchJson } from "@/client/lib/fetch-json";
-import { routes } from "@/client/routes/paths";
-import { AccountLayout, AccountPage, AuthLayout, AuthPanel, accountHeadingClass } from "@/components/account/account-shell";
+import { AccountLayout, AccountPage, accountHeadingClass } from "@/components/account/account-shell";
+import { useAuthenticatedSession } from "@/components/account/authenticated-route";
 import {
     AccountPrivacyAside,
     BotPreferencesSection,
     IdentitySection,
-    LoadingInline,
     type BotSettings,
     type LinkStatus,
     type ProfileAction,
 } from "@/components/account/profile-sections";
 import { Eyebrow } from "@/components/marketing";
-import { PrefetchLink } from "@/components/navigation/prefetch-link";
-import { formMessageClass, primaryActionClass } from "@/components/ui/action-styles";
+import { formMessageClass } from "@/components/ui/action-styles";
+import { getDiscordContactEmail } from "@/lib/discord-identity";
 import { cn } from "@/lib/utils";
 
 export default function Profile() {
-    const { data: session, isPending } = useSession();
+    const session = useAuthenticatedSession();
     const [linkStatus, setLinkStatus] = useState<LinkStatus | null>(null);
     const [settings, setSettings] = useState<BotSettings | null>(null);
     const [loading, setLoading] = useState(true);
@@ -29,11 +27,6 @@ export default function Profile() {
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
-        if (!session) {
-            setLoading(false);
-            return;
-        }
-
         const controller = new AbortController();
         setLoading(true);
         setError(null);
@@ -55,7 +48,7 @@ export default function Profile() {
             });
 
         return () => controller.abort();
-    }, [session]);
+    }, [session.user.id]);
 
     async function handleLinkOsu() {
         setAction("linking");
@@ -113,9 +106,6 @@ export default function Profile() {
         }
     }
 
-    if (isPending) return <AccountLoading />;
-    if (!session) return <SignedOutAccount />;
-
     const displayName = session.user.name || "Discord user";
 
     return (
@@ -137,7 +127,7 @@ export default function Profile() {
                 <IdentitySection
                     discordUser={{
                         name: displayName,
-                        email: session.user.email,
+                        email: getDiscordContactEmail(session.user.email),
                         image: session.user.image,
                     }}
                     linkStatus={linkStatus}
@@ -159,28 +149,5 @@ export default function Profile() {
                 <AccountPrivacyAside />
             </AccountLayout>
         </AccountPage>
-    );
-}
-
-function SignedOutAccount() {
-    return (
-        <AuthLayout>
-            <AuthPanel>
-                <Eyebrow>Account</Eyebrow>
-                <h1>Sign in to manage account links.</h1>
-                <p>Hanami uses Discord for web sign-in. osu! linking is a separate, optional step after authentication.</p>
-                <PrefetchLink className={cn(primaryActionClass, "mt-8 w-full")} to={routes.login}>
-                    Go to sign in
-                </PrefetchLink>
-            </AuthPanel>
-        </AuthLayout>
-    );
-}
-
-function AccountLoading() {
-    return (
-        <AuthLayout>
-            <LoadingInline label="Loading account" />
-        </AuthLayout>
     );
 }

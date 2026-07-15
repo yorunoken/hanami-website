@@ -9,11 +9,9 @@ const legalPrivacy = createRouteModule(() => import("@/components/legal/privacy-
 const legalTerms = createRouteModule(() => import("@/components/legal/tos"));
 const legalCookies = createRouteModule(() => import("@/components/legal/cookie-policy"));
 const legalDataDeletion = createRouteModule(() => import("@/components/legal/data-deletion"));
-const login = createRouteModule(() => import("@/client/pages/Login"));
 const mapAnalyzer = createRouteModule(() => import("@/client/pages/MapAnalyzer"));
 const notFound = createRouteModule(() => import("@/client/pages/NotFound"));
 const osuguessr = createRouteModule(() => import("@/client/pages/OsuGuessr"));
-const profile = createRouteModule(() => import("@/client/pages/Profile"));
 
 export const routeModules = {
     accountPrivacy,
@@ -24,11 +22,9 @@ export const routeModules = {
     legalIndex,
     legalPrivacy,
     legalTerms,
-    login,
     mapAnalyzer,
     notFound,
     osuguessr,
-    profile,
 } as const;
 
 export type RoutePreloader = () => Promise<unknown>;
@@ -43,10 +39,8 @@ export const routePreloaders = {
     [routes.legalTerms]: legalTerms.preload,
     [routes.legalCookies]: legalCookies.preload,
     [routes.legalDataDeletion]: legalDataDeletion.preload,
-    [routes.profile]: profile.preload,
     [routes.profilePrivacy]: accountPrivacy.preload,
     [routes.profilePrivacyConfirm]: accountPrivacy.preload,
-    [routes.login]: login.preload,
 } as const satisfies Partial<Record<InternalRoutePath, RoutePreloader>>;
 
 export function getRoutePreloader(path: string): RoutePreloader | undefined {

@@ -192,9 +192,8 @@ export default function TermsOfService() {
                 <p>
                     Terms questions and general legal notices: <a href={`mailto:${legalContacts.legal}`}>{legalContacts.legal}</a>.
                     Personal-data and privacy requests must instead be sent to{" "}
-                    <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>
-                    . The Discord community server is not an official legal or privacy request channel. The operator address remains{" "}
-                    <OwnerConfirmation />.
+                    <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. The Discord community server is not an official
+                    legal or privacy request channel. The operator address remains <OwnerConfirmation />.
                 </p>
             </LegalSection>
         </LegalDocument>

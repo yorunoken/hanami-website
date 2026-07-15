@@ -1,18 +1,15 @@
-import { House, Menu, UserRound, X } from "lucide-react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { routes } from "@/client/routes/paths";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
-import { accountActionClass } from "@/components/navigation/styles";
+import ProfileAction from "@/components/navigation/profile-action";
 import { navigation, siteConfig } from "@/data/site-config";
-
-const ProfileAction = lazy(() => import("@/components/navigation/profile-action"));
 
 export default function Header() {
     const [menuOpen, setMenuOpen] = useState(false);
     const { pathname } = useLocation();
-    const isProfile = pathname.startsWith("/profile");
 
     useEffect(() => {
         setMenuOpen(false);
@@ -55,16 +52,7 @@ export default function Header() {
                 </nav>
 
                 <div className="ml-auto flex items-center gap-2 min-[1081px]:ml-0">
-                    {isProfile ? (
-                        <Suspense fallback={<HomeAction />}>
-                            <ProfileAction />
-                        </Suspense>
-                    ) : (
-                        <PrefetchLink className={accountActionClass} to={routes.profile} prefetch="intent">
-                            <UserRound aria-hidden="true" />
-                            <span>Account</span>
-                        </PrefetchLink>
-                    )}
+                    <ProfileAction mobileNavigationOpen={menuOpen} onMenuOpen={() => setMenuOpen(false)} />
                     <button
                         className="inline-flex min-h-10 w-10.5 items-center justify-center border-0 bg-transparent text-white min-[1081px]:hidden [&_svg]:size-4.5"
                         type="button"
@@ -105,9 +93,6 @@ export default function Header() {
                     ))}
                 </div>
                 <div className="flex flex-wrap gap-x-6 gap-y-4 pt-8 [&_a]:text-[0.85rem] [&_a]:text-muted">
-                    <PrefetchLink to={routes.profile} prefetch="intent">
-                        Manage account
-                    </PrefetchLink>
                     <a href={siteConfig.links.community} target="_blank" rel="noreferrer">
                         Community
                     </a>
@@ -117,14 +102,5 @@ export default function Header() {
                 </div>
             </nav>
         </header>
-    );
-}
-
-function HomeAction() {
-    return (
-        <PrefetchLink className={accountActionClass} to={routes.home} prefetch="none">
-            <House aria-hidden="true" />
-            <span>Home</span>
-        </PrefetchLink>
     );
 }

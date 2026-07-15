@@ -78,7 +78,7 @@ export function IdentitySection({ discordUser, linkStatus, loading, action, onLi
                         </div>
                         <div>
                             <dt>Requested scope</dt>
-                            <dd>Identity and email</dd>
+                            <dd>Identity; email when available</dd>
                         </div>
                         <div>
                             <dt>Session</dt>

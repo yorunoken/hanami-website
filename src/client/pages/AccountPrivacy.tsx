@@ -2,19 +2,13 @@ import { ShieldCheck } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { reauthenticateWithDiscord } from "@/client/lib/auth";
+import { readOAuthError } from "@/client/lib/auth-navigation";
 import { fetchJson } from "@/client/lib/fetch-json";
-import { signIn, useSession } from "@/client/lib/auth";
 import { routes } from "@/client/routes/paths";
 import { AccountLayout, AccountPage, accountHeadingClass, sectionHeadingClass } from "@/components/account/account-shell";
-import {
-    ActionDefinition,
-    ConfirmationPage,
-    DeletionReceipt,
-    ErrorMessage,
-    PrivacyShell,
-    RequestStatus,
-    SignedOutPrivacy,
-} from "@/components/account/privacy-views";
+import { useAuthenticatedSession } from "@/components/account/authenticated-route";
+import { ActionDefinition, ConfirmationPage, DeletionReceipt, ErrorMessage, RequestStatus } from "@/components/account/privacy-views";
 import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import { dangerOutlineActionClass, primaryActionClass } from "@/components/ui/action-styles";
@@ -39,7 +33,7 @@ interface StartResponse {
 }
 
 export default function AccountPrivacy() {
-    const { data: session, isPending } = useSession();
+    const session = useAuthenticatedSession();
     const location = useLocation();
     const navigate = useNavigate();
     const isConfirmation = location.pathname.endsWith("/confirm");
@@ -62,7 +56,7 @@ export default function AccountPrivacy() {
     }, [location.hash, location.pathname]);
 
     useEffect(() => {
-        if (!session || isConfirmation) {
+        if (isConfirmation) {
             setLoading(false);
             return;
         }
@@ -90,10 +84,18 @@ export default function AccountPrivacy() {
         });
 
         return () => controller.abort();
-    }, [isConfirmation, session]);
+    }, [isConfirmation, session.user.id]);
 
     useEffect(() => {
-        if (!isConfirmation || !session || !challenge || confirmationReady) return;
+        const oauthError = readOAuthError(location.search);
+        if (!oauthError || !new URLSearchParams(location.search).has("reauth")) return;
+
+        setError(oauthError);
+        navigate(routes.profilePrivacy, { replace: true });
+    }, [location.search, navigate]);
+
+    useEffect(() => {
+        if (!isConfirmation || !challenge || confirmationReady) return;
         let active = true;
         setAction("verifying");
         setError(null);
@@ -110,7 +112,7 @@ export default function AccountPrivacy() {
         return () => {
             active = false;
         };
-    }, [challenge, confirmationReady, isConfirmation, session]);
+    }, [challenge, confirmationReady, isConfirmation, session.user.id]);
 
     async function startDeletionRequest() {
         setAction("starting");
@@ -118,10 +120,7 @@ export default function AccountPrivacy() {
         try {
             const result = await fetchJson<StartResponse>("/api/deletion-requests/reauth/start", undefined, jsonRequest({}));
             if (result.reauthenticationRequired) {
-                await signIn.social({
-                    provider: "discord",
-                    callbackURL: result.confirmationPath,
-                });
+                await reauthenticateWithDiscord(result.confirmationPath, `${routes.profilePrivacy}?reauth=1`);
                 return;
             }
             navigate(result.confirmationPath);
@@ -173,8 +172,6 @@ export default function AccountPrivacy() {
                 }}
             />
         );
-    if (isPending) return <PrivacyShell loading />;
-    if (!session) return <SignedOutPrivacy />;
     if (isConfirmation)
         return (
             <ConfirmationPage

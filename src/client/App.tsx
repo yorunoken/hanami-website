@@ -1,9 +1,12 @@
 import { Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import AuthenticatedRoute from "@/components/account/authenticated-route";
 import SiteMeta from "@/components/site-meta";
 import { RouteFallback } from "@/components/layout/route-fallback";
 import HomePage from "./pages/Home";
 import LegalPage from "./pages/LegalPage";
+import LoginPage from "./pages/Login";
+import ProfilePage from "./pages/Profile";
 import { legacyRedirects, routes } from "./routes/paths";
 import { routeModules } from "./routes/route-modules";
 
@@ -16,11 +19,9 @@ const {
     legalIndex,
     legalPrivacy,
     legalTerms,
-    login,
     mapAnalyzer,
     notFound,
     osuguessr,
-    profile,
 } = routeModules;
 
 export default function App() {
@@ -78,10 +79,12 @@ export default function App() {
                         {Object.entries(legacyRedirects).map(([path, destination]) => (
                             <Route key={path} path={path} element={<Navigate to={destination} replace />} />
                         ))}
-                        <Route path={routes.profile} element={<profile.Component />} />
-                        <Route path={routes.profilePrivacy} element={<accountPrivacy.Component />} />
-                        <Route path={routes.profilePrivacyConfirm} element={<accountPrivacy.Component />} />
-                        <Route path={routes.login} element={<login.Component />} />
+                        <Route element={<AuthenticatedRoute />}>
+                            <Route path={routes.profile} element={<ProfilePage />} />
+                            <Route path={routes.profilePrivacy} element={<accountPrivacy.Component />} />
+                            <Route path={routes.profilePrivacyConfirm} element={<accountPrivacy.Component />} />
+                        </Route>
+                        <Route path={routes.login} element={<LoginPage />} />
                         <Route path="*" element={<notFound.Component />} />
                     </Routes>
                 </Suspense>

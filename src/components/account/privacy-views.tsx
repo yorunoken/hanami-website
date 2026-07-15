@@ -2,7 +2,7 @@ import { AlertCircle, CheckCircle2, Copy, Loader2 } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 
 import { routes } from "@/client/routes/paths";
-import { AuthLayout, AuthPanel } from "@/components/account/account-shell";
+import { AuthLayout } from "@/components/account/account-shell";
 import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import {
@@ -179,36 +179,8 @@ export function DeletionReceipt({ request, copied, onCopy }: { request: PublicDe
     );
 }
 
-export function SignedOutPrivacy() {
-    return (
-        <PrivacyShell>
-            <AuthPanel>
-                <Eyebrow>Account privacy</Eyebrow>
-                <h1>Sign in to view or request deletion.</h1>
-                <p>
-                    Hanami verifies signed-in requests with Discord OAuth. If you cannot access the connected account, email{" "}
-                    <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>.
-                </p>
-                <PrefetchLink className={cn(primaryActionClass, "mt-8 w-full")} to={routes.login}>
-                    Sign in with Discord
-                </PrefetchLink>
-            </AuthPanel>
-        </PrivacyShell>
-    );
-}
-
-export function PrivacyShell({ children, loading = false }: { children?: ReactNode; loading?: boolean }) {
-    return (
-        <AuthLayout>
-            {loading ? (
-                <p className={loadingInlineClass} role="status">
-                    <Loader2 aria-hidden="true" /> Loading account privacy…
-                </p>
-            ) : (
-                children
-            )}
-        </AuthLayout>
-    );
+export function PrivacyShell({ children }: { children?: ReactNode }) {
+    return <AuthLayout>{children}</AuthLayout>;
 }
 
 export function ActionDefinition({ term, detail }: { term: string; detail: string }) {

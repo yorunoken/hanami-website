@@ -51,7 +51,11 @@ export default function PrivacyPolicy() {
             <LegalSection id="data" title="3. Data processed">
                 <h3>Hanami website and Discord sign-in</h3>
                 <ul>
-                    <li>Discord account ID, display name, email address, avatar URL, and provider scope returned through Discord OAuth.</li>
+                    <li>
+                        Discord account ID, display name, avatar URL, provider scope, and an email address when Discord supplies one. For a
+                        phone-only Discord account, Hanami stores a stable non-deliverable <code>discord.invalid</code> placeholder required
+                        by the authentication schema; it is not treated as verified contact information or used for mail.
+                    </li>
                     <li>OAuth account records, which may include Discord access or refresh tokens when Better Auth receives them.</li>
                     <li>Web session token, session dates, IP address, and user-agent string stored by Better Auth.</li>
                     <li>Short-lived OAuth verification values used to complete authentication safely.</li>
