@@ -9,9 +9,10 @@
         "lint": "eslint ."
     },
     "dependencies": {
+        "@better-auth/oauth-provider": "1.6.18",
         "@elysiajs/static": "^1.4.10",
         "@radix-ui/react-slot": "^1.2.3",
-        "better-auth": "^1.6.18",
+        "better-auth": "1.6.18",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "elysia": "^1.4.28",
@@ -24,7 +25,8 @@
         "react-icons": "^5.5.0",
         "react-router-dom": "^7.17.0",
         "redis": "^5.8.0",
-        "tailwind-merge": "^3.3.1"
+        "tailwind-merge": "^3.3.1",
+        "zod": "4.3.6"
     },
     "devDependencies": {
         "@eslint/eslintrc": "^3",
