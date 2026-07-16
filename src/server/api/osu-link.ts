@@ -1,11 +1,7 @@
 import { Elysia } from "elysia";
 import mysql, { type Connection, type RowDataPacket } from "mysql2/promise";
 
-import { auth } from "../auth";
-
-interface DiscordAccountRow extends RowDataPacket {
-    accountId: string;
-}
+import { serverIdentity } from "../identity";
 
 interface BotLinkRow extends RowDataPacket {
     banchoId: string | null;
@@ -34,10 +30,14 @@ const defaultSettings: BotSettings = {
 
 export const osuLinkRoute = new Elysia()
     .get("/osu-link/status", async ({ request, set }) => {
-        const session = await auth.api.getSession({ headers: request.headers });
-        if (!session) {
+        const identity = await serverIdentity.getCurrent(request.headers);
+        if (!identity) {
             set.status = 401;
             return { error: "Unauthorized" };
+        }
+        if (new URL(request.url).searchParams.size > 0) {
+            set.status = 400;
+            return { error: "Invalid request" };
         }
 
         if (!hasDatabaseConfiguration()) {
@@ -46,8 +46,8 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withDatabases(async (webDb, botDb) => {
-                const discordId = await getDiscordId(webDb, session.user.id);
+            return await withBotDatabase(async (botDb) => {
+                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
                 if (!discordId) {
                     set.status = 400;
                     return { error: "No Discord account is linked to this session" };
@@ -73,10 +73,14 @@ export const osuLinkRoute = new Elysia()
         }
     })
     .delete("/osu-link/unlink", async ({ request, set }) => {
-        const session = await auth.api.getSession({ headers: request.headers });
-        if (!session) {
+        const identity = await serverIdentity.getCurrent(request.headers);
+        if (!identity) {
             set.status = 401;
             return { error: "Unauthorized" };
+        }
+        if (new URL(request.url).searchParams.size > 0) {
+            set.status = 400;
+            return { error: "Invalid request" };
         }
 
         if (!hasDatabaseConfiguration()) {
@@ -85,8 +89,8 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withDatabases(async (webDb, botDb) => {
-                const discordId = await getDiscordId(webDb, session.user.id);
+            return await withBotDatabase(async (botDb) => {
+                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
                 if (!discordId) {
                     set.status = 400;
                     return { error: "No Discord account is linked to this session" };
@@ -102,10 +106,14 @@ export const osuLinkRoute = new Elysia()
         }
     })
     .get("/osu-link/settings", async ({ request, set }) => {
-        const session = await auth.api.getSession({ headers: request.headers });
-        if (!session) {
+        const identity = await serverIdentity.getCurrent(request.headers);
+        if (!identity) {
             set.status = 401;
             return { error: "Unauthorized" };
+        }
+        if (new URL(request.url).searchParams.size > 0) {
+            set.status = 400;
+            return { error: "Invalid request" };
         }
 
         if (!hasDatabaseConfiguration()) {
@@ -114,8 +122,8 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withDatabases(async (webDb, botDb) => {
-                const discordId = await getDiscordId(webDb, session.user.id);
+            return await withBotDatabase(async (botDb) => {
+                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
                 if (!discordId) {
                     set.status = 400;
                     return { error: "No Discord account is linked to this session" };
@@ -142,10 +150,14 @@ export const osuLinkRoute = new Elysia()
         }
     })
     .post("/osu-link/settings", async ({ request, body, set }) => {
-        const session = await auth.api.getSession({ headers: request.headers });
-        if (!session) {
+        const identity = await serverIdentity.getCurrent(request.headers);
+        if (!identity) {
             set.status = 401;
             return { error: "Unauthorized" };
+        }
+        if (new URL(request.url).searchParams.size > 0) {
+            set.status = 400;
+            return { error: "Invalid request" };
         }
 
         const settings = parseSettings(body);
@@ -160,8 +172,8 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withDatabases(async (webDb, botDb) => {
-                const discordId = await getDiscordId(webDb, session.user.id);
+            return await withBotDatabase(async (botDb) => {
+                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
                 if (!discordId) {
                     set.status = 400;
                     return { error: "No Discord account is linked to this session" };
@@ -186,23 +198,12 @@ export const osuLinkRoute = new Elysia()
         }
     });
 
-async function getDiscordId(webDb: Connection, userId: string): Promise<string | null> {
-    const [accounts] = await webDb.execute<DiscordAccountRow[]>(
-        "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord'",
-        [userId],
-    );
-    return accounts[0]?.accountId ?? null;
-}
-
-async function withDatabases<T>(callback: (webDb: Connection, botDb: Connection) => Promise<T>): Promise<T> {
-    let webDb: Connection | null = null;
+async function withBotDatabase<T>(callback: (botDb: Connection) => Promise<T>): Promise<T> {
     let botDb: Connection | null = null;
     try {
-        webDb = await mysql.createConnection(process.env.WEB_DATABASE_URL as string);
         botDb = await mysql.createConnection(process.env.BOT_DATABASE_URL as string);
-        return await callback(webDb, botDb);
+        return await callback(botDb);
     } finally {
-        await webDb?.end();
         await botDb?.end();
     }
 }
@@ -255,6 +256,8 @@ async function fetchPublicOsuProfile(banchoId: string): Promise<{
 
 function parseSettings(value: unknown): BotSettings | null {
     if (!isRecord(value)) return null;
+    const keys = Object.keys(value);
+    if (keys.length !== 4 || keys.some((key) => !["mode", "embed_type", "score_embeds", "score_data"].includes(key))) return null;
     if (!isOneOf(value.mode, ["osu", "mania", "taiko", "fruits"] as const)) return null;
     if (!isOneOf(value.embed_type, ["hanami", "bathbot", "owobot"] as const)) return null;
     if (value.score_embeds !== 0 && value.score_embeds !== 1) return null;

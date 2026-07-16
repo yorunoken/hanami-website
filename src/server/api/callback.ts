@@ -1,13 +1,10 @@
 import { Elysia } from "elysia";
-import mysql, { type RowDataPacket } from "mysql2/promise";
+import mysql from "mysql2/promise";
 
-import { auth, osuOAuthStateStore, webDatabase } from "../auth";
+import { osuOAuthStateStore } from "../auth";
+import { serverIdentity } from "../identity";
 import { consumeOAuthState } from "../oauth-state";
 import { logSafeFailure } from "../security/http";
-
-interface DiscordAccountRow extends RowDataPacket {
-    accountId: string;
-}
 
 interface OsuTokenResponse {
     access_token: string;
@@ -17,28 +14,17 @@ interface OsuIdentity {
     id: number | string;
 }
 
-export const callbackRoute = new Elysia().get("/callback", async ({ request, query, set, redirect }) => {
+export const callbackRoute = new Elysia().get("/callback", async ({ request, set, redirect }) => {
     set.headers["Cache-Control"] = "no-store";
-    const botDatabaseUrl = process.env.BOT_DATABASE_URL;
-
-    if (!botDatabaseUrl) {
-        set.status = 500;
-        return { success: false, message: "Server configuration error" };
-    }
-
-    if (!process.env.OSU_CLIENT_ID || !process.env.OSU_CLIENT_SECRET || !process.env.OSU_CALLBACK_URL) {
-        set.status = 500;
-        return { success: false, message: "Server configuration error" };
-    }
-
-    const { code, state } = query;
-    if (!code || !state) {
+    const callbackParameters = readCallbackParameters(new URL(request.url));
+    if (!callbackParameters) {
         set.status = 400;
         return { success: false, message: "Missing OAuth callback parameters." };
     }
+    const { code, state } = callbackParameters;
 
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) {
+    const identity = await serverIdentity.getCurrent(request.headers);
+    if (!identity) {
         set.status = 401;
         return {
             success: false,
@@ -46,11 +32,17 @@ export const callbackRoute = new Elysia().get("/callback", async ({ request, que
         };
     }
 
+    const botDatabaseUrl = process.env.BOT_DATABASE_URL;
+    if (!botDatabaseUrl || !process.env.OSU_CLIENT_ID || !process.env.OSU_CLIENT_SECRET || !process.env.OSU_CALLBACK_URL) {
+        set.status = 500;
+        return { success: false, message: "Server configuration error" };
+    }
+
     let validState: boolean;
     try {
         validState = await consumeOAuthState(osuOAuthStateStore, state, {
-            userId: session.user.id,
-            sessionId: session.session.id,
+            userId: identity.userId,
+            sessionId: identity.sessionId,
         });
     } catch (error) {
         logSafeFailure("verify osu! authorization state", error);
@@ -69,12 +61,7 @@ export const callbackRoute = new Elysia().get("/callback", async ({ request, que
     let botDb: Awaited<ReturnType<typeof mysql.createConnection>> | null = null;
 
     try {
-        const [accounts] = await webDatabase.execute<DiscordAccountRow[]>(
-            "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord'",
-            [session.user.id],
-        );
-
-        const discordId = accounts[0]?.accountId;
+        const discordId = await serverIdentity.resolveDiscordId(identity.userId);
         if (!discordId) {
             set.status = 400;
             return {
@@ -170,4 +157,27 @@ function isOsuIdentity(value: unknown): value is OsuIdentity {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null;
+}
+
+function readCallbackParameters(url: URL): { code: string; state: string } | null {
+    const allowed = new Set(["code", "state"]);
+    const seen = new Set<string>();
+    for (const [key] of url.searchParams) {
+        if (!allowed.has(key) || seen.has(key)) return null;
+        seen.add(key);
+    }
+
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    if (!code || code.length > 512 || hasControlCharacters(code)) return null;
+    if (!state) return null;
+    return { code, state };
+}
+
+function hasControlCharacters(value: string): boolean {
+    for (const character of value) {
+        const codePoint = character.codePointAt(0) ?? 0;
+        if (codePoint <= 31 || codePoint === 127) return true;
+    }
+    return false;
 }

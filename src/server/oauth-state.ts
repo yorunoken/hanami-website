@@ -1,6 +1,6 @@
-import type { Pool, ResultSetHeader } from "mysql2/promise";
+import type { Pool, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import { createSecureToken, hashToken, isSecureToken } from "./security/tokens";
+import { createSecureToken, hashToken, isSecureToken, safelyEqualHashes } from "./security/tokens";
 
 export const OSU_OAUTH_STATE_LIFETIME_MS = 10 * 60 * 1_000;
 
@@ -14,31 +14,67 @@ export interface OAuthStateStore {
     consume(input: OAuthStateBinding & { stateHash: string; now: Date }): Promise<boolean>;
 }
 
+interface OAuthStateRow extends RowDataPacket {
+    id: string;
+    stateHash: string;
+}
+
 export class MySqlOAuthStateStore implements OAuthStateStore {
     constructor(private readonly pool: Pool) {}
 
     async create(input: OAuthStateBinding & { stateHash: string; createdAt: Date; expiresAt: Date }): Promise<void> {
-        await this.pool.execute(
-            `INSERT INTO osuOAuthState
+        const connection = await this.pool.getConnection();
+        try {
+            await connection.beginTransaction();
+            await cleanupExpiredStates(connection, input.createdAt);
+            await connection.execute(
+                `DELETE FROM osuOAuthState
+                  WHERE userId = ? AND sessionId = ?`,
+                [input.userId, input.sessionId],
+            );
+            await connection.execute(
+                `INSERT INTO osuOAuthState
                 (id, stateHash, userId, sessionId, createdAt, expiresAt, consumedAt)
              VALUES (?, ?, ?, ?, ?, ?, NULL)`,
-            [crypto.randomUUID(), input.stateHash, input.userId, input.sessionId, input.createdAt, input.expiresAt],
-        );
+                [crypto.randomUUID(), input.stateHash, input.userId, input.sessionId, input.createdAt, input.expiresAt],
+            );
+            await connection.commit();
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     }
 
     async consume(input: OAuthStateBinding & { stateHash: string; now: Date }): Promise<boolean> {
         const connection = await this.pool.getConnection();
         try {
             await connection.beginTransaction();
+            await cleanupExpiredStates(connection, input.now);
+            const [states] = await connection.execute<OAuthStateRow[]>(
+                `SELECT id, stateHash
+                   FROM osuOAuthState
+                  WHERE userId = ?
+                    AND sessionId = ?
+                    AND consumedAt IS NULL
+                    AND expiresAt > ?
+                  FOR UPDATE`,
+                [input.userId, input.sessionId, input.now],
+            );
+            const state = states.find((candidate) => safelyEqualHashes(candidate.stateHash, input.stateHash));
+            if (!state) {
+                await connection.rollback();
+                return false;
+            }
+
             const [result] = await connection.execute<ResultSetHeader>(
                 `UPDATE osuOAuthState
                     SET consumedAt = ?
-                  WHERE stateHash = ?
-                    AND userId = ?
-                    AND sessionId = ?
+                  WHERE id = ?
                     AND consumedAt IS NULL
                     AND expiresAt > ?`,
-                [input.now, input.stateHash, input.userId, input.sessionId, input.now],
+                [input.now, state.id, input.now],
             );
             if (result.affectedRows !== 1) {
                 await connection.rollback();
@@ -54,6 +90,15 @@ export class MySqlOAuthStateStore implements OAuthStateStore {
             connection.release();
         }
     }
+}
+
+async function cleanupExpiredStates(connection: { execute: Pool["execute"] }, now: Date): Promise<void> {
+    await connection.execute(
+        `DELETE FROM osuOAuthState
+          WHERE expiresAt <= ? OR consumedAt IS NOT NULL
+          LIMIT 1000`,
+        [now],
+    );
 }
 
 export async function createOAuthState(store: OAuthStateStore, binding: OAuthStateBinding, now = new Date()): Promise<string> {

@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 const TOKEN_BYTES = 32;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -18,4 +20,11 @@ export function isSecureToken(value: unknown): value is string {
 export async function hashToken(value: string): Promise<string> {
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
     return Buffer.from(digest).toString("hex");
+}
+
+export function safelyEqualHashes(left: string, right: string): boolean {
+    const leftBuffer = Buffer.from(left, "utf8");
+    const rightBuffer = Buffer.from(right, "utf8");
+    if (leftBuffer.byteLength !== rightBuffer.byteLength) return false;
+    return timingSafeEqual(leftBuffer, rightBuffer);
 }

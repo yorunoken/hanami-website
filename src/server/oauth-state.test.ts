@@ -14,6 +14,11 @@ describe("osu! OAuth state", () => {
         expect(await consumeOAuthState(store, state, binding, new Date(now.getTime() + 2_000))).toBe(false);
     });
 
+    it("rejects a missing state", async () => {
+        const store = new MemoryOAuthStateStore();
+        expect(await consumeOAuthState(store, undefined, binding, now)).toBe(false);
+    });
+
     it("rejects malformed, expired, and mismatched states", async () => {
         const store = new MemoryOAuthStateStore();
         const state = await createOAuthState(store, binding, now);

@@ -14,6 +14,126 @@ interface IndexRow extends RowDataPacket {
     present: number | string;
 }
 
+const companionOAuthMigration = {
+    id: "20260716_companion_oauth",
+    statements: [
+        `CREATE TABLE IF NOT EXISTS companionAuthorizationRequest (
+                id VARCHAR(36) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                sessionId VARCHAR(36) NOT NULL,
+                clientId VARCHAR(64) NOT NULL,
+                redirectUri VARCHAR(255) NOT NULL,
+                state VARCHAR(512) NOT NULL,
+                codeChallenge CHAR(43) NOT NULL,
+                codeChallengeMethod VARCHAR(8) NOT NULL,
+                deviceName VARCHAR(100) NOT NULL,
+                platform VARCHAR(20) NOT NULL,
+                csrfTokenHash CHAR(64) NOT NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                expiresAt TIMESTAMP(3) NOT NULL,
+                consumedAt TIMESTAMP(3) NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY companionAuthorizationRequest_csrf_unique (csrfTokenHash),
+                KEY companionAuthorizationRequest_binding_idx (userId, sessionId, consumedAt),
+                KEY companionAuthorizationRequest_expiry_idx (expiresAt),
+                CONSTRAINT companionAuthorizationRequest_user_fk
+                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE,
+                CONSTRAINT companionAuthorizationRequest_session_fk
+                    FOREIGN KEY (sessionId) REFERENCES session (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        `CREATE TABLE IF NOT EXISTS companionAuthorizationCode (
+                id VARCHAR(36) NOT NULL,
+                codeHash CHAR(64) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                clientId VARCHAR(64) NOT NULL,
+                redirectUri VARCHAR(255) NOT NULL,
+                codeChallenge CHAR(43) NOT NULL,
+                codeChallengeMethod VARCHAR(8) NOT NULL,
+                deviceName VARCHAR(100) NOT NULL,
+                platform VARCHAR(20) NOT NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                expiresAt TIMESTAMP(3) NOT NULL,
+                usedAt TIMESTAMP(3) NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY companionAuthorizationCode_hash_unique (codeHash),
+                KEY companionAuthorizationCode_user_idx (userId, createdAt),
+                KEY companionAuthorizationCode_expiry_idx (expiresAt, usedAt),
+                CONSTRAINT companionAuthorizationCode_user_fk
+                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        `CREATE TABLE IF NOT EXISTS companionDevice (
+                id VARCHAR(36) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                displayName VARCHAR(100) NOT NULL,
+                platform VARCHAR(20) NOT NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                lastUsedAt TIMESTAMP(3) NOT NULL,
+                revokedAt TIMESTAMP(3) NULL,
+                PRIMARY KEY (id),
+                KEY companionDevice_user_idx (userId, createdAt),
+                KEY companionDevice_user_active_idx (userId, revokedAt),
+                CONSTRAINT companionDevice_user_fk
+                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        `CREATE TABLE IF NOT EXISTS companionTokenFamily (
+                id VARCHAR(36) NOT NULL,
+                deviceId VARCHAR(36) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                clientId VARCHAR(64) NOT NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                lastUsedAt TIMESTAMP(3) NOT NULL,
+                revokedAt TIMESTAMP(3) NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY companionTokenFamily_device_unique (deviceId),
+                KEY companionTokenFamily_user_idx (userId, revokedAt),
+                CONSTRAINT companionTokenFamily_device_fk
+                    FOREIGN KEY (deviceId) REFERENCES companionDevice (id) ON DELETE CASCADE,
+                CONSTRAINT companionTokenFamily_user_fk
+                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        `CREATE TABLE IF NOT EXISTS companionAccessToken (
+                id VARCHAR(36) NOT NULL,
+                tokenHash CHAR(64) NOT NULL,
+                familyId VARCHAR(36) NOT NULL,
+                deviceId VARCHAR(36) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                expiresAt TIMESTAMP(3) NOT NULL,
+                lastUsedAt TIMESTAMP(3) NULL,
+                revokedAt TIMESTAMP(3) NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY companionAccessToken_hash_unique (tokenHash),
+                KEY companionAccessToken_family_idx (familyId, revokedAt),
+                KEY companionAccessToken_expiry_idx (expiresAt),
+                KEY companionAccessToken_user_idx (userId, deviceId),
+                CONSTRAINT companionAccessToken_family_fk
+                    FOREIGN KEY (familyId) REFERENCES companionTokenFamily (id) ON DELETE CASCADE,
+                CONSTRAINT companionAccessToken_device_fk
+                    FOREIGN KEY (deviceId) REFERENCES companionDevice (id) ON DELETE CASCADE,
+                CONSTRAINT companionAccessToken_user_fk
+                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        `CREATE TABLE IF NOT EXISTS companionRefreshToken (
+                id VARCHAR(36) NOT NULL,
+                tokenHash CHAR(64) NOT NULL,
+                familyId VARCHAR(36) NOT NULL,
+                parentTokenId VARCHAR(36) NULL,
+                replacedByTokenId VARCHAR(36) NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                expiresAt TIMESTAMP(3) NOT NULL,
+                usedAt TIMESTAMP(3) NULL,
+                revokedAt TIMESTAMP(3) NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY companionRefreshToken_hash_unique (tokenHash),
+                KEY companionRefreshToken_family_idx (familyId, revokedAt),
+                KEY companionRefreshToken_expiry_idx (expiresAt, usedAt),
+                KEY companionRefreshToken_parent_idx (parentTokenId),
+                CONSTRAINT companionRefreshToken_family_fk
+                    FOREIGN KEY (familyId) REFERENCES companionTokenFamily (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    ],
+} as const;
+
 const migrations = [
     {
         id: "20260715_account_deletion_reauthentication",
@@ -74,6 +194,7 @@ const migrations = [
         ],
         run: ensureUniqueProviderAccountIndex,
     },
+    companionOAuthMigration,
 ] as const;
 
 export async function runWebMigrations(pool: Pool): Promise<void> {

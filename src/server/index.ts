@@ -4,6 +4,7 @@ import { getPageSeo, isKnownClientRoute } from "@/lib/seo";
 
 import { apiRoutes } from "./api";
 import { auth, webDatabase } from "./auth";
+import { companionOAuthRoutes } from "./companion/routes";
 import { runWebMigrations } from "./migrations";
 import { injectRenderedPage } from "./page-renderer";
 import { injectSeoHead } from "./seo";
@@ -16,7 +17,9 @@ const legacyLegalRoutes = new Map([
     ["/terms-of-service", "/legal/terms"],
 ]);
 
-const app = new Elysia().use(apiRoutes).all("*", async ({ request, set }) => {
+const app = new Elysia().use(apiRoutes).use(companionOAuthRoutes);
+
+app.all("*", async ({ request, set }) => {
     const url = new URL(request.url);
 
     if (url.pathname === "/index.html") {
