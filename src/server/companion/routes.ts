@@ -45,6 +45,7 @@ export function createCompanionOAuthRoutes(dependencies: CompanionRouteDependenc
 
             const authorization = parseAuthorizationRequest(new URL(request.url));
             if (!authorization) return oauthFailure(set, 400, "invalid_request", "The authorization request is invalid.");
+            allowCompanionCallback(set, authorization.redirectUri);
 
             const now = dependencies.now();
             const requestId = crypto.randomUUID();
@@ -99,6 +100,7 @@ export function createCompanionOAuthRoutes(dependencies: CompanionRouteDependenc
                 return oauthFailure(set, 500, "invalid_request", "The approval action could not be completed.");
             }
             if (!authorization) return oauthFailure(set, 400, "invalid_request", "The approval request expired or was already used.");
+            allowCompanionCallback(set, authorization.redirectUri);
 
             if (action.decision === "cancel") {
                 return redirect(
@@ -227,7 +229,10 @@ function createClientRedirect(redirectUri: string, parameters: Record<string, st
 
 function hasValidApprovalOrigin(request: Request, allowedOrigins: readonly string[]): boolean {
     const origin = request.headers.get("origin");
-    if (!origin) return false;
+    // Some privacy-focused browsers omit Origin on same-origin form posts or
+    // serialize an opaque origin as "null". The approval still requires the
+    // request-bound, session-bound, single-use CSRF token checked below.
+    if (!origin || origin === "null") return true;
     return origin === new URL(request.url).origin || allowedOrigins.includes(origin);
 }
 
@@ -242,6 +247,12 @@ function setSecurityHeaders(set: { headers: Record<string, string | number> }): 
     set.headers["X-Frame-Options"] = "DENY";
     set.headers["Content-Security-Policy"] =
         "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
+}
+
+function allowCompanionCallback(set: { headers: Record<string, string | number> }, redirectUri: string): void {
+    const callbackOrigin = new URL(redirectUri).origin;
+    set.headers["Content-Security-Policy"] =
+        `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${callbackOrigin}; frame-ancestors 'none'; base-uri 'none'`;
 }
 
 function setTokenHeaders(set: { headers: Record<string, string | number> }): void {

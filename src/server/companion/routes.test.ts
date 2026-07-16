@@ -35,10 +35,12 @@ describe("Companion authorization code flow", () => {
 
         expect(approval.response.status).toBe(200);
         expect(approval.html).toContain("Connect Hanami Companion?");
+        expect(approval.response.headers.get("content-security-policy")).toContain(`form-action 'self' ${new URL(redirectUri).origin}`);
         expect(context.store.codes).toHaveLength(0);
 
         const approved = await submitApproval(context.app, approval.html, "approve");
         expect(approved.status).toBe(302);
+        expect(approved.headers.get("content-security-policy")).toContain(`form-action 'self' ${new URL(redirectUri).origin}`);
         const redirect = new URL(approved.headers.get("location")!);
         expect(redirect.origin + redirect.pathname).toBe(redirectUri);
         expect(redirect.searchParams.get("state")).toBe(clientState);
@@ -117,20 +119,47 @@ describe("Companion authorization code flow", () => {
         expect(context.store.codes).toHaveLength(0);
     });
 
-    it("requires a trusted-origin approval action and the request-bound CSRF token", async () => {
+    it("allows approval without an Origin header when the request-bound CSRF token is valid", async () => {
+        const context = await makeOAuthApp();
+        for (const origin of [undefined, "null"]) {
+            const approval = await startAuthorization(context.app);
+            const headers = new Headers({ "Content-Type": "application/x-www-form-urlencoded" });
+            if (origin) headers.set("Origin", origin);
+
+            const approved = await context.app.handle(
+                new Request("http://localhost/oauth/authorize", {
+                    method: "POST",
+                    headers,
+                    body: new URLSearchParams({
+                        request_id: readHiddenValue(approval.html, "request_id"),
+                        csrf_token: readHiddenValue(approval.html, "csrf_token"),
+                        decision: "approve",
+                    }),
+                }),
+            );
+            expect(approved.status).toBe(302);
+            expect(new URL(approved.headers.get("location")!).searchParams.has("code")).toBe(true);
+        }
+        expect(context.store.codes).toHaveLength(2);
+    });
+
+    it("rejects an explicitly untrusted approval origin and an invalid CSRF token", async () => {
         const context = await makeOAuthApp();
         const approval = await startAuthorization(context.app);
         const requestId = readHiddenValue(approval.html, "request_id");
         const csrfToken = readHiddenValue(approval.html, "csrf_token");
 
-        const missingOrigin = await context.app.handle(
+        const untrustedOrigin = await context.app.handle(
             new Request("http://localhost/oauth/authorize", {
                 method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    Origin: "https://attacker.example",
+                },
                 body: new URLSearchParams({ request_id: requestId, csrf_token: csrfToken, decision: "approve" }),
             }),
         );
-        expect(missingOrigin.status).toBe(403);
+        expect(untrustedOrigin.status).toBe(403);
 
         const wrongToken = await context.app.handle(
             new Request("http://localhost/oauth/authorize", {
