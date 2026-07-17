@@ -19,9 +19,14 @@ export function injectRenderedPage(template: string, location: string): string {
 }
 
 function renderPage(location: string): string {
-    return renderToString(
-        <MemoryRouter initialEntries={[location]}>
-            <AppContent />
-        </MemoryRouter>,
-    );
+    try {
+        return renderToString(
+            <MemoryRouter initialEntries={[location]}>
+                <AppContent />
+            </MemoryRouter>,
+        );
+    } catch (error) {
+        console.error(`Failed to render route "${location}"`, error);
+        return "";
+    }
 }

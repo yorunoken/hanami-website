@@ -17,16 +17,20 @@ import MapAnalyzerPage from "./pages/MapAnalyzer";
 import NotFoundPage from "./pages/NotFound";
 import OsuGuessrPage from "./pages/OsuGuessr";
 import ProfilePage from "./pages/Profile";
+
+import ErrorBoundary from "@/components/error-boundary";
+
 import { legacyRedirects, routes } from "./routes/paths";
 
 export default function App() {
     return (
-        <BrowserRouter>
-            <AppContent />
-        </BrowserRouter>
+        <ErrorBoundary>
+            <BrowserRouter>
+                <AppContent />
+            </BrowserRouter>
+        </ErrorBoundary>
     );
 }
-
 export function AppContent() {
     return (
         <>
