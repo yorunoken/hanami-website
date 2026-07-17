@@ -1,8 +1,9 @@
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 
-import { AppContent } from "@/client/App";
 import { getPageSeo } from "@/lib/seo";
+
+import SeoApp from "./seo-app";
 
 const ROOT_ELEMENT = '<div id="root"></div>';
 const renderedPublicPages = new Map<string, string>();
@@ -22,11 +23,11 @@ function renderPage(location: string): string {
     try {
         return renderToString(
             <MemoryRouter initialEntries={[location]}>
-                <AppContent />
+                <SeoApp />
             </MemoryRouter>,
         );
     } catch (error) {
-        console.error(`Failed to render route "${location}"`, error);
+        console.error(`Failed to render SEO route "${location}"`, error);
         return "";
     }
 }
