@@ -1,55 +1,57 @@
-"use client";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import { Component, ErrorInfo, ReactNode } from "react";
-
-interface Props {
+interface ErrorBoundaryProps {
     children: ReactNode;
-    fallback?: ReactNode;
 }
 
-interface State {
+interface ErrorBoundaryState {
     hasError: boolean;
-    error?: Error;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-    public state: State = {
+export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+    state: ErrorBoundaryState = {
         hasError: false,
     };
 
-    public static getDerivedStateFromError(error: Error): State {
-        return { hasError: true, error };
+    static getDerivedStateFromError(): ErrorBoundaryState {
+        return {
+            hasError: true,
+        };
     }
 
-    public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error("Uncaught error:", error, errorInfo);
+    componentDidCatch(error: Error, info: ErrorInfo) {
+        console.error("Unhandled React error", error, info);
     }
 
-    public render() {
-        if (this.state.hasError) {
-            if (this.props.fallback) {
-                return this.props.fallback;
-            }
-
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-900">
-                    <div className="text-center p-8">
-                        <h2 className="text-2xl font-bold text-red-400 mb-4">Something went wrong</h2>
-                        <p className="text-gray-400 mb-6">We encountered an unexpected error. Please try refreshing the page.</p>
-                        <button className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded transition-colors" onClick={() => window.location.reload()}>
-                            Refresh Page
-                        </button>
-                        {process.env.NODE_ENV === "development" && this.state.error && (
-                            <details className="mt-4 text-left">
-                                <summary className="cursor-pointer text-gray-400">Error Details</summary>
-                                <pre className="mt-2 text-xs text-red-300 bg-gray-800 p-4 rounded overflow-auto">{this.state.error.stack}</pre>
-                            </details>
-                        )}
-                    </div>
-                </div>
-            );
+    render() {
+        if (!this.state.hasError) {
+            return this.props.children;
         }
 
-        return this.props.children;
+        return (
+            <main className="grid min-h-screen place-items-center bg-bg px-6 text-text">
+                <section className="max-w-xl text-center">
+                    <p className="font-mono text-sm text-accent">Something went wrong</p>
+
+                    <h1 className="mt-4 text-4xl font-bold tracking-tight">Hanami couldn’t load this page.</h1>
+
+                    <p className="mt-4 leading-7 text-muted">Try reloading the page. If the problem continues, return to the homepage.</p>
+
+                    <div className="mt-8 flex flex-wrap justify-center gap-3">
+                        <button
+                            className="rounded-sm bg-accent px-5 py-3 font-semibold text-bg"
+                            type="button"
+                            onClick={() => window.location.reload()}
+                        >
+                            Reload page
+                        </button>
+
+                        <a className="rounded-sm border border-border-strong px-5 py-3 font-semibold text-white" href="/">
+                            Go home
+                        </a>
+                    </div>
+                </section>
+            </main>
+        );
     }
 }

@@ -1,35 +1,172 @@
-import { describe, it, expect } from "bun:test";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+
+import { auth, osuOAuthStateStore } from "./auth";
 import app from "./index";
+import { hashToken } from "./security/tokens";
+
+const originalClientId = process.env.OSU_CLIENT_ID;
+const originalCallbackUrl = process.env.OSU_CALLBACK_URL;
+const originalClientSecret = process.env.OSU_CLIENT_SECRET;
+const originalBotDatabaseUrl = process.env.BOT_DATABASE_URL;
+
+afterEach(() => {
+    mock.restore();
+    restoreEnvironment("OSU_CLIENT_ID", originalClientId);
+    restoreEnvironment("OSU_CALLBACK_URL", originalCallbackUrl);
+    restoreEnvironment("OSU_CLIENT_SECRET", originalClientSecret);
+    restoreEnvironment("BOT_DATABASE_URL", originalBotDatabaseUrl);
+});
+
+describe("osu! OAuth callback state", () => {
+    it("rejects missing callback state", async () => {
+        const response = await app.handle(new Request("http://localhost/api/callback?code=osu-code"));
+        expect(response.status).toBe(400);
+        expect(await response.json()).toMatchObject({ success: false });
+    });
+
+    it("rejects a state that is not bound to the current session", async () => {
+        mockAuthenticatedSession();
+        process.env.OSU_CLIENT_ID = "12345";
+        process.env.OSU_CLIENT_SECRET = "client-secret";
+        process.env.OSU_CALLBACK_URL = "http://localhost:3000/api/callback";
+        process.env.BOT_DATABASE_URL = "mysql://unused";
+        const consumeState = spyOn(osuOAuthStateStore, "consume").mockResolvedValue(false);
+
+        const state = "s".repeat(43);
+        const response = await app.handle(new Request(`http://localhost/api/callback?code=osu-code&state=${state}`));
+        expect(response.status).toBe(400);
+        expect(await response.json()).toMatchObject({ success: false });
+        expect(consumeState).toHaveBeenCalledTimes(1);
+    });
+});
 
 describe("Auth Endpoint", () => {
-    it("should return 500 when missing env variables", async () => {
-        // Unset env vars
-        const oldId = process.env.OSU_CLIENT_ID;
-        const oldCb = process.env.OSU_CALLBACK_URL;
+    it("returns 401 when the request has no authenticated session", async () => {
+        const request = new Request("http://localhost/api/auth");
+        const response = await app.handle(request);
+
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({ error: "Unauthorized" });
+    });
+
+    it("returns 500 for an authenticated request when osu! auth is not configured", async () => {
+        mockAuthenticatedSession();
         delete process.env.OSU_CLIENT_ID;
         delete process.env.OSU_CALLBACK_URL;
 
-        const req = new Request("http://localhost/api/auth?state=teststate");
-        const res = await app.handle(req);
+        const request = new Request("http://localhost/api/auth");
+        const response = await app.handle(request);
 
-        expect(res.status).toBe(500);
-
-        // Restore
-        process.env.OSU_CLIENT_ID = oldId;
-        process.env.OSU_CALLBACK_URL = oldCb;
+        expect(response.status).toBe(500);
+        expect(await response.json()).toEqual({
+            error: "Server configuration error",
+        });
     });
 
-    it("should return auth URL when env variables are set", async () => {
+    it("returns an osu! authorization URL for an authenticated request", async () => {
+        mockAuthenticatedSession();
         process.env.OSU_CLIENT_ID = "12345";
         process.env.OSU_CALLBACK_URL = "http://localhost:3000/api/callback";
+        const createState = spyOn(osuOAuthStateStore, "create").mockResolvedValue();
 
-        const req = new Request("http://localhost/api/auth?state=teststate");
-        const res = await app.handle(req);
+        const request = new Request("http://localhost/api/auth");
+        const response = await app.handle(request);
 
-        expect(res.status).toBe(200);
-        const data = (await res.json()) as any;
+        expect(response.status).toBe(200);
+        const data = (await response.json()) as { url: string };
         expect(data.url).toContain("https://osu.ppy.sh/oauth/authorize");
         expect(data.url).toContain("client_id=12345");
-        expect(data.url).toContain("state=teststate");
+        const state = new URL(data.url).searchParams.get("state");
+        expect(state).toBeTruthy();
+        expect(state).not.toBe("teststate");
+        expect(createState).toHaveBeenCalledTimes(1);
+        expect(createState.mock.calls[0]?.[0]).toMatchObject({
+            userId: "test-user",
+            sessionId: "test-session",
+            stateHash: await hashToken(state!),
+        });
+    });
+
+    it("rejects state supplied by the frontend", async () => {
+        mockAuthenticatedSession();
+        process.env.OSU_CLIENT_ID = "12345";
+        process.env.OSU_CALLBACK_URL = "http://localhost:3000/api/callback";
+        const createState = spyOn(osuOAuthStateStore, "create").mockResolvedValue();
+
+        const response = await app.handle(new Request("http://localhost/api/auth?state=frontend-state"));
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: "OAuth state is generated by the server" });
+        expect(createState).not.toHaveBeenCalled();
     });
 });
+
+describe("Legacy legal URLs", () => {
+    it("redirects old privacy URLs to the legal center", async () => {
+        const response = await app.handle(new Request("http://localhost/privacy?source=footer"));
+        expect(response.status).toBe(308);
+        expect(response.headers.get("location")).toBe("http://localhost/legal/privacy?source=footer");
+    });
+
+    it("redirects old terms URLs to the legal center", async () => {
+        const response = await app.handle(new Request("http://localhost/terms-of-service"));
+        expect(response.status).toBe(308);
+        expect(response.headers.get("location")).toBe("http://localhost/legal/terms");
+    });
+});
+
+describe("Canonical route redirects", () => {
+    it("redirects index.html and trailing-slash duplicates", async () => {
+        const indexResponse = await app.handle(new Request("http://localhost/index.html?source=old"));
+        expect(indexResponse.status).toBe(308);
+        expect(indexResponse.headers.get("location")).toBe("http://localhost/?source=old");
+
+        const trailingSlashResponse = await app.handle(new Request("http://localhost/bot/?source=old"));
+        expect(trailingSlashResponse.status).toBe(308);
+        expect(trailingSlashResponse.headers.get("location")).toBe("http://localhost/bot?source=old");
+    });
+});
+
+describe("Unknown API routes", () => {
+    it("returns a non-indexable JSON 404 instead of the application shell", async () => {
+        const response = await app.handle(new Request("http://localhost/api/does-not-exist"));
+
+        expect(response.status).toBe(404);
+        expect(response.headers.get("content-type")).toContain("application/json");
+        expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+        expect(await response.json()).toEqual({ error: "Not Found" });
+    });
+});
+
+function mockAuthenticatedSession() {
+    return spyOn(auth.api, "getSession").mockResolvedValue({
+        session: {
+            id: "test-session",
+            token: "test-token",
+            userId: "test-user",
+            expiresAt: new Date(Date.now() + 60_000),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        },
+        user: {
+            id: "test-user",
+            name: "Test User",
+            email: "test@example.com",
+            emailVerified: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            image: null,
+        },
+    });
+}
+
+function restoreEnvironment(
+    key: "OSU_CLIENT_ID" | "OSU_CLIENT_SECRET" | "OSU_CALLBACK_URL" | "BOT_DATABASE_URL",
+    value: string | undefined,
+) {
+    if (value === undefined) {
+        delete process.env[key];
+        return;
+    }
+
+    process.env[key] = value;
+}

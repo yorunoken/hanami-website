@@ -1,204 +1,155 @@
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Code2, Github, Heart, MessageCircle, ShieldCheck, Terminal, Trophy, UserRound, Zap } from "lucide-react";
-import { Link } from "react-router-dom";
-import Header from "@/components/header";
+import { Github } from "lucide-react";
+
 import Footer from "@/components/footer";
+import Header from "@/components/header";
+import { sectionSpacingClass, siteContainerClass, sitePageClass } from "@/components/layout/styles";
+import { ActionLink, Eyebrow, TextLink } from "@/components/marketing";
+import { products, siteConfig } from "@/data/site-config";
+import { cn } from "@/lib/utils";
 
-import { signIn, useSession } from "../lib/auth";
-
-const commands = [
-    {
-        icon: UserRound,
-        name: "/osu",
-        title: "Profile cards",
-        description: "Show rank, accuracy, play count, country, and linked account details.",
-    },
-    {
-        icon: Zap,
-        name: "/recent",
-        title: "Recent scores",
-        description: "Fetch the latest play with mods, combo, hit results, and performance info.",
-    },
-    {
-        icon: Trophy,
-        name: "/top",
-        title: "Top plays",
-        description: "Pull best scores for linked users or any osu! username in the server.",
-    },
-];
-
-const libraries = [
-    { name: "Lilybird", detail: "Discord API", url: "https://lilybird.dev/" },
-    { name: "osu-api-extended", detail: "osu! API v2", url: "https://www.npmjs.com/package/osu-api-extended" },
-    { name: "rosu-pp-js", detail: "PP calculation", url: "https://www.npmjs.com/package/rosu-pp-js" },
-];
+const productAccentClasses = {
+    rose: "text-white",
+    violet: "text-[#d4c8ff]",
+    cyan: "text-[#b8edf5]",
+    lime: "text-[#d2edab]",
+} as const;
 
 export default function Home() {
-    const { data: session, isPending } = useSession();
-
     return (
-        <div className="relative min-h-screen overflow-x-hidden bg-[#050507] text-zinc-100">
-            <Background />
-
+        <div className={sitePageClass}>
             <Header />
 
-            <main className="relative z-10 pt-16">
-                <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col justify-center px-5 py-16">
-                    <div className="grid items-center gap-10 lg:grid-cols-[1fr_420px]">
-                        <div>
-                            <h1 className="max-w-2xl text-5xl font-black leading-[1.02] tracking-normal text-white sm:text-7xl">Hanami</h1>
-                            <p className="mt-5 max-w-2xl text-xl leading-8 text-zinc-300">Link your osu! profile once, then call recent scores, top plays, and profile cards straight from Discord.</p>
+            <main>
+                <section className="relative min-h-[min(820px,calc(100svh-72px))] overflow-hidden border-b border-border max-[820px]:min-h-180 max-[600px]:min-h-165">
+                    <div className="absolute inset-0" aria-hidden="true">
+                        <img
+                            className="size-full object-cover object-[50%_38%] opacity-55"
+                            src="/background.webp"
+                            alt=""
+                            width="2560"
+                            height="1709"
+                            fetchPriority="high"
+                        />
+                    </div>
+                    <div
+                        className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,9,12,0.97)_0%,rgba(10,9,12,0.78)_40%,rgba(10,9,12,0.14)_72%),linear-gradient(0deg,var(--color-bg),transparent_30%)]"
+                        aria-hidden="true"
+                    />
 
-                            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                                <Button asChild size="lg" className="h-12 rounded-lg bg-pink-500 px-5 text-white shadow-lg shadow-pink-950/30 hover:bg-pink-400">
-                                    <a href="https://discord.com/oauth2/authorize?client_id=995999045157916763&permissions=265216&scope=bot" target="_blank" rel="noopener noreferrer">
-                                        Add to Discord
-                                        <ArrowRight className="size-4" />
-                                    </a>
-                                </Button>
-                                <Button asChild size="lg" variant="outline" className="h-12 rounded-lg border-white/15 bg-black/25 px-5 text-zinc-100 backdrop-blur-md hover:bg-white/10 hover:text-white">
-                                    <a href="https://discord.gg/RcGjBZkDP6" target="_blank" rel="noopener noreferrer">
-                                        <MessageCircle className="size-4" />
-                                        Join Community
-                                    </a>
-                                </Button>
-                                {!isPending && !session && (
-                                    <Button
-                                        onClick={() => signIn.social({ provider: "discord", callbackURL: "/profile" })}
-                                        size="lg"
-                                        variant="ghost"
-                                        className="h-12 rounded-lg text-zinc-300 hover:bg-white/8 hover:text-white"
-                                    >
-                                        <ShieldCheck className="size-4" />
-                                        Link account
-                                    </Button>
-                                )}
+                    <div
+                        className={cn(
+                            siteContainerClass,
+                            "relative z-10 grid min-h-[min(820px,calc(100svh-72px))] grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)] items-center gap-[clamp(2rem,7vw,7rem)] py-16 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-180 max-[820px]:grid-cols-1 max-[820px]:content-center max-[820px]:py-12 max-[600px]:min-h-165",
+                        )}
+                    >
+                        <div className="relative z-20 max-w-180 pr-0 motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both] min-[601px]:max-[820px]:pr-[10%]">
+                            <h1 className="text-[clamp(4rem,24vw,5.7rem)] leading-[0.88] tracking-[-0.085em] text-white min-[601px]:text-[clamp(4.4rem,9vw,7.2rem)]">
+                                Hanami
+                            </h1>
+                            <p className="mt-[1.8rem] max-w-165 text-[1.08rem] leading-[1.45] tracking-tight text-[#e9e4e9] min-[601px]:text-[clamp(1.2rem,2.2vw,1.65rem)]">
+                                A small family of osu! projects: a Discord bot, a guessing game, a desktop prototype, and a Rust analysis
+                                toolkit.
+                            </p>
+                            <div className="mt-8 flex flex-wrap gap-3 max-[600px]:flex-col max-[600px]:items-stretch">
+                                <ActionLink href="#projects">Browse the projects</ActionLink>
+                                <ActionLink href={siteConfig.links.organization} variant="secondary" external>
+                                    <Github aria-hidden="true" /> GitHub
+                                </ActionLink>
                             </div>
                         </div>
-                        <div className="relative flex items-center justify-center p-6 lg:p-10 animate-float select-none">
-                            <div className="absolute -inset-6 rounded-full bg-gradient-to-tr from-pink-500/15 via-purple-600/10 to-cyan-500/15 blur-3xl opacity-70" />
 
-                            <div className="relative z-10 flex items-center justify-center">
-                                <img src="hanami-transparent.png" alt="Hanami Logo" className="max-h-[280px] rounded-lg w-auto object-contain filter  drop-shadow-[0_0_20px_rgba(236,72,153,0.2)]" />
-                            </div>
+                        <div
+                            className="w-[min(45vw,530px)] self-end justify-self-end motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both] max-[820px]:absolute max-[820px]:-right-20 max-[820px]:-bottom-10 max-[820px]:w-[min(62vw,390px)] max-[820px]:opacity-40 max-[600px]:-right-26 max-[600px]:opacity-30"
+                            aria-hidden="true"
+                        >
+                            <img
+                                className="h-auto w-full drop-shadow-[0_22px_35px_rgba(0,0,0,0.28)]"
+                                src="/hanami-transparent.png"
+                                alt=""
+                                width="565"
+                                height="542"
+                                fetchPriority="high"
+                            />
                         </div>
                     </div>
                 </section>
 
-                <section id="commands" className="border-y border-white/8 bg-black/38 backdrop-blur-md">
-                    <div className="mx-auto max-w-5xl px-5 py-16">
-                        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-pink-200">Core commands</p>
-                                <h2 className="mt-2 text-3xl font-bold text-white">The stuff people actually type.</h2>
-                            </div>
-                            <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-white/10 bg-white/6 px-3 py-2 text-sm text-zinc-400">
-                                <Terminal className="size-4" />
-                                Use <code className="text-pink-200">/help</code> for the full list
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-3">
-                            {commands.map((command) => {
-                                const Icon = command.icon;
-
-                                return (
-                                    <article key={command.name} className="rounded-lg border border-white/10 bg-zinc-950/55 p-5 shadow-lg shadow-black/25 backdrop-blur-sm">
-                                        <div className="mb-5 flex items-center justify-between gap-4">
-                                            <span className="flex size-10 items-center justify-center rounded-lg bg-pink-400/12 text-pink-200">
-                                                <Icon className="size-5" />
-                                            </span>
-                                            <code className="rounded-lg bg-black/45 px-3 py-1.5 text-sm font-semibold text-pink-100">{command.name}</code>
-                                        </div>
-                                        <h3 className="text-lg font-semibold text-white">{command.title}</h3>
-                                        <p className="mt-2 leading-7 text-zinc-400">{command.description}</p>
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </section>
-
-                <section id="source" className="mx-auto grid max-w-5xl gap-6 px-5 py-16 md:grid-cols-[1fr_1fr]">
-                    <div className="rounded-lg border border-white/10 bg-black/36 p-6 backdrop-blur-md">
-                        <h2 className="flex items-center gap-3 text-2xl font-bold text-white">
-                            <Github className="size-6" />
-                            Open source
+                <section className={cn(siteContainerClass, sectionSpacingClass)} id="projects" aria-labelledby="projects-title">
+                    <header className="mb-10 grid grid-cols-1 items-end gap-x-20 gap-y-6 min-[601px]:mb-18 min-[821px]:grid-cols-[minmax(0,0.85fr)_minmax(280px,0.55fr)]">
+                        <Eyebrow className="mb-0 min-[821px]:col-span-2 min-[821px]:-mb-2">Projects</Eyebrow>
+                        <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white" id="projects-title">
+                            Choose the thing you need.
                         </h2>
-                        <p className="mt-4 leading-8 text-zinc-400">Hanami is public, self-hostable, and inspectable. No mystery box around the Discord and osu! account bridge.</p>
-                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                            <Button asChild className="h-11 rounded-lg bg-white text-zinc-950 hover:bg-zinc-200">
-                                <a href="https://github.com/hanami-osu/bot" target="_blank" rel="noopener noreferrer">
-                                    <Github className="size-4" />
-                                    Repository
-                                </a>
-                            </Button>
-                            <Button asChild variant="ghost" className="h-11 rounded-lg text-zinc-300 hover:bg-white/8 hover:text-white">
-                                <a href="https://github.com/hanami-osu/bot/blob/main/TERMS.md" target="_blank" rel="noopener noreferrer">
-                                    <Code2 className="size-4" />
-                                    Terms
-                                </a>
-                            </Button>
-                        </div>
-                    </div>
+                        <p className="max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">
+                            Each project has its own purpose and release state. The product pages cover the details without pretending the
+                            prototypes are finished.
+                        </p>
+                    </header>
 
-                    <div className="rounded-lg border border-white/10 bg-black/36 p-6 backdrop-blur-md">
-                        <h2 className="text-2xl font-bold text-white">Powered by</h2>
-                        <div className="mt-5 space-y-2">
-                            {libraries.map((library) => (
-                                <a
-                                    key={library.name}
-                                    href={library.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-between gap-4 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/8"
+                    <div className="border-t border-border-strong">
+                        {products.map((product) => (
+                            <article
+                                className="grid min-h-37.5 grid-cols-[minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 border-b border-border max-[1080px]:grid-cols-[minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-1 max-[600px]:items-start max-[600px]:gap-y-3 max-[600px]:py-6"
+                                key={product.key}
+                            >
+                                <div>
+                                    <p className="mb-[0.45rem] font-mono text-[0.68rem] tracking-[0.06em] text-quiet uppercase">
+                                        {product.category} · {product.status}
+                                    </p>
+                                    <h3
+                                        className={cn(
+                                            "text-[clamp(1.3rem,2.2vw,2rem)] tracking-[-0.04em]",
+                                            productAccentClasses[product.tone],
+                                        )}
+                                    >
+                                        {product.name}
+                                    </h3>
+                                </div>
+                                <p className="max-w-[52ch] text-[0.96rem] leading-[1.65] text-muted">{product.description}</p>
+                                <TextLink
+                                    className="max-[1080px]:col-start-2 max-[1080px]:-mt-2 max-[1080px]:mb-6 max-[600px]:col-start-1 max-[600px]:mt-[0.6rem] max-[600px]:mb-0"
+                                    href={product.route}
+                                    prefetch="intent-and-viewport"
                                 >
-                                    <span className="font-medium text-zinc-100">{library.name}</span>
-                                    <span className="text-zinc-500">{library.detail}</span>
-                                </a>
-                            ))}
-                        </div>
+                                    {product.action}
+                                </TextLink>
+                            </article>
+                        ))}
                     </div>
                 </section>
 
-                <section id="support" className="border-t border-white/8 bg-black/42 backdrop-blur-md">
-                    <div className="mx-auto flex max-w-5xl flex-col gap-5 px-5 py-10 sm:flex-row sm:items-center sm:justify-between">
+                <section className="border-y border-border bg-surface">
+                    <div
+                        className={cn(
+                            siteContainerClass,
+                            "grid grid-cols-1 items-center gap-[clamp(2rem,7vw,7rem)] py-12 min-[821px]:grid-cols-[minmax(300px,1fr)_minmax(300px,0.78fr)] min-[821px]:py-[clamp(3.5rem,7vw,6rem)]",
+                        )}
+                    >
+                        <img
+                            className="aspect-video w-full rounded-md object-cover"
+                            src="/products/osuguessr-audio.webp"
+                            alt="Colorful osu! beatmap artwork used in osu!guessr"
+                            width="1920"
+                            height="1080"
+                        />
                         <div>
-                            <h2 className="text-2xl font-bold text-white">Support the project</h2>
-                            <p className="mt-2 text-zinc-400">Hanami is free to use. Sponsorship helps with hosting and maintenance.</p>
+                            <Eyebrow>Open development</Eyebrow>
+                            <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white">
+                                Useful on its own. Connected only when it helps.
+                            </h2>
+                            <p className="mt-5 max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">
+                                Published Hanami code, issues, and project history are public. Live products, released packages, and
+                                in-development prototypes are labeled separately so their current state is clear.
+                            </p>
+                            <TextLink className="mt-[1.8rem]" href={siteConfig.links.organization} external>
+                                Browse the repositories
+                            </TextLink>
                         </div>
-                        <Button asChild className="h-11 rounded-lg bg-pink-500 text-white hover:bg-pink-400">
-                            <a href="https://yorunoken.com#support" target="_blank" rel="noopener noreferrer">
-                                <Heart className="size-4" />
-                                Sponsor Hanami
-                            </a>
-                        </Button>
                     </div>
                 </section>
             </main>
 
             <Footer />
-        </div>
-    );
-}
-
-function Background() {
-    return (
-        <>
-            <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
-                <img src="/background.webp" alt="" className="h-full w-full scale-105 object-cover opacity-80 blur-sm" />
-            </div>
-            <div className="pointer-events-none fixed inset-0 z-0 bg-black/72" />
-            <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_18%,rgba(236,72,153,0.18),transparent_32%),linear-gradient(180deg,rgba(0,0,0,0.15)_0%,rgba(0,0,0,0.35)_45%,rgba(0,0,0,0.78)_100%)]" />
-        </>
-    );
-}
-
-function CommandLine({ command, response }: { command: string; response: string }) {
-    return (
-        <div className="rounded-lg border border-white/8 bg-black/36 p-3">
-            <code className="text-sm font-semibold text-pink-100">{command}</code>
-            <p className="mt-1 text-sm text-zinc-500">{response}</p>
         </div>
     );
 }
