@@ -10,8 +10,6 @@ export const siteConfig = {
         support: "https://yorunoken.com#support",
         discordPrivacy: "https://discord.com/privacy",
         osuPrivacy: "https://osu.ppy.sh/legal/en/Privacy",
-        googlePrivacy: "https://policies.google.com/privacy",
-        googleAdsSettings: "https://adssettings.google.com/",
         cloudflarePrivacy: "https://www.cloudflare.com/privacypolicy/",
         cloudflareCookies: "https://developers.cloudflare.com/fundamentals/reference/policies-compliances/cloudflare-cookies/",
         kvkk: "https://www.kvkk.gov.tr/",
@@ -81,7 +79,7 @@ export const products: readonly ProductSummary[] = [
         status: "Development",
         category: "Desktop app",
         headline: "A local bridge, still taking shape.",
-        description: "An unpublished Tauri prototype for reading local osu! state through tosu.",
+        description: "A public Tauri prototype for local osu! tracking, tosu lifecycle control, and Hanami authentication.",
         action: "See the prototype",
         tone: "cyan",
         links: {
@@ -147,7 +145,7 @@ export const routeMetadata = {
     },
     "/companion": {
         title: "Hanami Companion — desktop prototype",
-        description: "Follow development of an unpublished Hanami Companion prototype for local osu! state tracking through tosu.",
+        description: "Follow the public Hanami Companion prototype for local osu! tracking, tosu control, and native Hanami authentication.",
         indexable: true,
         socialImage: "/products/companion-icon.png",
     },

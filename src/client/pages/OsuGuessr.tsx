@@ -149,10 +149,7 @@ export default function OsuGuessr() {
             </ProductSplit>
 
             <ProductFootnote>
-                <p>
-                    osu!guessr is a separate hosted service with its own authentication, browser storage, analytics, and advertising
-                    behavior.
-                </p>
+                <p>osu!guessr is a separate hosted service with its own authentication, browser storage, and analytics behavior.</p>
                 <TextLink href="/legal/privacy">Read the ecosystem privacy policy</TextLink>
             </ProductFootnote>
         </ProductPage>

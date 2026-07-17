@@ -42,14 +42,13 @@ export default function PrivacyPolicy() {
             <LegalSection id="scope" title="2. Services covered">
                 <p>
                     This policy is intended to cover the Hanami ecosystem operated by the controller: this website and account area, Hanami
-                    Bot on Discord, the separately hosted osu!guessr service, and any networked Hanami Companion feature if it is enabled
-                    later.
+                    Bot on Discord, the separately hosted osu!guessr service, and networked features in the public Hanami Companion prototype.
                 </p>
                 <p>
                     Map Analyzer 0.2.9 is a separately distributed Rust library. The published crate parses local files and has no network
                     client dependency or command-line binary. Broader CLI and dataset work exists only in an unpublished development
-                    worktree. Companion is also unreleased: its public repository currently contains only a license, while the local
-                    prototype’s Hanami score-upload request is mocked and commented out.
+                    worktree. Companion is public source but remains unreleased: local tracking and Hanami authentication are implemented,
+                    while play upload is unavailable because Hanami Web does not expose a production ingestion endpoint.
                 </p>
             </LegalSection>
 
@@ -161,9 +160,25 @@ export default function PrivacyPolicy() {
                         storage, and theme storage supplied by next-themes.
                     </li>
                     <li>
-                        Production pages load self-hosted Umami for aggregate analytics and Google AdSense for advertising. Umami is
-                        intended to operate without analytics cookies. Google and its advertising partners may use cookies or local storage
-                        and process device, network, page, and ad-interaction data under their own settings and policies.
+                        Production pages load self-hosted Umami for aggregate analytics. Umami is configured to operate without analytics
+                        cookies. Request and device information may be processed to derive aggregate session and location metrics; raw IP
+                        addresses are not intended to be stored by the analytics service.
+                    </li>
+                </ul>
+
+                <h3>Hanami Companion prototype</h3>
+                <ul>
+                    <li>
+                        Selected beatmap, live gameplay, and attempt-state information received from a local tosu instance. Recent attempts
+                        are retained in memory for the current application session and are not written to a Companion database.
+                    </li>
+                    <li>
+                        Hanami sign-in opens the system browser and uses Authorization Code with PKCE through a temporary loopback listener.
+                        The access token remains in Rust memory and the refresh token is stored in the operating system credential store.
+                    </li>
+                    <li>
+                        Authorization codes, PKCE verifiers, and tokens are not exposed to the React interface or written to Companion
+                        application files. Play upload is currently unavailable and no attempt is reported as successfully submitted.
                     </li>
                 </ul>
 
@@ -200,8 +215,8 @@ export default function PrivacyPolicy() {
                             </td>
                         </tr>
                         <tr>
-                            <td>Optional analytics or advertising on osu!guessr.</td>
-                            <td>Consent where required; otherwise legitimate interests where applicable law permits.</td>
+                            <td>Measure aggregate osu!guessr usage and service reliability.</td>
+                            <td>Legitimate interests in understanding and maintaining the service, subject to applicable law.</td>
                         </tr>
                         <tr>
                             <td>Meet binding legal obligations and respond to valid legal process.</td>
@@ -214,15 +229,15 @@ export default function PrivacyPolicy() {
             <LegalSection id="sharing" title="5. Third parties and international processing">
                 <p>
                     Data is transmitted as needed to Discord for sign-in, bot operation, webhooks, and error reporting; to osu! for sign-in
-                    and API lookups; to Cloudflare as the public sites’ proxy and network provider; and to Google AdSense on osu!guessr.
-                    Hanami-controlled application, database, Redis, and self-hosted Umami infrastructure is hosted in Germany.
+                    and API lookups; and to Cloudflare as the public sites’ proxy and network provider. Hanami-controlled application,
+                    database, Redis, and self-hosted Umami infrastructure is hosted in Germany.
                 </p>
                 <p>
                     The operator manages the services from Türkiye while Hanami-controlled production data is processed on infrastructure in
-                    Germany. Processing may also cross other national borders because Discord, osu!, Google, and some service providers
-                    operate internationally. Third-party handling is governed by each provider’s own terms, privacy notice, and applicable
-                    transfer mechanisms. The public repositories do not establish the physical location of every provider request or the
-                    operator’s production-access roster.
+                    Germany. Processing may also cross other national borders because Discord, osu!, and some service providers operate
+                    internationally. Third-party handling is governed by each provider’s own terms, privacy notice, and applicable transfer
+                    mechanisms. The public repositories do not establish the physical location of every provider request or the operator’s
+                    production-access roster.
                 </p>
                 <p>
                     See the providers’ own notices, including{" "}
@@ -232,10 +247,6 @@ export default function PrivacyPolicy() {
                     ,{" "}
                     <a href={siteConfig.links.osuPrivacy} target="_blank" rel="noreferrer">
                         osu!’s privacy policy
-                    </a>
-                    , and{" "}
-                    <a href={siteConfig.links.googlePrivacy} target="_blank" rel="noreferrer">
-                        Google’s privacy policy
                     </a>
                     , and{" "}
                     <a href={siteConfig.links.cloudflarePrivacy} target="_blank" rel="noreferrer">
@@ -266,11 +277,15 @@ export default function PrivacyPolicy() {
                         lasts for the browser-tab session.
                     </li>
                     <li>
+                        Companion recent-attempt data remains in memory until the application exits. Its stored refresh token remains in the
+                        operating system credential store until sign-out, token rejection, or removal through the operating system.
+                    </li>
+                    <li>
                         Account, provider-link, preference, guild, completed-game, report, and API-key metadata remain while the related
                         account or feature is active, until the user deletes or revokes them where a control exists, or until Hanami no
                         longer needs them for the service, security, or a legal obligation. Cached scores and maps are refreshed or
                         overwritten as the services operate. The source does not define a general automatic deletion schedule for these
-                        database rows. Analytics and advertising providers apply their own retention settings.
+                        database rows. The analytics service applies its configured retention settings.
                     </li>
                     <li>Short-lived account-deletion reauthentication challenges expire after approximately 15 minutes.</li>
                     <li>
