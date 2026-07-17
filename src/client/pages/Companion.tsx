@@ -1,4 +1,4 @@
-import { Github, HardDrive, MonitorDot, Radio, UploadCloud } from "lucide-react";
+import { Github, HardDrive, KeyRound, MonitorDot, Radio, UploadCloud } from "lucide-react";
 
 import { ActionLink, Eyebrow, SectionIntro, StatusLine } from "@/components/marketing";
 import {
@@ -19,9 +19,9 @@ import {
 import { getProduct } from "@/data/site-config";
 
 const currentCapabilities = [
-    ["Tauri shell", "A Rust-backed desktop prototype with a React interface."],
-    ["tosu process control", "The app can start and stop a local tosu process."],
-    ["Local state events", "It listens for local play-state changes over tosu’s WebSocket."],
+    ["tosu lifecycle", "Connect to an existing tosu instance or launch and stop one owned by Companion."],
+    ["Play detection", "Track selected beatmaps and detect passed, failed, retried, and quit attempts."],
+    ["Native Hanami sign-in", "Authenticate through the system browser with Authorization Code and PKCE."],
 ] as const;
 
 export default function Companion() {
@@ -32,15 +32,16 @@ export default function Companion() {
             <ProductHero className="bg-[linear-gradient(130deg,rgba(128,215,232,0.08),transparent_42%),#0b0c0f]">
                 <div className={productHeroCopyClass}>
                     <Eyebrow>Desktop prototype</Eyebrow>
-                    <StatusLine status={product.status} detail="No public application source or packaged release" tone={product.tone} />
+                    <StatusLine status={product.status} detail="Public source · no packaged release" tone={product.tone} />
                     <h1 className={productTitleClass}>{product.name}</h1>
                     <h2 className={productSubtitleClass}>A local bridge for ideas that do not belong in a browser.</h2>
                     <p className={productBodyClass}>
-                        A local development worktree explores a Tauri shell that can manage tosu and observe local osu! state. The public
-                        repository currently contains only its license, and Hanami account connection and score upload remain mocked.
+                        The public Tauri prototype uses Rust for process lifecycle, local play detection, and native authentication while React
+                        renders normalized state. It can connect to tosu, track local osu! activity, and sign in to Hanami Web; play upload
+                        remains unavailable.
                     </p>
                     <ActionLink className="mt-8" href={product.links.primary} external>
-                        <Github aria-hidden="true" /> View the project repository
+                        <Github aria-hidden="true" /> View the source
                     </ActionLink>
                 </div>
 
@@ -53,7 +54,7 @@ export default function Companion() {
                         height="512"
                     />
                     <figcaption className="mx-auto mt-4 max-w-[45ch] text-[0.72rem] leading-[1.55] text-quiet max-[600px]:text-left">
-                        Current project icon. The desktop application is not yet distributed.
+                        Current project icon. No packaged release is published yet.
                     </figcaption>
                 </figure>
             </ProductHero>
@@ -61,8 +62,8 @@ export default function Companion() {
             <ProductSection>
                 <SectionIntro
                     eyebrow="Implemented now"
-                    title="A narrow local prototype."
-                    body="These capabilities were verified in the local development worktree. They are not yet available as public source or a release."
+                    title="A functional local prototype."
+                    body="These capabilities are implemented in the public repository. The project remains in development and does not yet offer a packaged release."
                 />
                 <div className="grid grid-cols-1 border-t border-border-strong min-[821px]:grid-cols-3">
                     {currentCapabilities.map(([title, description]) => (
@@ -80,31 +81,36 @@ export default function Companion() {
             <ProductSplit>
                 <div>
                     <Eyebrow>Data boundary</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Local first, with the network path still unfinished.</h2>
+                    <h2 className={sectionHeadingClass}>Local tracking first. Upload is deliberately unavailable.</h2>
                     <p className={sectionBodyClass}>
-                        The prototype connects to a local tosu WebSocket. Its Hanami API client only prints mock score and map-upload
-                        messages; the network requests are commented out.
+                        Recent attempts stay in memory for the current desktop session. Hanami sign-in uses the system browser and PKCE; the
+                        access token stays in Rust memory and the refresh token is stored in the operating system credential store. Hanami Web
+                        does not yet expose a production play-ingestion endpoint.
                     </p>
                 </div>
                 <ProductSteps className="[&_svg]:text-cyan">
                     <ProductStep icon={<HardDrive aria-hidden="true" />}>
                         <strong>Local osu! session</strong>
-                        <p>tosu reads local game state.</p>
+                        <p>tosu reads local game state and exposes it over loopback.</p>
                     </ProductStep>
                     <ProductStep icon={<Radio aria-hidden="true" />}>
                         <strong>Companion listener</strong>
-                        <p>The app observes state transitions.</p>
+                        <p>The app normalizes state and detects meaningful play attempts.</p>
+                    </ProductStep>
+                    <ProductStep icon={<KeyRound aria-hidden="true" />}>
+                        <strong>Hanami authentication</strong>
+                        <p>Authorization Code with PKCE is implemented through the system browser.</p>
                     </ProductStep>
                     <ProductStep icon={<UploadCloud aria-hidden="true" />} muted>
-                        <strong>Hanami sync — planned</strong>
-                        <p>No production upload endpoint is active.</p>
+                        <strong>Play upload — planned</strong>
+                        <p>No production ingestion endpoint is active, and attempts are never reported as uploaded.</p>
                     </ProductStep>
                 </ProductSteps>
             </ProductSplit>
 
             <ProductFootnote className="[&>svg]:text-cyan">
                 <MonitorDot aria-hidden="true" />
-                <p>No release download is offered, and the application source has not yet been published to the public repository.</p>
+                <p>The source is public, but no packaged release is currently offered. Play upload remains unavailable.</p>
             </ProductFootnote>
         </ProductPage>
     );
