@@ -1,44 +1,23 @@
 import { Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
-import AuthenticatedRoute from "@/components/account/authenticated-route";
-import ErrorBoundary from "@/components/error-boundary";
+import BotPage from "@/client/pages/Bot";
+import CompanionPage from "@/client/pages/Companion";
+import HomePage from "@/client/pages/Home";
+import LegalPage from "@/client/pages/LegalPage";
+import MapAnalyzerPage from "@/client/pages/MapAnalyzer";
+import NotFoundPage from "@/client/pages/NotFound";
+import OsuGuessrPage from "@/client/pages/OsuGuessr";
+import { routes } from "@/client/routes/paths";
+import RouteLoadingFallback from "@/client/routes/route-loading-fallback";
+import CookiePolicy from "@/components/legal/cookie-policy";
+import DataDeletion from "@/components/legal/data-deletion";
+import LegalIndex from "@/components/legal/legal-index";
+import PrivacyPolicy from "@/components/legal/privacy-policy";
+import TermsOfService from "@/components/legal/tos";
 import SiteMeta from "@/components/site-meta";
 
-import LegalPage from "./pages/LegalPage";
-import { clientRouteComponents } from "./routes/client-components";
-import { legacyRedirects, routes } from "./routes/paths";
-import RouteLoadingFallback from "./routes/route-loading-fallback";
-
-const {
-    AccountPrivacyPage,
-    BotPage,
-    CompanionPage,
-    CookiePolicy,
-    DataDeletion,
-    HomePage,
-    LegalIndex,
-    LinkErrorPage,
-    LoginPage,
-    MapAnalyzerPage,
-    NotFoundPage,
-    OsuGuessrPage,
-    PrivacyPolicy,
-    ProfilePage,
-    TermsOfService,
-} = clientRouteComponents;
-
-export default function App() {
-    return (
-        <ErrorBoundary>
-            <BrowserRouter>
-                <AppContent />
-            </BrowserRouter>
-        </ErrorBoundary>
-    );
-}
-
-export function AppContent() {
+export default function SeoApp() {
     return (
         <>
             <SiteMeta />
@@ -90,16 +69,6 @@ export function AppContent() {
                                 </LegalPage>
                             }
                         />
-                        {Object.entries(legacyRedirects).map(([path, destination]) => (
-                            <Route key={path} path={path} element={<Navigate to={destination} replace />} />
-                        ))}
-                        <Route element={<AuthenticatedRoute />}>
-                            <Route path={routes.profile} element={<ProfilePage />} />
-                            <Route path={routes.profilePrivacy} element={<AccountPrivacyPage />} />
-                            <Route path={routes.profilePrivacyConfirm} element={<AccountPrivacyPage />} />
-                        </Route>
-                        <Route path={routes.login} element={<LoginPage />} />
-                        <Route path={routes.linkError} element={<LinkErrorPage />} />
                         <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </Suspense>
