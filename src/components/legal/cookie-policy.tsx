@@ -218,23 +218,18 @@ export default function CookiePolicy() {
                     Both public sites are proxied through Cloudflare. Depending on the security and traffic features triggered for a
                     request, Cloudflare may set strictly necessary cookies such as <code>__cf_bm</code> for bot protection or{" "}
                     <code>cf_clearance</code> after a challenge. Cloudflare documents <code>__cf_bm</code> as expiring after 30 minutes of
-                    inactivity; challenge-cookie lifetime depends on the configured protection. These cookies are conditional and were not
-                    present in the ordinary live responses checked during this audit. See{" "}
+                    inactivity; challenge-cookie lifetime depends on the configured protection. See{" "}
                     <a href={siteConfig.links.cloudflareCookies} target="_blank" rel="noreferrer">
                         Cloudflare’s cookie documentation
                     </a>
                     .
                 </p>
                 <p>
-                    osu!guessr loads self-hosted Umami from <code>umami.yorunoken.com</code> for aggregate analytics and Google AdSense for
-                    advertising in production. Umami is intended to operate without analytics cookies or personal-data collection. Google
-                    and its advertising partners may use cookies or local storage and receive device, network, page, and ad-interaction
-                    data. The exact names and lifetimes can vary by region, consent choice, browser, and Google’s current configuration.
+                    osu!guessr loads self-hosted Umami from <code>umami.yorunoken.com</code> for aggregate analytics. Umami does not set
+                    analytics cookies. Request and device information such as IP address and user agent may be processed to derive aggregate
+                    session and location metrics, while raw IP addresses are not intended to be stored.
                 </p>
-                <p>
-                    No tracking pixel or third-party iframe was found in the audited source. Google AdSense can make additional network
-                    requests and inject ad content at runtime.
-                </p>
+                <p>No advertising script, tracking pixel, or third-party iframe is loaded by the audited application source.</p>
             </LegalSection>
 
             <LegalSection id="choices" title="6. Choices and consent">
@@ -244,17 +239,9 @@ export default function CookiePolicy() {
                     and using browser controls; authentication will not work without the session cookie.
                 </p>
                 <p>
-                    osu!guessr’s analytics and advertising scripts are non-essential and currently load after the production page starts.
-                    The audited repository does not delay those scripts behind its own consent control. Google may present a consent message
-                    through publisher-account configuration, which is not visible in the repository. Google requires publishers serving ads
-                    in the EEA, UK, or Switzerland to use a certified consent-management platform for personalized ads. You can also manage
-                    ad personalization through{" "}
-                    <a href={siteConfig.links.googleAdsSettings} target="_blank" rel="noreferrer">
-                        Google Ads Settings
-                    </a>{" "}
-                    and block or clear storage through browser controls. Blocking these scripts can prevent ads and aggregate analytics but
-                    should not prevent the core game from working. This inventory describes the implementation; it is not evidence that a
-                    deployment-level consent configuration is complete.
+                    osu!guessr’s self-hosted Umami script is non-essential and loads after the production page starts. Blocking it prevents
+                    aggregate analytics but should not prevent the core game from working. Browser controls or content blockers can stop the
+                    request; Umami does not use an analytics cookie to recognize the browser.
                 </p>
             </LegalSection>
 
