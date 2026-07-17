@@ -169,7 +169,7 @@ function readCallbackParameters(url: URL): { code: string; state: string } | nul
 
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
-    if (!code || code.length > 512 || hasControlCharacters(code)) return null;
+    if (!code || hasControlCharacters(code)) return null;
     if (!state) return null;
     return { code, state };
 }
