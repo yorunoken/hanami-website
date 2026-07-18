@@ -3,9 +3,10 @@ import { Elysia } from "elysia";
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import { auth, trustedOrigins } from "../auth";
 import { serverIdentity } from "../identity";
-import { hasTrustedOrigin, logSafeFailure } from "../security/http";
+import { getSafeErrorDetails, hasTrustedOrigin, logSafeFailure } from "../security/http";
 import { botIdentityCompatibility, userIdentities } from "./runtime";
 import { IdentityConflictError, isSupportedIdentityProvider, type SupportedIdentityProvider } from "./model";
+import { IdentityUnlinkStateError, unlinkProviderAccount } from "./unlink";
 
 const LINK_RATE_LIMIT_WINDOW_MS = 60_000;
 const LINK_RATE_LIMIT_ATTEMPTS = 5;
@@ -19,7 +20,7 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
 
         try {
             await botIdentityCompatibility.flushPendingForUser(current.userId).catch(() => undefined);
-            const identities = await userIdentities.getUserIdentities(current.userId);
+            const identities = await userIdentities.getUserAuthenticationIdentities(current.userId);
             return {
                 userId: current.userId,
                 identities: identities.map(toClientIdentity),
@@ -43,8 +44,13 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
             return fail(set, 429, "Too many link attempts. Wait a minute and try again.");
         }
 
-        const existing = (await userIdentities.getUserIdentities(current.userId)).find((identity) => identity.provider === params.provider);
+        const existing = (await userIdentities.getUserAuthenticationIdentities(current.userId)).find(
+            (identity) => identity.provider === params.provider,
+        );
         if (existing) {
+            if (!existing.canAuthenticate) {
+                return fail(set, 409, `${providerLabel(params.provider)} ownership requires identity reconciliation before linking.`);
+            }
             return { alreadyLinked: true, url: null, identity: toClientIdentity(existing) };
         }
 
@@ -57,6 +63,7 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
                 params.provider === "discord"
                     ? await auth.api.linkSocialAccount({
                           headers: request.headers,
+                          returnHeaders: true,
                           body: {
                               provider: "discord",
                               callbackURL,
@@ -66,6 +73,7 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
                       })
                     : await auth.api.oAuth2LinkAccount({
                           headers: request.headers,
+                          returnHeaders: true,
                           body: {
                               providerId: "osu",
                               callbackURL,
@@ -73,9 +81,9 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
                           },
                       });
 
-            const url = readAuthorizationUrl(result);
+            const url = readAuthorizationUrl(result.response);
             if (!url) throw new Error("Authentication library did not return a provider authorization URL");
-            return { alreadyLinked: false, url };
+            return providerLinkResponse(url, result.headers);
         } catch (error) {
             if (error instanceof IdentityConflictError) {
                 logConflict(current.userId, params.provider);
@@ -95,19 +103,15 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
             return fail(set, 403, "Sign out and sign in again before removing a login method.");
         }
 
-        const identities = await userIdentities.getUserIdentities(current.userId);
-        const target = identities.find((identity) => identity.provider === params.provider);
-        if (!target) return { unlinked: true, alreadyUnlinked: true, syncPending: false };
-        if (identities.length <= 1) return fail(set, 409, "Your final sign-in method cannot be removed.");
-
         try {
-            await auth.api.unlinkAccount({
-                headers: request.headers,
-                body: {
-                    providerId: params.provider,
-                    accountId: target.providerUserId,
-                },
-            });
+            const result = await unlinkProviderAccount(
+                userIdentities,
+                (input) => auth.api.unlinkAccount(input),
+                request.headers,
+                current.userId,
+                params.provider,
+            );
+            if (result.alreadyUnlinked) return { unlinked: true, alreadyUnlinked: true, syncPending: false };
             await botIdentityCompatibility.flushPendingForUser(current.userId).catch(() => undefined);
             return {
                 unlinked: true,
@@ -116,11 +120,12 @@ export const identityRoutes = new Elysia({ prefix: "/identities" })
             };
         } catch (error) {
             logSafeFailure(`unlink ${params.provider} identity`, error);
-            return fail(set, 502, `${providerLabel(params.provider)} could not be unlinked.`);
+            const mapped = mapUnlinkError(error, params.provider);
+            return fail(set, mapped.status, mapped.message);
         }
     });
 
-function toClientIdentity(identity: Awaited<ReturnType<typeof userIdentities.getUserIdentities>>[number]) {
+function toClientIdentity(identity: Awaited<ReturnType<typeof userIdentities.getUserAuthenticationIdentities>>[number]) {
     return {
         provider: identity.provider,
         providerUserId: identity.providerUserId,
@@ -129,7 +134,40 @@ function toClientIdentity(identity: Awaited<ReturnType<typeof userIdentities.get
         avatarUrl: identity.avatarUrl,
         linkedAt: identity.linkedAt.toISOString(),
         updatedAt: identity.updatedAt.toISOString(),
+        canAuthenticate: identity.canAuthenticate,
+        status: identity.status,
     };
+}
+
+function mapUnlinkError(error: unknown, provider: SupportedIdentityProvider): { status: number; message: string } {
+    if (error instanceof IdentityConflictError) return { status: 409, message: providerConflictMessage(provider) };
+    if (error instanceof IdentityUnlinkStateError) {
+        switch (error.code) {
+            case "final_login_method":
+                return { status: 409, message: "Your final sign-in method cannot be removed." };
+            case "provider_account_missing":
+                return { status: 409, message: `${providerLabel(provider)} was not found. Run identity reconciliation first.` };
+            case "identity_reconciliation_required":
+                return {
+                    status: 409,
+                    message: `${providerLabel(provider)} ownership requires identity reconciliation before unlinking.`,
+                };
+        }
+    }
+    const details = getSafeErrorDetails(error);
+    switch (details.code) {
+        case "FAILED_TO_UNLINK_LAST_ACCOUNT":
+            return { status: 409, message: "Your final sign-in method cannot be removed." };
+        case "ACCOUNT_NOT_FOUND":
+            return { status: 409, message: `${providerLabel(provider)} was not found. Refresh the profile and try again.` };
+        case "SESSION_EXPIRED":
+        case "SESSION_NOT_FRESH":
+            return { status: 403, message: "Sign out and sign in again before removing a login method." };
+        case "identity_conflict":
+            return { status: 409, message: providerConflictMessage(provider) };
+        default:
+            return { status: 500, message: `${providerLabel(provider)} could not be unlinked.` };
+    }
 }
 
 function readAuthorizationUrl(value: unknown): string | null {
@@ -140,6 +178,20 @@ function readAuthorizationUrl(value: unknown): string | null {
     } catch {
         return null;
     }
+}
+
+function providerLinkResponse(url: string, authenticationHeaders: Headers): Response {
+    const headers = new Headers({ "Cache-Control": "no-store" });
+    for (const cookie of readSetCookies(authenticationHeaders)) headers.append("Set-Cookie", cookie);
+    return Response.json({ alreadyLinked: false, url }, { headers });
+}
+
+function readSetCookies(headers: Headers): string[] {
+    const extendedHeaders = headers as Headers & { getSetCookie?(): string[] };
+    const cookies = extendedHeaders.getSetCookie?.();
+    if (cookies && cookies.length > 0) return cookies;
+    const combined = headers.get("set-cookie");
+    return combined ? [combined] : [];
 }
 
 function consumeLinkAttempt(userId: string, provider: SupportedIdentityProvider, now = Date.now()): boolean {

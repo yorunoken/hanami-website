@@ -126,7 +126,7 @@ describeDatabase("MySQL canonical identity repository", () => {
         expect(await repository.getUserIdentities("user-2")).toHaveLength(1);
     });
 
-    it("unlinks only the selected provider identity", async () => {
+    it("unlinks only the selected provider identity and preserves the canonical user in both directions", async () => {
         if (!repository) throw new Error("Identity repository is unavailable");
         await repository.linkIdentity("user-1", { provider: "discord", providerUserId: "123456789012345678" });
         await repository.linkIdentity("user-1", { provider: "osu", providerUserId: "24680" });
@@ -135,6 +135,14 @@ describeDatabase("MySQL canonical identity repository", () => {
         expect(await repository.getUserIdentities("user-1")).toEqual([
             expect.objectContaining({ provider: "discord", providerUserId: "123456789012345678" }),
         ]);
+        expect(await repository.getUserByCanonicalId("user-1")).not.toBeNull();
+
+        await repository.linkIdentity("user-1", { provider: "osu", providerUserId: "24680" });
+        expect(await repository.unlinkIdentity("user-1", "discord")).toMatchObject({ providerUserId: "123456789012345678" });
+        expect(await repository.getUserIdentities("user-1")).toEqual([
+            expect.objectContaining({ provider: "osu", providerUserId: "24680" }),
+        ]);
+        expect(await repository.getUserByCanonicalId("user-1")).not.toBeNull();
     });
 });
 

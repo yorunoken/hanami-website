@@ -46,8 +46,21 @@ describeDatabase("canonical identity backfill", () => {
 
         const first = await runIdentityBackfillWithLock(webPool, botPool);
         const second = await runIdentityBackfillWithLock(webPool, botPool);
-        expect(first).toMatchObject({ created: 2, updated: 0, skipped: 0, conflicts: [] });
-        expect(second).toMatchObject({ created: 0, updated: 2, skipped: 0, conflicts: [] });
+        expect(first).toMatchObject({
+            accountsCreated: 1,
+            identitiesCreated: 2,
+            identitiesUpdated: 0,
+            skippedInvalid: 0,
+            conflicts: [],
+        });
+        expect(second).toMatchObject({
+            accountsCreated: 0,
+            identitiesCreated: 0,
+            identitiesUpdated: 0,
+            alreadyConsistent: 2,
+            skippedInvalid: 0,
+            conflicts: [],
+        });
 
         const [rows] = await webPool.execute<RowDataPacket[]>(
             "SELECT userId, provider, providerUserId FROM userIdentity ORDER BY provider",
@@ -55,6 +68,24 @@ describeDatabase("canonical identity backfill", () => {
         expect(rows).toEqual([
             expect.objectContaining({ userId: "user-1", provider: "discord", providerUserId: "123456789012345678" }),
             expect.objectContaining({ userId: "user-1", provider: "osu", providerUserId: "24680" }),
+        ]);
+        const [accounts] = await webPool.execute<RowDataPacket[]>(
+            "SELECT userId, providerId, accountId, accessToken, refreshToken FROM account WHERE userId = ? ORDER BY providerId",
+            ["user-1"],
+        );
+        expect(accounts).toEqual([
+            expect.objectContaining({
+                userId: "user-1",
+                providerId: "discord",
+                accountId: "123456789012345678",
+            }),
+            expect.objectContaining({
+                userId: "user-1",
+                providerId: "osu",
+                accountId: "24680",
+                accessToken: null,
+                refreshToken: null,
+            }),
         ]);
     });
 
@@ -69,7 +100,7 @@ describeDatabase("canonical identity backfill", () => {
         ]);
 
         const summary = await runIdentityBackfillWithLock(webPool, botPool);
-        expect(summary).toMatchObject({ created: 2, skipped: 2, conflicts: [] });
+        expect(summary).toMatchObject({ identitiesCreated: 2, skippedInvalid: 2, conflicts: [] });
         const [osuRows] = await webPool.execute<RowDataPacket[]>("SELECT id FROM userIdentity WHERE provider = 'osu'");
         expect(osuRows).toHaveLength(0);
     });
@@ -88,6 +119,78 @@ describeDatabase("canonical identity backfill", () => {
         await expect(runIdentityBackfillWithLock(webPool, botPool)).rejects.toBeInstanceOf(IdentityBackfillConflictError);
         const [rows] = await webPool.execute<RowDataPacket[]>("SELECT id FROM userIdentity");
         expect(rows).toHaveLength(0);
+        const [osuAccounts] = await webPool.execute<RowDataPacket[]>("SELECT id FROM account WHERE providerId = 'osu'");
+        expect(osuAccounts).toHaveLength(0);
+    });
+
+    it("repairs an existing legacy osu! identity without replacing its profile snapshot", async () => {
+        if (!webPool || !botPool) throw new Error("Disposable test databases are unavailable");
+        await seedWebAccount("user-1", "123456789012345678");
+        await botPool.execute("INSERT INTO users (id, banchoId) VALUES (?, ?)", ["123456789012345678", "24680"]);
+        await webPool.execute(
+            `INSERT INTO userIdentity
+                (id, userId, provider, providerUserId, username, displayName, avatarUrl, metadata, linkedAt, updatedAt)
+             VALUES ('identity-osu', 'user-1', 'osu', '24680', 'legacy-name', 'Legacy Name',
+                     'https://a.ppy.sh/24680', NULL, ?, ?)`,
+            [now, now],
+        );
+
+        const summary = await runIdentityBackfillWithLock(webPool, botPool);
+        expect(summary).toMatchObject({ accountsCreated: 1, identitiesCreated: 1, identitiesUpdated: 0, conflicts: [] });
+        const [accounts] = await webPool.execute<RowDataPacket[]>(
+            "SELECT userId, providerId, accountId FROM account WHERE providerId = 'osu'",
+        );
+        expect(accounts).toEqual([expect.objectContaining({ userId: "user-1", providerId: "osu", accountId: "24680" })]);
+        const [identities] = await webPool.execute<RowDataPacket[]>(
+            "SELECT username, displayName FROM userIdentity WHERE provider = 'osu'",
+        );
+        expect(identities).toEqual([expect.objectContaining({ username: "legacy-name", displayName: "Legacy Name" })]);
+    });
+
+    it("runs the additive repair migration for an installation where the original migration is already applied", async () => {
+        if (!webPool || !botPool) throw new Error("Disposable test databases are unavailable");
+        await seedWebAccount("user-1", "123456789012345678");
+        await botPool.execute("INSERT INTO users (id, banchoId) VALUES (?, ?)", ["123456789012345678", "24680"]);
+        await webPool.execute(
+            `INSERT INTO userIdentity
+                (id, userId, provider, providerUserId, username, displayName, avatarUrl, metadata, linkedAt, updatedAt)
+             VALUES ('identity-osu', 'user-1', 'osu', '24680', NULL, NULL, NULL, NULL, ?, ?)`,
+            [now, now],
+        );
+        await webPool.execute("DELETE FROM webSchemaMigration WHERE id = '20260718_reconcile_legacy_osu_auth_accounts'");
+
+        await runWebMigrations(webPool, { botPool });
+
+        const [accounts] = await webPool.execute<RowDataPacket[]>(
+            "SELECT userId, providerId, accountId FROM account WHERE providerId = 'osu'",
+        );
+        expect(accounts).toEqual([expect.objectContaining({ userId: "user-1", providerId: "osu", accountId: "24680" })]);
+        const [migration] = await webPool.execute<RowDataPacket[]>(
+            "SELECT id FROM webSchemaMigration WHERE id = '20260718_reconcile_legacy_osu_auth_accounts'",
+        );
+        expect(migration).toHaveLength(1);
+    });
+
+    it("reports disagreement between Better Auth and the identity projection before writing", async () => {
+        if (!webPool || !botPool) throw new Error("Disposable test databases are unavailable");
+        await seedWebAccount("user-1", "123456789012345678");
+        await seedWebAccount("user-2", "222222222222222222");
+        await botPool.execute("INSERT INTO users (id, banchoId) VALUES (?, ?)", ["123456789012345678", "24680"]);
+        await webPool.execute(
+            `INSERT INTO account (id, accountId, providerId, userId, createdAt, updatedAt)
+             VALUES ('account-osu-other', '24680', 'osu', 'user-2', ?, ?)`,
+            [now, now],
+        );
+        await webPool.execute(
+            `INSERT INTO userIdentity
+                (id, userId, provider, providerUserId, username, displayName, avatarUrl, metadata, linkedAt, updatedAt)
+             VALUES ('identity-osu', 'user-1', 'osu', '24680', NULL, NULL, NULL, NULL, ?, ?)`,
+            [now, now],
+        );
+
+        const error = await runIdentityBackfillWithLock(webPool, botPool).catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(IdentityBackfillConflictError);
+        expect((error as IdentityBackfillConflictError).summary.conflicts.join(" ")).toContain("disagree");
     });
 });
 

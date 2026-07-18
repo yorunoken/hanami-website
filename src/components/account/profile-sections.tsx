@@ -30,6 +30,8 @@ export interface LinkedIdentity {
     avatarUrl: string | null;
     linkedAt: string;
     updatedAt: string;
+    canAuthenticate: boolean;
+    status: "linked" | "repair_required";
 }
 
 export interface IdentityResponse {
@@ -63,6 +65,7 @@ interface IdentitySectionProps {
 }
 
 export function IdentitySection({ identities, loading, action, onLink, onUnlink }: IdentitySectionProps) {
+    const authenticationMethodCount = identities.filter((identity) => identity.canAuthenticate).length;
     return (
         <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
@@ -76,7 +79,7 @@ export function IdentitySection({ identities, loading, action, onLink, onUnlink 
                         key={provider}
                         provider={provider}
                         identity={identities.find((identity) => identity.provider === provider) ?? null}
-                        identityCount={identities.length}
+                        authenticationMethodCount={authenticationMethodCount}
                         loading={loading}
                         action={action}
                         onLink={onLink}
@@ -94,7 +97,7 @@ export function IdentitySection({ identities, loading, action, onLink, onUnlink 
 function ProviderIdentity({
     provider,
     identity,
-    identityCount,
+    authenticationMethodCount,
     loading,
     action,
     onLink,
@@ -102,20 +105,37 @@ function ProviderIdentity({
 }: {
     provider: LinkedIdentity["provider"];
     identity: LinkedIdentity | null;
-    identityCount: number;
+    authenticationMethodCount: number;
     loading: boolean;
     action: ProfileAction;
     onLink: (provider: LinkedIdentity["provider"]) => void;
     onUnlink: (provider: LinkedIdentity["provider"]) => void;
 }) {
     const label = provider === "osu" ? "osu!" : "Discord";
+    const otherLabel = provider === "osu" ? "Discord" : "osu!";
     const linking = action === `linking-${provider}`;
     const unlinking = action === `unlinking-${provider}`;
+    const finalLoginMethod = authenticationMethodCount <= 1;
 
     return (
         <article className={identityBlockClass}>
             {loading ? (
                 <LoadingInline label={`Checking ${label}`} />
+            ) : identity?.status === "repair_required" ? (
+                <>
+                    <div className={identityPersonClass}>
+                        <Avatar src={identity.avatarUrl} name={identity.displayName || identity.username || label} />
+                        <div>
+                            <p>{label} login</p>
+                            <h3>Needs repair</h3>
+                            <span>This provider is not currently available for sign-in.</span>
+                        </div>
+                    </div>
+                    <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
+                        The provider account and Hanami identity record do not match. Run identity reconciliation before linking or
+                        unlinking {label}.
+                    </p>
+                </>
             ) : identity ? (
                 <>
                     <div className={identityPersonClass}>
@@ -146,15 +166,19 @@ function ProviderIdentity({
                         </div>
                     </dl>
                     <button
-                        className={cn(textButtonClass, identityCount > 1 && "text-danger")}
+                        className={cn(textButtonClass, authenticationMethodCount > 1 && "text-danger")}
                         type="button"
                         onClick={() => onUnlink(provider)}
-                        disabled={unlinking || identityCount <= 1}
-                        title={identityCount <= 1 ? "Link another login method before removing this one." : undefined}
+                        disabled={unlinking || finalLoginMethod}
                     >
                         <Unlink aria-hidden="true" />
-                        {unlinking ? `Unlinking ${label}…` : identityCount <= 1 ? "Final login method" : `Unlink ${label}`}
+                        {unlinking ? `Unlinking ${label}…` : `Unlink ${label}`}
                     </button>
+                    {finalLoginMethod && (
+                        <p className="mt-3 text-[0.78rem] leading-[1.55] text-quiet">
+                            Link {otherLabel} before unlinking {label}.
+                        </p>
+                    )}
                 </>
             ) : (
                 <>

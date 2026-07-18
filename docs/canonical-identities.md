@@ -1,6 +1,6 @@
 # Canonical Hanami identities
 
-Better Auth `user.id` is the only canonical Hanami user ID. The Hanami-owned `userIdentity` table projects stable provider identity and profile fields for domain consumers; provider tokens remain in Better Auth’s `account` table.
+Better Auth `user.id` is the only canonical Hanami user ID. Better Auth’s `account` table is authoritative for usable authentication methods. The Hanami-owned `userIdentity` table is a token-free projection of the same provider ownership plus stable profile fields for domain consumers; provider tokens remain only in `account`.
 
 Initial providers are `discord` and `osu`. A provider subject can belong to only one canonical user, and a canonical user can have at most one identity from each provider. Matching email addresses, usernames, display names, or avatars never merge accounts.
 
@@ -20,14 +20,20 @@ The osu! application requests only `identify`. Its registered callback must matc
 
 ## Existing-user backfill
 
-`bun run db:migrate` creates the identity schema under the existing Web migration lock and backfills:
+On an empty database, startup and `bun run db:migrate` first apply the schema reported by the installed Better Auth version, then apply Hanami-owned migrations while holding the existing Web migration lock. Do not create the Better Auth tables from a separate handwritten schema.
+
+The Hanami migration then creates the identity schema and reconciles:
 
 1. every Better Auth Discord account into a Discord domain identity;
-2. the Bot `users.banchoId` into an osu! identity when the same Discord subject maps to a canonical Web user.
+2. the Bot `users.banchoId` into both an osu! Better Auth account and an osu! domain identity when the same Discord subject maps to a canonical Web user.
 
-Malformed or empty Bot osu! IDs are skipped. Duplicate provider subjects, more than one provider subject for one canonical user, or an existing conflicting domain identity stop the backfill before identity rows are written. The command prints created, updated, skipped, and conflict counts.
+The `20260718_reconcile_legacy_osu_auth_accounts` repair migration is additive so installations that already applied the original identity migration are repaired. Migrated account rows use normal generated IDs and null OAuth token fields. Malformed or empty Bot osu! IDs are skipped. Duplicate ownership, a different provider subject in either store, or disagreement between `account` and `userIdentity` stops reconciliation before writes. The command reports accounts created, identities created or updated, already-consistent mappings, skipped invalid mappings, and conflicts.
 
-`bun run db:backfill-identities` reruns the idempotent backfill under the same lock. Integration tests must provide separate disposable `TEST_DATABASE_URL` and `TEST_BOT_DATABASE_URL` databases.
+`bun run db:backfill-identities` reruns the idempotent reconciliation in one transaction under the same lock. Integration tests must provide separate disposable `TEST_DATABASE_URL` and `TEST_BOT_DATABASE_URL` databases.
+
+The profile API joins these two views logically and marks a provider `canAuthenticate: true` only when both stores contain the same subject for the same canonical user. A mismatch is displayed as requiring repair and cannot be linked or unlinked through the profile.
+
+`bun run db:diagnose-orphan-auth-users` is read-only. It reports redacted osu! placeholder users that have no session, domain identity, or Companion data and either have no Better Auth accounts or have a provider account whose domain identity is owned by another user. It never deletes rows.
 
 ## Temporary Bot compatibility
 

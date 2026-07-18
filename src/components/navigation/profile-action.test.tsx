@@ -32,18 +32,36 @@ describe("header account control", () => {
         expect(markup).not.toContain("Open account menu");
     });
 
-    it("shows a direct Discord sign-in control when signed out", () => {
+    it("routes the generic signed-out action through provider selection with a safe profile return", () => {
         const markup = render({ session: null, isPending: false });
-        expect(markup).toContain('aria-label="Sign in with Discord"');
+        expect(markup).toContain('href="/login?returnTo=%2Fprofile"');
         expect(markup).toContain("Sign in");
-        expect(markup).toContain("Discord");
+        expect(markup).not.toContain("Sign in with Discord");
+        expect(markup).not.toContain("discord");
+        expect(markup).not.toContain("<button");
     });
 
     it("shows the compact account control without exposing email when signed in", () => {
         const markup = render({ session, isPending: false });
         expect(markup).toContain('aria-label="Open account menu for Hanami Player"');
+        expect(markup).toContain('aria-haspopup="menu"');
+        expect(markup).toContain('aria-controls="account-menu"');
+        expect(markup).not.toContain("/login?returnTo=");
         expect(markup).toContain("avatar.png");
         expect(markup).not.toContain("discord.invalid");
+    });
+
+    it("uses provider-neutral account naming when a signed-in profile has no display name", () => {
+        const unnamedSession = {
+            ...session,
+            user: {
+                ...session.user,
+                name: "",
+            },
+        } as HeaderSession;
+        const markup = render({ session: unnamedSession, isPending: false });
+        expect(markup).toContain('aria-label="Open account menu for Hanami user"');
+        expect(markup).not.toContain("Discord user");
     });
 
     it("supports wrapping arrow navigation plus Home and End", () => {
@@ -58,13 +76,7 @@ describe("header account control", () => {
 function render({ session: currentSession, isPending }: { session: HeaderSession | null; isPending: boolean }): string {
     return renderToStaticMarkup(
         <MemoryRouter>
-            <ProfileActionView
-                session={currentSession}
-                isPending={isPending}
-                routeKey="/"
-                onSignIn={async () => {}}
-                onSignOut={async () => {}}
-            />
+            <ProfileActionView session={currentSession} isPending={isPending} routeKey="/" onSignOut={async () => {}} />
         </MemoryRouter>,
     );
 }

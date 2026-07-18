@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 
 import { auth, trustedOrigins, webDatabase } from "../auth";
 import { botIdentityCompatibility } from "../identities/runtime";
-import { hasTrustedOrigin } from "../security/http";
+import { hasTrustedOrigin, logSafeFailure } from "../security/http";
 import { createChallengeToken, hashChallengeToken, isFreshAuthentication, isValidConfirmationPhrase } from "./domain";
 import { AccountDeletionStoreError, MySqlAccountDeletionStore, type AccountDeletionStore } from "./store";
 
@@ -51,7 +51,7 @@ export function createAccountDeletionRoutes(dependencies: AccountDeletionRouteDe
                     confirmationPath: `/profile/privacy/confirm#challenge=${encodeURIComponent(challenge)}`,
                 };
             } catch (error) {
-                logFailure("start account-deletion reauthentication", error);
+                logSafeFailure("start account-deletion reauthentication", error);
                 return fail(set, 500, "Reauthentication could not be started.");
             }
         })
@@ -135,25 +135,13 @@ function handleStoreFailure(set: { status?: number | string }, error: unknown, f
         }
     }
 
-    logFailure("delete an account", error);
+    logSafeFailure("delete an account", error);
     return fail(set, 500, fallbackMessage);
 }
 
 function fail(set: { status?: number | string }, status: number, error: string) {
     set.status = status;
     return { error };
-}
-
-function logFailure(action: string, error: unknown): void {
-    console.error(
-        `Could not ${action}`,
-        error instanceof Error ? { name: error.name, code: readErrorCode(error) } : { type: typeof error },
-    );
-}
-
-function readErrorCode(error: Error): string | undefined {
-    if (!("code" in error) || typeof error.code !== "string") return undefined;
-    return error.code.slice(0, 80);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

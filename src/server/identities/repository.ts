@@ -6,7 +6,9 @@ import {
     type LinkIdentityInput,
     normalizeIdentityInput,
     type SupportedIdentityProvider,
+    type UserAuthenticationIdentity,
     type UserIdentity,
+    type UserProviderAccount,
 } from "./model";
 
 interface IdentityRow extends RowDataPacket {
@@ -28,6 +30,19 @@ interface UserRow extends RowDataPacket {
     image: string | null;
     createdAt: Date;
     updatedAt: Date;
+}
+
+interface AccountRow extends RowDataPacket {
+    id: string;
+    userId: string;
+    providerId: SupportedIdentityProvider;
+    accountId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+interface CountRow extends RowDataPacket {
+    count: number | string;
 }
 
 export interface CanonicalUser {
@@ -72,6 +87,68 @@ export class UserIdentityRepository {
             [userId],
         );
         return rows.map(mapIdentity);
+    }
+
+    async getUserProviderAccounts(userId: string): Promise<UserProviderAccount[]> {
+        const [rows] = await this.pool.execute<AccountRow[]>(
+            `SELECT id, userId, providerId, accountId, createdAt, updatedAt
+               FROM account
+              WHERE userId = ? AND providerId IN ('discord', 'osu')
+              ORDER BY FIELD(providerId, 'discord', 'osu'), createdAt`,
+            [userId],
+        );
+        return rows.map((row) => ({
+            id: row.id,
+            userId: row.userId,
+            provider: row.providerId,
+            providerUserId: row.accountId,
+            createdAt: new Date(row.createdAt),
+            updatedAt: new Date(row.updatedAt),
+        }));
+    }
+
+    async getUserAuthenticationAccountCount(userId: string): Promise<number> {
+        const [rows] = await this.pool.execute<CountRow[]>("SELECT COUNT(*) AS count FROM account WHERE userId = ?", [userId]);
+        return Number(rows[0]?.count ?? 0);
+    }
+
+    async getUserAuthenticationIdentities(userId: string): Promise<UserAuthenticationIdentity[]> {
+        const [identities, accounts] = await Promise.all([this.getUserIdentities(userId), this.getUserProviderAccounts(userId)]);
+        const identitiesByProvider = new Map(identities.map((identity) => [identity.provider, identity]));
+        const accountsByProvider = new Map(accounts.map((account) => [account.provider, account]));
+        const providers = new Set<SupportedIdentityProvider>([
+            ...identities.map((identity) => identity.provider),
+            ...accounts.map((account) => account.provider),
+        ]);
+
+        return [...providers].map((provider) => {
+            const identity = identitiesByProvider.get(provider);
+            const account = accountsByProvider.get(provider);
+            const subjectsMatch = Boolean(identity && account && identity.providerUserId === account.providerUserId);
+            if (identity) {
+                return {
+                    ...identity,
+                    canAuthenticate: subjectsMatch,
+                    status: subjectsMatch ? "linked" : "repair_required",
+                };
+            }
+
+            if (!account) throw new Error("Authentication identity provider index is inconsistent");
+            return {
+                id: account.id,
+                userId,
+                provider,
+                providerUserId: account.providerUserId,
+                username: null,
+                displayName: null,
+                avatarUrl: null,
+                metadata: null,
+                linkedAt: account.createdAt,
+                updatedAt: account.updatedAt,
+                canAuthenticate: false,
+                status: "repair_required",
+            };
+        });
     }
 
     async getPrimaryOsuIdentity(userId: string): Promise<UserIdentity | null> {
@@ -173,12 +250,22 @@ export class UserIdentityRepository {
 
     async assertProviderSlotAvailable(userId: string, provider: SupportedIdentityProvider, providerUserId: string): Promise<void> {
         const normalized = normalizeIdentityInput({ provider, providerUserId });
-        const [rows] = await this.pool.execute<IdentityRow[]>(
-            "SELECT userId, providerUserId FROM userIdentity WHERE userId = ? AND provider = ? LIMIT 1",
-            [userId, provider],
-        );
-        const identity = rows[0];
-        if (identity && identity.providerUserId !== normalized.providerUserId) {
+        const [subjectRows, slotRows] = await Promise.all([
+            this.pool.execute<IdentityRow[]>(
+                "SELECT userId, providerUserId FROM userIdentity WHERE provider = ? AND providerUserId = ? LIMIT 1",
+                [provider, normalized.providerUserId],
+            ),
+            this.pool.execute<IdentityRow[]>("SELECT userId, providerUserId FROM userIdentity WHERE userId = ? AND provider = ? LIMIT 1", [
+                userId,
+                provider,
+            ]),
+        ]);
+        const subjectIdentity = subjectRows[0][0];
+        if (subjectIdentity && subjectIdentity.userId !== userId) {
+            throw new IdentityConflictError("provider_owned");
+        }
+        const slotIdentity = slotRows[0][0];
+        if (slotIdentity && slotIdentity.providerUserId !== normalized.providerUserId) {
             throw new IdentityConflictError("provider_slot_occupied");
         }
     }

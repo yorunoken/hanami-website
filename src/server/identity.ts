@@ -27,8 +27,8 @@ export class ServerIdentityService implements IdentityService {
     }
 
     async resolveDiscordId(userId: string): Promise<string | null> {
-        const identities = await userIdentities.getUserIdentities(userId);
-        return identities.find((identity) => identity.provider === "discord")?.providerUserId ?? null;
+        const identities = await userIdentities.getUserAuthenticationIdentities(userId);
+        return identities.find((identity) => identity.provider === "discord" && identity.canAuthenticate)?.providerUserId ?? null;
     }
 }
 

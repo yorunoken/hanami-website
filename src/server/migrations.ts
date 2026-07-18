@@ -16,6 +16,10 @@ interface IndexRow extends RowDataPacket {
     present: number | string;
 }
 
+interface CountRow extends RowDataPacket {
+    count: number | string;
+}
+
 const companionOAuthMigration = {
     id: "20260716_companion_oauth",
     statements: [
@@ -241,7 +245,7 @@ const migrations = [
             if (!options.botPool) {
                 throw new Error("BOT_DATABASE_URL is required to backfill canonical identities");
             }
-            const summary = await backfillCanonicalIdentities(connection, options.botPool);
+            const summary = await runIdentityReconciliationTransaction(connection, options.botPool);
             options.onIdentityBackfill?.(summary);
         },
     },
@@ -250,11 +254,24 @@ const migrations = [
         statements: [],
         run: ensureUniqueUserProviderAccountIndex,
     },
+    {
+        id: "20260718_reconcile_legacy_osu_auth_accounts",
+        statements: [],
+        run: async (connection: PoolConnection, options: WebMigrationOptions) => {
+            if (options.skipIdentityBackfill) return;
+            if (!options.botPool) {
+                throw new Error("BOT_DATABASE_URL is required to reconcile canonical authentication accounts");
+            }
+            const summary = await runIdentityReconciliationTransaction(connection, options.botPool);
+            options.onIdentityBackfill?.(summary);
+        },
+    },
 ] as const;
 
 export interface WebMigrationOptions {
     botPool?: Pool;
     skipIdentityBackfill?: boolean;
+    prepareAuthenticationSchema?(): Promise<void>;
     onIdentityBackfill?(summary: IdentityBackfillSummary): void;
 }
 
@@ -266,6 +283,9 @@ export async function runWebMigrations(pool: Pool, options: WebMigrationOptions 
         const [lockRows] = await connection.execute<MigrationLockRow[]>("SELECT GET_LOCK(?, 30) AS acquired", [migrationLockName]);
         lockAcquired = Number(lockRows[0]?.acquired) === 1;
         if (!lockAcquired) throw new Error("Could not acquire the web database migration lock");
+
+        await options.prepareAuthenticationSchema?.();
+        await assertBetterAuthSchemaPresent(connection);
 
         await connection.query(`CREATE TABLE IF NOT EXISTS webSchemaMigration (
             id VARCHAR(191) NOT NULL,
@@ -287,6 +307,20 @@ export async function runWebMigrations(pool: Pool, options: WebMigrationOptions 
     } finally {
         if (lockAcquired) await connection.execute("SELECT RELEASE_LOCK(?)", [migrationLockName]).catch(() => undefined);
         connection.release();
+    }
+}
+
+async function assertBetterAuthSchemaPresent(connection: PoolConnection): Promise<void> {
+    const [rows] = await connection.execute<CountRow[]>(
+        `SELECT COUNT(*) AS count
+           FROM information_schema.tables
+          WHERE table_schema = DATABASE()
+            AND table_name IN ('user', 'session', 'account', 'verification')`,
+    );
+    if (Number(rows[0]?.count) !== 4) {
+        throw new Error(
+            "Better Auth database tables are missing. Run migrations through the application bootstrap or `bun run db:migrate`.",
+        );
     }
 }
 
@@ -331,6 +365,18 @@ async function ensureUniqueProviderAccountIndex(connection: PoolConnection): Pro
     if (duplicateRows[0]) throw new Error("Duplicate provider accounts must be resolved before applying this migration");
 
     await connection.query("ALTER TABLE account ADD UNIQUE KEY account_provider_account_unique (providerId(64), accountId(191))");
+}
+
+async function runIdentityReconciliationTransaction(connection: PoolConnection, botPool: Pool): Promise<IdentityBackfillSummary> {
+    await connection.beginTransaction();
+    try {
+        const summary = await backfillCanonicalIdentities(connection, botPool);
+        await connection.commit();
+        return summary;
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    }
 }
 
 async function ensureUniqueUserProviderAccountIndex(connection: PoolConnection): Promise<void> {

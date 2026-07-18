@@ -2,12 +2,16 @@ import { betterAuth } from "better-auth";
 import { genericOAuth } from "better-auth/plugins";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
+import { validateProductionOAuthConfiguration } from "./auth-configuration";
+import { runBetterAuthSchemaMigrations } from "./auth-schema";
 import { webDatabase } from "./database";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
 import { MySqlDiscordLinkTicketStore } from "./discord-link/tickets";
 import { createIdentityDatabaseHooks } from "./identities/auth-hooks";
 import { createOsuOAuthProvider } from "./identities/osu-provider";
 import { userIdentities } from "./identities/runtime";
+
+validateProductionOAuthConfiguration();
 
 const baseURL = process.env.BETTER_AUTH_URL || "http://localhost:3000";
 const baseOrigin = new URL(baseURL).origin;
@@ -59,5 +63,9 @@ export const auth = betterAuth({
         errorURL: "/login?returnTo=%2Fprofile",
     },
 });
+
+export function prepareAuthenticationSchema(): Promise<void> {
+    return runBetterAuthSchemaMigrations(auth.options);
+}
 
 export { webDatabase };

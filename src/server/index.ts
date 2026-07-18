@@ -4,9 +4,10 @@ import mysql from "mysql2/promise";
 import { getPageSeo, isKnownClientRoute } from "@/lib/seo";
 
 import { apiRoutes } from "./api";
-import { auth, webDatabase } from "./auth";
+import { auth, prepareAuthenticationSchema, webDatabase } from "./auth";
 import { companionOAuthRoutes } from "./companion/routes";
 import { botIdentityCompatibility } from "./identities/runtime";
+import { formatBackfillConflicts, formatBackfillSummary, IdentityBackfillConflictError } from "./identities/backfill";
 import { runWebMigrations } from "./migrations";
 import { injectRenderedPage } from "./page-renderer";
 import { injectSeoHead } from "./seo";
@@ -85,12 +86,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     try {
         await runWebMigrations(webDatabase, {
             botPool,
+            prepareAuthenticationSchema,
             onIdentityBackfill: (summary) => {
-                console.log(
-                    `Canonical identity backfill: created=${summary.created} updated=${summary.updated} skipped=${summary.skipped} conflicts=${summary.conflicts.length}`,
-                );
+                console.log(`Canonical identity reconciliation: ${formatBackfillSummary(summary)}`);
             },
         });
+    } catch (error) {
+        if (error instanceof IdentityBackfillConflictError) console.error(formatBackfillConflicts(error));
+        throw error;
     } finally {
         await botPool.end();
     }

@@ -8,6 +8,7 @@
         "start": "bun src/server/index.ts",
         "db:migrate": "bun src/scripts/migrate.ts",
         "db:backfill-identities": "bun src/scripts/backfill-identities.ts",
+        "db:diagnose-orphan-auth-users": "bun src/scripts/diagnose-orphan-auth-users.ts",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint .",

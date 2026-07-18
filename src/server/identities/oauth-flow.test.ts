@@ -144,6 +144,54 @@ describe("Better Auth provider login lifecycle", () => {
         expect(projection.values.get("discord:123456789012345678")).not.toBe(projection.values.get("osu:24680"));
     });
 
+    it("lets a Discord-only user link osu!, unlink Discord, and keep the same osu!-authenticated canonical user", async () => {
+        const { testAuth, database, projection } = createUnifiedAuth();
+        mockDiscordProvider();
+        const discordLogin = await completeDiscordLogin(testAuth);
+        const sessionCookie = readSessionCookie(discordLogin);
+        const canonicalUserId = database.user[0]?.id;
+
+        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord"]);
+
+        await linkGenericProvider(testAuth, "osu", sessionCookie);
+        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord", "osu"]);
+
+        const unlinkDiscord = await unlinkProvider(testAuth, "discord", "123456789012345678", sessionCookie);
+        expect(unlinkDiscord.status).toBe(200);
+        expect(database.user).toHaveLength(1);
+        expect(database.user[0]?.id).toBe(canonicalUserId);
+        expect(database.account).toEqual([expect.objectContaining({ providerId: "osu", userId: canonicalUserId })]);
+        expect(projection.identitiesFor(canonicalUserId)).toEqual(["osu"]);
+
+        await completeGenericLogin(testAuth, "osu");
+        expect(database.user).toHaveLength(1);
+        expect(database.user[0]?.id).toBe(canonicalUserId);
+    });
+
+    it("lets an osu!-only user link Discord, unlink osu!, and keep the same Discord-authenticated canonical user", async () => {
+        const { testAuth, database, projection } = createUnifiedAuth();
+        mockDiscordProvider();
+        const osuLogin = await completeGenericLogin(testAuth, "osu");
+        const sessionCookie = readSessionCookie(osuLogin);
+        const canonicalUserId = database.user[0]?.id;
+
+        expect(projection.identitiesFor(canonicalUserId)).toEqual(["osu"]);
+
+        await linkDiscordProvider(testAuth, sessionCookie);
+        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord", "osu"]);
+
+        const unlinkOsu = await unlinkProvider(testAuth, "osu", "24680", sessionCookie);
+        expect(unlinkOsu.status).toBe(200);
+        expect(database.user).toHaveLength(1);
+        expect(database.user[0]?.id).toBe(canonicalUserId);
+        expect(database.account).toEqual([expect.objectContaining({ providerId: "discord", userId: canonicalUserId })]);
+        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord"]);
+
+        await completeDiscordLogin(testAuth);
+        expect(database.user).toHaveLength(1);
+        expect(database.user[0]?.id).toBe(canonicalUserId);
+    });
+
     it("unlinks only one provider and refuses to remove the final login method", async () => {
         const { testAuth, database, projection } = createUnifiedAuth();
         mockDiscordProvider();
@@ -165,6 +213,14 @@ describe("Better Auth provider login lifecycle", () => {
 
 class IdentityProjection {
     readonly values = new Map<string, string>();
+
+    identitiesFor(userId: string | undefined): string[] {
+        if (!userId) return [];
+        return [...this.values.entries()]
+            .filter(([, owner]) => owner === userId)
+            .map(([key]) => key.split(":", 1)[0]!)
+            .sort();
+    }
 
     readonly hooks = {
         account: {
@@ -316,6 +372,7 @@ async function completeGenericLogin(testAuth: AuthHandler, providerId: string): 
     const data = (await start.json()) as { url: string };
     const authorization = new URL(data.url);
     expect(authorization.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(authorization.searchParams.get("redirect_uri")).toBe(`${baseURL}/api/auth/oauth2/callback/${providerId}`);
     const state = authorization.searchParams.get("state");
     expect(state).toBeTruthy();
     const callback = await testAuth.handler(

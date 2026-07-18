@@ -1,8 +1,8 @@
-import { ChevronDown, LogOut, MessageCircle, Shield, UserRound } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, Shield, UserRound } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { claimPendingAttempt, signInWithDiscord, signOutFromHanami, useSession } from "@/client/lib/auth";
+import { claimPendingAttempt, signOutFromHanami, useSession } from "@/client/lib/auth";
 import { createLoginPath } from "@/client/lib/auth-navigation";
 import { routes } from "@/client/routes/paths";
 import { cn } from "@/lib/utils";
@@ -25,15 +25,6 @@ export default function ProfileAction({
     const navigate = useNavigate();
     const location = useLocation();
 
-    async function handleSignIn() {
-        try {
-            await signInWithDiscord(routes.profile);
-        } catch (error) {
-            navigate(`${createLoginPath(routes.profile)}&error=initiation_failed`);
-            throw error;
-        }
-    }
-
     async function handleSignOut() {
         await signOutFromHanami();
         navigate(routes.home, { replace: true });
@@ -45,7 +36,6 @@ export default function ProfileAction({
             isPending={isPending}
             routeKey={`${location.pathname}${location.search}`}
             mobileNavigationOpen={mobileNavigationOpen}
-            onSignIn={handleSignIn}
             onSignOut={handleSignOut}
             onMenuOpen={onMenuOpen}
         />
@@ -59,7 +49,6 @@ export function ProfileActionView({
     isPending,
     routeKey,
     mobileNavigationOpen = false,
-    onSignIn,
     onSignOut,
     onMenuOpen,
 }: {
@@ -67,15 +56,12 @@ export function ProfileActionView({
     isPending: boolean;
     routeKey: string;
     mobileNavigationOpen?: boolean;
-    onSignIn: () => Promise<void>;
     onSignOut: () => Promise<void>;
     onMenuOpen?: () => void;
 }) {
     const buttonRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
-    const signInPending = useRef(false);
     const signOutPending = useRef(false);
-    const [isSigningIn, setIsSigningIn] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [isSigningOut, setIsSigningOut] = useState(false);
@@ -104,18 +90,6 @@ export function ProfileActionView({
         document.addEventListener("pointerdown", closeOnOutsideInteraction);
         return () => document.removeEventListener("pointerdown", closeOnOutsideInteraction);
     }, [menuOpen]);
-
-    async function startSignIn() {
-        if (isPending || !claimPendingAttempt(signInPending)) return;
-        setIsSigningIn(true);
-
-        try {
-            await onSignIn();
-        } catch {
-            signInPending.current = false;
-            setIsSigningIn(false);
-        }
-    }
 
     function openMenu(focus?: "first" | "last") {
         onMenuOpen?.();
@@ -188,21 +162,19 @@ export function ProfileActionView({
     if (!session) {
         return (
             <div className={controlFrameClass}>
-                <button
+                <PrefetchLink
                     className={cn(accountActionClass, "w-full border-0 bg-transparent px-2 whitespace-nowrap")}
-                    type="button"
-                    onClick={startSignIn}
-                    disabled={isSigningIn}
-                    aria-label="Sign in with Discord"
+                    to={createLoginPath(routes.profile)}
+                    prefetch="intent"
                 >
-                    <MessageCircle aria-hidden="true" />
-                    <span>{isSigningIn ? "Opening…" : "Sign in"}</span>
-                </button>
+                    <LogIn aria-hidden="true" />
+                    <span>Sign in</span>
+                </PrefetchLink>
             </div>
         );
     }
 
-    const displayName = session.user.name || "Discord user";
+    const displayName = session.user.name || "Hanami user";
     const showAvatar = Boolean(session.user.image) && !avatarFailed;
 
     return (

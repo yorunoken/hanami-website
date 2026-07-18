@@ -1,7 +1,11 @@
 import type { Pool, PoolConnection, RowDataPacket } from "mysql2/promise";
 
-interface DiscordAccountSource extends RowDataPacket {
+import type { SupportedIdentityProvider } from "./model";
+
+interface AccountSource extends RowDataPacket {
+    id: string;
     accountId: string;
+    providerId: SupportedIdentityProvider;
     userId: string;
     name: string;
     image: string | null;
@@ -14,25 +18,32 @@ interface BotUserSource extends RowDataPacket {
 }
 
 interface ExistingIdentityRow extends RowDataPacket {
+    id: string;
     userId: string;
-    provider: "discord" | "osu";
+    provider: SupportedIdentityProvider;
     providerUserId: string;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
 }
 
-interface DesiredIdentity {
+interface DesiredMapping {
     userId: string;
-    provider: "discord" | "osu";
+    provider: SupportedIdentityProvider;
     providerUserId: string;
     username: string | null;
     displayName: string | null;
     avatarUrl: string | null;
     linkedAt: Date;
+    createAccount: boolean;
 }
 
 export interface IdentityBackfillSummary {
-    created: number;
-    updated: number;
-    skipped: number;
+    accountsCreated: number;
+    identitiesCreated: number;
+    identitiesUpdated: number;
+    alreadyConsistent: number;
+    skippedInvalid: number;
     conflicts: string[];
 }
 
@@ -40,142 +51,239 @@ export class IdentityBackfillConflictError extends Error {
     readonly code = "identity_backfill_conflict";
 
     constructor(public readonly summary: IdentityBackfillSummary) {
-        super(`Identity backfill stopped with ${summary.conflicts.length} conflict(s)`);
+        super(`Identity reconciliation stopped with ${summary.conflicts.length} conflict(s)`);
         this.name = "IdentityBackfillConflictError";
     }
 }
 
+/**
+ * Reconciles Better Auth accounts with Hanami's token-free identity projection.
+ * The caller owns the transaction so the account and projection are committed
+ * together under the Web migration lock.
+ */
 export async function backfillCanonicalIdentities(webConnection: PoolConnection, botPool: Pool): Promise<IdentityBackfillSummary> {
-    const summary: IdentityBackfillSummary = { created: 0, updated: 0, skipped: 0, conflicts: [] };
-    const [discordAccounts] = await webConnection.execute<DiscordAccountSource[]>(
-        `SELECT account.accountId, account.userId, account.createdAt, user.name, user.image
+    const summary: IdentityBackfillSummary = {
+        accountsCreated: 0,
+        identitiesCreated: 0,
+        identitiesUpdated: 0,
+        alreadyConsistent: 0,
+        skippedInvalid: 0,
+        conflicts: [],
+    };
+    const [accounts] = await webConnection.execute<AccountSource[]>(
+        `SELECT account.id, account.accountId, account.providerId, account.userId, account.createdAt, user.name, user.image
            FROM account
            JOIN user ON user.id = account.userId
-          WHERE account.providerId = 'discord'
-          ORDER BY account.userId, account.accountId`,
+          WHERE account.providerId IN ('discord', 'osu')
+          ORDER BY account.providerId, account.userId, account.accountId`,
+    );
+    const [identities] = await webConnection.execute<ExistingIdentityRow[]>(
+        `SELECT id, userId, provider, providerUserId, username, displayName, avatarUrl
+           FROM userIdentity
+          WHERE provider IN ('discord', 'osu')
+          ORDER BY provider, userId, providerUserId`,
     );
 
-    const discordBySubject = new Map<string, DiscordAccountSource>();
-    const discordByUser = new Map<string, DiscordAccountSource>();
-    for (const account of discordAccounts) {
-        if (!/^[1-9]\d{0,19}$/.test(account.accountId)) {
-            summary.conflicts.push(`Invalid Discord provider subject for canonical user ${redact(account.userId)}`);
+    const accountsBySubject = indexAccounts(accounts, "subject", summary);
+    const accountsBySlot = indexAccounts(accounts, "slot", summary);
+    const identitiesBySubject = indexIdentities(identities, "subject", summary);
+    const identitiesBySlot = indexIdentities(identities, "slot", summary);
+    detectStoreDisagreements(accounts, identitiesBySubject, identitiesBySlot, summary);
+
+    const discordAccounts = accounts.filter((account) => account.providerId === "discord");
+    const botUsers = await readBotUsers(
+        botPool,
+        discordAccounts.map((account) => account.accountId),
+    );
+    const desired = new Map<string, DesiredMapping>();
+
+    for (const account of accounts) {
+        if (!isValidProviderSubject(account.providerId, account.accountId)) {
+            summary.conflicts.push(`Invalid ${account.providerId} account subject for canonical user ${redact(account.userId)}`);
             continue;
         }
-        const subjectOwner = discordBySubject.get(account.accountId);
-        if (subjectOwner && subjectOwner.userId !== account.userId) {
-            summary.conflicts.push(`Discord provider subject ${redact(account.accountId)} belongs to multiple canonical users`);
-        } else {
-            discordBySubject.set(account.accountId, account);
-        }
-        const userIdentity = discordByUser.get(account.userId);
-        if (userIdentity && userIdentity.accountId !== account.accountId) {
-            summary.conflicts.push(`Canonical user ${redact(account.userId)} has conflicting Discord provider subjects`);
-        } else {
-            discordByUser.set(account.userId, account);
-        }
+        desired.set(slotKey(account.userId, account.providerId), {
+            userId: account.userId,
+            provider: account.providerId,
+            providerUserId: account.accountId,
+            username: account.providerId === "discord" ? account.name : null,
+            displayName: account.providerId === "discord" ? account.name : null,
+            avatarUrl: account.providerId === "discord" ? account.image : null,
+            linkedAt: new Date(account.createdAt),
+            createAccount: false,
+        });
     }
 
-    const botUsers = await readBotUsers(botPool, [...discordBySubject.keys()]);
-    const desired: DesiredIdentity[] = [];
-    const osuOwners = new Map<string, string>();
-
-    for (const account of discordByUser.values()) {
-        desired.push({
-            userId: account.userId,
-            provider: "discord",
-            providerUserId: account.accountId,
-            username: account.name,
-            displayName: account.name,
-            avatarUrl: account.image,
-            linkedAt: new Date(account.createdAt),
-        });
-
-        const botUser = botUsers.get(account.accountId);
-        const osuId = botUser?.banchoId?.trim() ?? "";
-        if (!osuId) {
-            summary.skipped += 1;
-            continue;
-        }
-        if (!/^[1-9]\d{0,19}$/.test(osuId)) {
-            summary.skipped += 1;
+    const legacyOsuOwners = new Map<string, string>();
+    for (const discordAccount of discordAccounts) {
+        const osuId = botUsers.get(discordAccount.accountId)?.banchoId?.trim() ?? "";
+        if (!osuId || !isValidProviderSubject("osu", osuId)) {
+            summary.skippedInvalid += 1;
             continue;
         }
 
-        const owner = osuOwners.get(osuId);
-        if (owner && owner !== account.userId) {
-            summary.conflicts.push(`osu! provider subject ${redact(osuId)} would belong to multiple canonical users`);
+        const legacyOwner = legacyOsuOwners.get(osuId);
+        if (legacyOwner) {
+            summary.conflicts.push(`Legacy osu! subject ${redact(osuId)} is assigned by multiple Bot rows`);
             continue;
         }
-        osuOwners.set(osuId, account.userId);
-        desired.push({
-            userId: account.userId,
+        legacyOsuOwners.set(osuId, discordAccount.userId);
+
+        const key = slotKey(discordAccount.userId, "osu");
+        const existingDesired = desired.get(key);
+        if (existingDesired && existingDesired.providerUserId !== osuId) {
+            summary.conflicts.push(`Canonical user ${redact(discordAccount.userId)} has a different osu! Better Auth account`);
+            continue;
+        }
+        desired.set(key, {
+            userId: discordAccount.userId,
             provider: "osu",
             providerUserId: osuId,
-            username: null,
-            displayName: null,
-            avatarUrl: `https://a.ppy.sh/${osuId}`,
-            linkedAt: new Date(account.createdAt),
+            username: existingDesired?.username ?? null,
+            displayName: existingDesired?.displayName ?? null,
+            avatarUrl: existingDesired?.avatarUrl ?? `https://a.ppy.sh/${osuId}`,
+            linkedAt: existingDesired?.linkedAt ?? new Date(discordAccount.createdAt),
+            createAccount: !existingDesired,
         });
     }
 
-    const [existingRows] = await webConnection.execute<ExistingIdentityRow[]>(
-        "SELECT userId, provider, providerUserId FROM userIdentity WHERE provider IN ('discord', 'osu')",
-    );
-    const existingBySubject = new Map(existingRows.map((row) => [`${row.provider}:${row.providerUserId}`, row]));
-    const existingBySlot = new Map(existingRows.map((row) => [`${row.userId}:${row.provider}`, row]));
-
-    for (const identity of desired) {
-        const subject = existingBySubject.get(`${identity.provider}:${identity.providerUserId}`);
-        if (subject && subject.userId !== identity.userId) {
+    for (const mapping of desired.values()) {
+        const subjectAccount = accountsBySubject.get(subjectKey(mapping.provider, mapping.providerUserId));
+        if (subjectAccount && subjectAccount.userId !== mapping.userId) {
             summary.conflicts.push(
-                `${identity.provider} provider subject ${redact(identity.providerUserId)} is already owned by another canonical user`,
+                `${mapping.provider} Better Auth subject ${redact(mapping.providerUserId)} is owned by another canonical user`,
             );
         }
-        const slot = existingBySlot.get(`${identity.userId}:${identity.provider}`);
-        if (slot && slot.providerUserId !== identity.providerUserId) {
-            summary.conflicts.push(`Canonical user ${redact(identity.userId)} already has a different ${identity.provider} identity`);
+        const slotAccount = accountsBySlot.get(slotKey(mapping.userId, mapping.provider));
+        if (slotAccount && slotAccount.accountId !== mapping.providerUserId) {
+            summary.conflicts.push(`Canonical user ${redact(mapping.userId)} has a different ${mapping.provider} Better Auth account`);
+        }
+        const subjectIdentity = identitiesBySubject.get(subjectKey(mapping.provider, mapping.providerUserId));
+        if (subjectIdentity && subjectIdentity.userId !== mapping.userId) {
+            summary.conflicts.push(`${mapping.provider} identity ${redact(mapping.providerUserId)} is owned by another canonical user`);
+        }
+        const slotIdentity = identitiesBySlot.get(slotKey(mapping.userId, mapping.provider));
+        if (slotIdentity && slotIdentity.providerUserId !== mapping.providerUserId) {
+            summary.conflicts.push(`Canonical user ${redact(mapping.userId)} has a different ${mapping.provider} identity`);
         }
     }
 
     summary.conflicts = [...new Set(summary.conflicts)];
     if (summary.conflicts.length > 0) throw new IdentityBackfillConflictError(summary);
 
-    for (const identity of desired) {
-        const existing = existingBySubject.get(`${identity.provider}:${identity.providerUserId}`);
-        if (existing) {
+    for (const mapping of desired.values()) {
+        const account = accountsBySubject.get(subjectKey(mapping.provider, mapping.providerUserId));
+        if (!account && mapping.createAccount) {
             await webConnection.execute(
-                `UPDATE userIdentity
-                    SET username = COALESCE(?, username),
-                        displayName = COALESCE(?, displayName),
-                        avatarUrl = COALESCE(?, avatarUrl),
-                        updatedAt = CURRENT_TIMESTAMP(3)
-                  WHERE provider = ? AND providerUserId = ? AND userId = ?`,
-                [identity.username, identity.displayName, identity.avatarUrl, identity.provider, identity.providerUserId, identity.userId],
+                `INSERT INTO account
+                    (id, accountId, providerId, userId, accessToken, refreshToken, idToken,
+                     accessTokenExpiresAt, refreshTokenExpiresAt, scope, password, createdAt, updatedAt)
+                 VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))`,
+                [crypto.randomUUID(), mapping.providerUserId, mapping.provider, mapping.userId],
             );
-            summary.updated += 1;
+            summary.accountsCreated += 1;
+        }
+
+        const identity = identitiesBySubject.get(subjectKey(mapping.provider, mapping.providerUserId));
+        if (!identity) {
+            await webConnection.execute(
+                `INSERT INTO userIdentity
+                    (id, userId, provider, providerUserId, username, displayName, avatarUrl, metadata, linkedAt, updatedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP(3))`,
+                [
+                    crypto.randomUUID(),
+                    mapping.userId,
+                    mapping.provider,
+                    mapping.providerUserId,
+                    mapping.username,
+                    mapping.displayName,
+                    mapping.avatarUrl,
+                    mapping.linkedAt,
+                ],
+            );
+            summary.identitiesCreated += 1;
+            continue;
+        }
+
+        const nextUsername = mapping.username ?? identity.username;
+        const nextDisplayName = mapping.displayName ?? identity.displayName;
+        const nextAvatarUrl = mapping.avatarUrl ?? identity.avatarUrl;
+        if (identity.username === nextUsername && identity.displayName === nextDisplayName && identity.avatarUrl === nextAvatarUrl) {
+            summary.alreadyConsistent += 1;
             continue;
         }
 
         await webConnection.execute(
-            `INSERT INTO userIdentity
-                (id, userId, provider, providerUserId, username, displayName, avatarUrl, metadata, linkedAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, CURRENT_TIMESTAMP(3))`,
-            [
-                crypto.randomUUID(),
-                identity.userId,
-                identity.provider,
-                identity.providerUserId,
-                identity.username,
-                identity.displayName,
-                identity.avatarUrl,
-                identity.linkedAt,
-            ],
+            `UPDATE userIdentity
+                SET username = ?, displayName = ?, avatarUrl = ?, updatedAt = CURRENT_TIMESTAMP(3)
+              WHERE id = ?`,
+            [nextUsername, nextDisplayName, nextAvatarUrl, identity.id],
         );
-        summary.created += 1;
+        summary.identitiesUpdated += 1;
     }
 
     return summary;
+}
+
+function indexAccounts(accounts: AccountSource[], index: "subject" | "slot", summary: IdentityBackfillSummary): Map<string, AccountSource> {
+    const result = new Map<string, AccountSource>();
+    for (const account of accounts) {
+        const key = index === "subject" ? subjectKey(account.providerId, account.accountId) : slotKey(account.userId, account.providerId);
+        if (result.has(key)) {
+            summary.conflicts.push(
+                index === "subject"
+                    ? `Duplicate ${account.providerId} Better Auth subject ${redact(account.accountId)}`
+                    : `Canonical user ${redact(account.userId)} has multiple ${account.providerId} Better Auth accounts`,
+            );
+        } else {
+            result.set(key, account);
+        }
+    }
+    return result;
+}
+
+function indexIdentities(
+    identities: ExistingIdentityRow[],
+    index: "subject" | "slot",
+    summary: IdentityBackfillSummary,
+): Map<string, ExistingIdentityRow> {
+    const result = new Map<string, ExistingIdentityRow>();
+    for (const identity of identities) {
+        const key =
+            index === "subject" ? subjectKey(identity.provider, identity.providerUserId) : slotKey(identity.userId, identity.provider);
+        if (result.has(key)) {
+            summary.conflicts.push(
+                index === "subject"
+                    ? `Duplicate ${identity.provider} identity subject ${redact(identity.providerUserId)}`
+                    : `Canonical user ${redact(identity.userId)} has multiple ${identity.provider} identities`,
+            );
+        } else {
+            result.set(key, identity);
+        }
+    }
+    return result;
+}
+
+function detectStoreDisagreements(
+    accounts: AccountSource[],
+    identitiesBySubject: Map<string, ExistingIdentityRow>,
+    identitiesBySlot: Map<string, ExistingIdentityRow>,
+    summary: IdentityBackfillSummary,
+): void {
+    for (const account of accounts) {
+        const subjectIdentity = identitiesBySubject.get(subjectKey(account.providerId, account.accountId));
+        if (subjectIdentity && subjectIdentity.userId !== account.userId) {
+            summary.conflicts.push(
+                `${account.providerId} Better Auth account and identity disagree for subject ${redact(account.accountId)}`,
+            );
+        }
+        const slotIdentity = identitiesBySlot.get(slotKey(account.userId, account.providerId));
+        if (slotIdentity && slotIdentity.providerUserId !== account.accountId) {
+            summary.conflicts.push(
+                `Canonical user ${redact(account.userId)} has disagreeing ${account.providerId} account and identity subjects`,
+            );
+        }
+    }
 }
 
 async function readBotUsers(botPool: Pool, discordIds: string[]): Promise<Map<string, BotUserSource>> {
@@ -192,11 +300,33 @@ async function readBotUsers(botPool: Pool, discordIds: string[]): Promise<Map<st
 
 export function formatBackfillSummary(summary: IdentityBackfillSummary): string {
     return [
-        `created=${summary.created}`,
-        `updated=${summary.updated}`,
-        `skipped=${summary.skipped}`,
+        `accountsCreated=${summary.accountsCreated}`,
+        `identitiesCreated=${summary.identitiesCreated}`,
+        `identitiesUpdated=${summary.identitiesUpdated}`,
+        `alreadyConsistent=${summary.alreadyConsistent}`,
+        `skippedInvalid=${summary.skippedInvalid}`,
         `conflicts=${summary.conflicts.length}`,
     ].join(" ");
+}
+
+export function formatBackfillConflicts(error: IdentityBackfillConflictError): string {
+    return [
+        `Canonical identity reconciliation failed: ${formatBackfillSummary(error.summary)}`,
+        ...error.summary.conflicts.map((conflict) => `- ${conflict}`),
+    ].join("\n");
+}
+
+function isValidProviderSubject(provider: SupportedIdentityProvider, value: string): boolean {
+    if (value.length < 1 || value.length > 255) return false;
+    return (provider === "discord" || provider === "osu") && /^[1-9]\d{0,19}$/.test(value);
+}
+
+function subjectKey(provider: SupportedIdentityProvider, providerUserId: string): string {
+    return `${provider}:${providerUserId}`;
+}
+
+function slotKey(userId: string, provider: SupportedIdentityProvider): string {
+    return `${userId}:${provider}`;
 }
 
 function redact(value: string): string {

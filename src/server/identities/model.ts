@@ -15,6 +15,20 @@ export interface UserIdentity {
     updatedAt: Date;
 }
 
+export interface UserAuthenticationIdentity extends UserIdentity {
+    canAuthenticate: boolean;
+    status: "linked" | "repair_required";
+}
+
+export interface UserProviderAccount {
+    id: string;
+    userId: string;
+    provider: SupportedIdentityProvider;
+    providerUserId: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface LinkIdentityInput {
     provider: SupportedIdentityProvider;
     providerUserId: string;

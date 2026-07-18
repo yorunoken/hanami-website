@@ -97,7 +97,7 @@ export default function AccountPrivacy() {
         try {
             const result = await fetchJson<StartResponse>("/api/account-deletion/reauth/start", undefined, jsonRequest({}));
             if (result.reauthenticationRequired) {
-                const provider = identityState?.identities[0]?.provider;
+                const provider = identityState?.identities.find((identity) => identity.canAuthenticate)?.provider;
                 if (!provider) throw new Error("A linked login method is required before account deletion can continue.");
                 const callbackURL = prepareDeletionReauthentication(result.confirmationPath);
                 try {
