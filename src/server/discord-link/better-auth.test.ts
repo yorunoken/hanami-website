@@ -36,6 +36,19 @@ describe("Better Auth Discord identity resolution", () => {
         });
         expect(adapter.createOAuthUserCount).toBe(1);
     });
+
+    it("does not merge a new Discord subject into a user based on matching email", async () => {
+        const existing = makeUser("user-existing");
+        existing.email = "discord-123456789012345678@users.hanami.invalid";
+        const adapter = new MemoryAuthAdapter([existing]);
+
+        const resolved = await resolveDiscordIdentity(adapter.value, makeTicket("123456789012345678"));
+
+        expect(resolved.id).not.toBe(existing.id);
+        expect(adapter.users).toHaveLength(2);
+        expect(adapter.accounts).toHaveLength(1);
+        expect(adapter.accounts[0]?.userId).toBe(resolved.id);
+    });
 });
 
 class MemoryAuthAdapter {

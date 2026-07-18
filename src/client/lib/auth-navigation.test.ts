@@ -55,7 +55,7 @@ describe("post-authentication destinations", () => {
         expect(describeOAuthError("access_denied")).toContain("cancelled");
         expect(describeOAuthError("state_security_mismatch")).toContain("could not be verified");
         expect(describeOAuthError("unable_to_create_session")).not.toContain("unable_to_create_session");
-        expect(describeOAuthError("raw-provider-stack")).toBe("Discord sign-in did not complete. Please try again.");
+        expect(describeOAuthError("raw-provider-stack")).toBe("Provider sign-in did not complete. Please try again.");
     });
 
     it("keeps the development auth flow on the callback hostname", () => {

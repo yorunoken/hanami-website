@@ -227,7 +227,7 @@ describe("Companion device API", () => {
             revokedAt: null,
         });
         const app = createCompanionDeviceRoutes({
-            identity: new StubIdentity({ userId: "user-1", sessionId: "session-1" }),
+            identity: new StubIdentity({ userId: "user-1", sessionId: "session-1", sessionCreatedAt: now }),
             store,
             now: () => now,
             trustedOrigins: [],
@@ -269,7 +269,7 @@ describe("Companion device API", () => {
             revokedAt: null,
         });
         const app = createCompanionDeviceRoutes({
-            identity: new StubIdentity({ userId: "user-1", sessionId: "session-1" }),
+            identity: new StubIdentity({ userId: "user-1", sessionId: "session-1", sessionCreatedAt: now }),
             store,
             now: () => now,
             trustedOrigins: [],
@@ -291,7 +291,7 @@ describe("Companion device API", () => {
 async function makeOAuthApp() {
     const store = new MemoryCompanionStore();
     const app = createCompanionOAuthRoutes({
-        identity: new StubIdentity({ userId: "user-1", sessionId: "session-1" }),
+        identity: new StubIdentity({ userId: "user-1", sessionId: "session-1", sessionCreatedAt: now }),
         store,
         now: () => now,
         trustedOrigins: [],

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { reauthenticateWithDiscord } from "@/client/lib/auth";
+import { reauthenticateWithProvider } from "@/client/lib/auth";
 import { readOAuthError } from "@/client/lib/auth-navigation";
 import { clearPendingDeletionChallenge, prepareDeletionReauthentication, readPendingDeletionChallenge } from "@/client/lib/deletion-reauth";
 import { fetchJson } from "@/client/lib/fetch-json";
@@ -9,17 +9,12 @@ import { routes } from "@/client/routes/paths";
 import { AccountLayout, AccountPage, profileHeadingClass, sectionHeadingClass } from "@/components/account/account-shell";
 import { useAuthenticatedSession } from "@/components/account/authenticated-route";
 import { ConfirmationPage, ErrorMessage } from "@/components/account/privacy-views";
+import type { IdentityResponse } from "@/components/account/profile-sections";
 import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import { dangerOutlineActionClass, primaryActionClass } from "@/components/ui/action-styles";
 import { legalContacts } from "@/data/legal";
 import { cn } from "@/lib/utils";
-
-interface OsuLinkStatus {
-    linked: boolean;
-    banchoId?: string;
-    username?: string;
-}
 
 interface StartResponse {
     reauthenticationRequired: boolean;
@@ -34,8 +29,8 @@ export default function AccountPrivacy() {
     const [challenge, setChallenge] = useState<string | null>(
         () => readChallengeFromHash(location.hash) ?? (isConfirmation ? readPendingDeletionChallenge() : null),
     );
-    const [osuLink, setOsuLink] = useState<OsuLinkStatus | null>(null);
-    const [osuLinkUnavailable, setOsuLinkUnavailable] = useState(false);
+    const [identityState, setIdentityState] = useState<IdentityResponse | null>(null);
+    const [identitiesUnavailable, setIdentitiesUnavailable] = useState(false);
     const [loading, setLoading] = useState(true);
     const [action, setAction] = useState<"starting" | "verifying" | "deleting" | null>(null);
     const [confirmationReady, setConfirmationReady] = useState(false);
@@ -57,12 +52,12 @@ export default function AccountPrivacy() {
 
         const controller = new AbortController();
         setLoading(true);
-        fetchJson<OsuLinkStatus>("/api/osu-link/status", controller.signal)
+        fetchJson<IdentityResponse>("/api/identities", controller.signal)
             .then((result) => {
-                setOsuLink(result);
-                setOsuLinkUnavailable(false);
+                setIdentityState(result);
+                setIdentitiesUnavailable(false);
             })
-            .catch(() => setOsuLinkUnavailable(true))
+            .catch(() => setIdentitiesUnavailable(true))
             .finally(() => setLoading(false));
         return () => controller.abort();
     }, [isConfirmation, session.user.id]);
@@ -86,7 +81,7 @@ export default function AccountPrivacy() {
                 if (active) setConfirmationReady(true);
             })
             .catch(() => {
-                if (active) setError("Fresh Discord authentication could not be confirmed. Start again from account privacy.");
+                if (active) setError("Fresh provider authentication could not be confirmed. Start again from account privacy.");
             })
             .finally(() => {
                 if (active) setAction(null);
@@ -102,9 +97,11 @@ export default function AccountPrivacy() {
         try {
             const result = await fetchJson<StartResponse>("/api/account-deletion/reauth/start", undefined, jsonRequest({}));
             if (result.reauthenticationRequired) {
+                const provider = identityState?.identities[0]?.provider;
+                if (!provider) throw new Error("A linked login method is required before account deletion can continue.");
                 const callbackURL = prepareDeletionReauthentication(result.confirmationPath);
                 try {
-                    await reauthenticateWithDiscord(callbackURL, `${routes.profilePrivacy}?reauth=1`);
+                    await reauthenticateWithProvider(provider, callbackURL, `${routes.profilePrivacy}?reauth=1`);
                 } catch (reauthenticationError) {
                     clearPendingDeletionChallenge();
                     throw reauthenticationError;
@@ -174,27 +171,24 @@ export default function AccountPrivacy() {
                 <section className="mt-12" aria-labelledby="identity-title">
                     <div className={sectionHeadingClass}>
                         <h2 id="identity-title">Signed-in identity</h2>
-                        <p>This is the account affected by deletion.</p>
+                        <p>Every provider below belongs to the canonical account affected by deletion.</p>
                     </div>
                     <dl className="grid grid-cols-1 min-[601px]:grid-cols-2 [&_dd]:mt-2 [&_dd]:text-base [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_small]:mt-1 [&_small]:block [&_small]:text-[0.78rem] [&_small]:leading-[1.55] [&_small]:text-muted [&>div]:border-b [&>div]:border-border [&>div]:py-6 min-[601px]:[&>div:first-child]:border-r min-[601px]:[&>div:first-child]:pr-8 min-[601px]:[&>div:last-child]:pl-8">
-                        <div>
-                            <dt>Discord sign-in</dt>
-                            <dd>{session.user.name || "Discord user"}</dd>
-                            <small>Hanami website identity and sessions</small>
-                        </div>
-                        <div>
-                            <dt>Hanami Bot osu! link</dt>
-                            <dd>
-                                {loading
-                                    ? "Checking…"
-                                    : osuLinkUnavailable
-                                      ? "Status unavailable"
-                                      : osuLink?.linked
-                                        ? osuLink.username || `osu! ID ${osuLink.banchoId}`
-                                        : "Not linked"}
-                            </dd>
-                            <small>{osuLink?.linked ? `osu! ID ${osuLink.banchoId}` : "Stored against the Discord account"}</small>
-                        </div>
+                        {loading || identitiesUnavailable ? (
+                            <div>
+                                <dt>Linked providers</dt>
+                                <dd>{loading ? "Checking…" : "Status unavailable"}</dd>
+                                <small>Canonical Hanami user ID {session.user.id}</small>
+                            </div>
+                        ) : (
+                            identityState?.identities.map((identity) => (
+                                <div key={identity.provider}>
+                                    <dt>{identity.provider === "osu" ? "osu! login" : "Discord login"}</dt>
+                                    <dd>{identity.displayName || identity.username || "Linked provider"}</dd>
+                                    <small>Provider user ID {identity.providerUserId}</small>
+                                </div>
+                            ))
+                        )}
                     </dl>
                 </section>
 
@@ -208,8 +202,8 @@ export default function AccountPrivacy() {
                             Delete account
                         </h2>
                         <p className="mt-3 max-w-[68ch] text-[0.88rem] leading-[1.7] text-muted">
-                            Immediately deletes your Hanami website identity, provider link, and sessions, plus the Hanami Bot osu! link and
-                            preferences stored for this Discord account. This cannot be undone.
+                            Immediately deletes your canonical Hanami account, linked login methods, sessions, and Companion credentials.
+                            Discord-keyed Bot data is also queued for deletion when a Discord identity exists. This cannot be undone.
                         </p>
                     </div>
                     <button
@@ -223,7 +217,7 @@ export default function AccountPrivacy() {
                     <p className="max-w-[80ch] text-[0.78rem] leading-[1.6] text-muted min-[821px]:col-span-2">
                         This does not delete your Discord or osu! provider accounts, a separate osu!guessr profile, or records that must
                         remain temporarily in operational logs where justified. The repositories do not document a production backup
-                        schedule. A Discord sign-in from the last 15 minutes and typed confirmation are required.
+                        schedule. A provider sign-in from the last 15 minutes and typed confirmation are required.
                     </p>
                 </section>
 

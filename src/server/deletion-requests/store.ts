@@ -1,5 +1,6 @@
 import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
+import type { TemporaryBotIdentityCompatibility } from "../identities/bot-compatibility";
 import { REAUTHENTICATION_WINDOW_MS } from "./domain";
 
 export type AccountDeletionFailureCode = "account_not_found" | "challenge_invalid" | "challenge_stale" | "service_unavailable";
@@ -14,7 +15,7 @@ export class AccountDeletionStoreError extends Error {
 export interface AccountDeletionStore {
     startReauthentication(input: { userId: string; tokenHash: string; now: Date; alreadyFresh: boolean }): Promise<void>;
     completeReauthentication(input: { userId: string; tokenHash: string; sessionCreatedAt: Date; now: Date }): Promise<Date>;
-    deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<void>;
+    deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<{ syncPending: boolean }>;
 }
 
 interface ChallengeRow extends RowDataPacket {
@@ -26,16 +27,17 @@ interface ChallengeRow extends RowDataPacket {
     consumedAt: Date | null;
 }
 
-interface AccountRow extends RowDataPacket {
-    accountId: string;
+interface IdentityRow extends RowDataPacket {
+    providerUserId: string;
 }
-
-type DeleteBotAccountData = (discordAccountId: string) => Promise<void>;
 
 export class MySqlAccountDeletionStore implements AccountDeletionStore {
     constructor(
         private readonly pool: Pool,
-        private readonly deleteBotAccountData: DeleteBotAccountData,
+        private readonly botCompatibility: Pick<
+            TemporaryBotIdentityCompatibility,
+            "accountDeleted" | "flushPendingForUser" | "hasPendingForUser"
+        >,
     ) {}
 
     async startReauthentication(input: { userId: string; tokenHash: string; now: Date; alreadyFresh: boolean }): Promise<void> {
@@ -78,7 +80,8 @@ export class MySqlAccountDeletionStore implements AccountDeletionStore {
         });
     }
 
-    async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<void> {
+    async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<{ syncPending: boolean }> {
+        let discordProviderUserId: string | null = null;
         await withTransaction(this.pool, async (connection) => {
             const challenge = await getChallengeForUpdate(connection, input.userId, input.tokenHash);
             assertChallengeUsable(challenge, input.now);
@@ -86,19 +89,24 @@ export class MySqlAccountDeletionStore implements AccountDeletionStore {
                 throw new AccountDeletionStoreError("challenge_stale");
             }
 
-            const [accountRows] = await connection.execute<AccountRow[]>(
-                "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord' LIMIT 1 FOR UPDATE",
+            const [identityRows] = await connection.execute<IdentityRow[]>(
+                "SELECT providerUserId FROM userIdentity WHERE userId = ? AND provider = 'discord' LIMIT 1 FOR UPDATE",
                 [input.userId],
             );
-            const discordAccountId = accountRows[0]?.accountId;
-            if (!discordAccountId) throw new AccountDeletionStoreError("account_not_found");
+            discordProviderUserId = identityRows[0]?.providerUserId ?? null;
+            if (discordProviderUserId) {
+                await this.botCompatibility.accountDeleted(connection, input.userId, discordProviderUserId);
+            }
 
-            await this.deleteBotAccountData(discordAccountId);
             await deleteLegacyRequestRecords(connection, input.userId);
 
             const [result] = await connection.execute<ResultSetHeader>("DELETE FROM user WHERE id = ?", [input.userId]);
             if (result.affectedRows !== 1) throw new AccountDeletionStoreError("account_not_found");
         });
+
+        if (!discordProviderUserId) return { syncPending: false };
+        await this.botCompatibility.flushPendingForUser(input.userId).catch(() => undefined);
+        return { syncPending: await this.botCompatibility.hasPendingForUser(input.userId) };
     }
 }
 

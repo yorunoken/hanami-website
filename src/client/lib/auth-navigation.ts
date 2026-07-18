@@ -76,7 +76,7 @@ export function describeOAuthError(code: string | null): string | null {
         case "access_denied":
         case "oauth_cancelled":
         case "user_cancelled":
-            return "Discord authorization was cancelled. You can try again when you are ready.";
+            return "Provider authorization was cancelled. You can try again when you are ready.";
         case "state_not_found":
         case "state_invalid":
         case "state_mismatch":
@@ -84,11 +84,20 @@ export function describeOAuthError(code: string | null): string | null {
         case "invalid_state":
             return "That sign-in request expired or could not be verified. Please start again.";
         case "email_not_found":
-            return "Discord did not provide the account details needed to sign in. Please try again.";
+        case "email_is_missing":
+        case "user_info_is_missing":
+            return "The provider did not return the account details needed to sign in. Please try again.";
+        case "account_already_linked_to_different_user":
+        case "identity_conflict":
+            return "That provider identity belongs to another Hanami account and cannot be transferred automatically.";
+        case "account_not_linked":
+            return "Hanami did not link this provider based on matching profile details. Sign in first, then link it from your profile.";
+        case "fresh_session_required":
+            return "Sign out and sign in again before changing linked login methods.";
         case "unable_to_get_user_info":
         case "oauth_provider_not_found":
         case "provider_unavailable":
-            return "Discord sign-in is temporarily unavailable. Please try again shortly.";
+            return "Provider sign-in is temporarily unavailable. Please try again shortly.";
         case "unable_to_create_user":
         case "unable_to_create_session":
         case "internal_server_error":
@@ -96,7 +105,7 @@ export function describeOAuthError(code: string | null): string | null {
         case "initiation_failed":
             return "Discord sign-in could not be started. Check your connection and try again.";
         default:
-            return "Discord sign-in did not complete. Please try again.";
+            return "Provider sign-in did not complete. Please try again.";
     }
 }
 

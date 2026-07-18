@@ -13,9 +13,6 @@ export function createDiscordPlaceholderEmail(providerAccountId: string): string
 }
 
 export function mapDiscordProfileToUser(profile: DiscordIdentityProfile): { email: string; emailVerified: boolean } {
-    const email = profile.email?.trim();
-    if (email) return { email, emailVerified: profile.verified };
-
     return {
         email: createDiscordPlaceholderEmail(profile.id),
         emailVerified: false,

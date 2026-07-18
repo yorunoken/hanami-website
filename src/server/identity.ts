@@ -1,10 +1,10 @@
-import type { Pool, RowDataPacket } from "mysql2/promise";
-
-import { auth, webDatabase } from "./auth";
+import { auth } from "./auth";
+import { userIdentities } from "./identities/runtime";
 
 export interface HanamiIdentity {
     userId: string;
     sessionId: string;
+    sessionCreatedAt: Date;
 }
 
 export interface IdentityService {
@@ -12,15 +12,8 @@ export interface IdentityService {
     resolveDiscordId(userId: string): Promise<string | null>;
 }
 
-interface DiscordAccountRow extends RowDataPacket {
-    accountId: string;
-}
-
 export class ServerIdentityService implements IdentityService {
-    constructor(
-        private readonly getSession: (headers: Headers) => ReturnType<typeof auth.api.getSession>,
-        private readonly pool: Pool,
-    ) {}
+    constructor(private readonly getSession: (headers: Headers) => ReturnType<typeof auth.api.getSession>) {}
 
     async getCurrent(headers: Headers): Promise<HanamiIdentity | null> {
         const session = await this.getSession(headers);
@@ -29,16 +22,14 @@ export class ServerIdentityService implements IdentityService {
         return {
             userId: session.user.id,
             sessionId: session.session.id,
+            sessionCreatedAt: new Date(session.session.createdAt),
         };
     }
 
     async resolveDiscordId(userId: string): Promise<string | null> {
-        const [accounts] = await this.pool.execute<DiscordAccountRow[]>(
-            "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord' LIMIT 1",
-            [userId],
-        );
-        return accounts[0]?.accountId ?? null;
+        const identities = await userIdentities.getUserIdentities(userId);
+        return identities.find((identity) => identity.provider === "discord")?.providerUserId ?? null;
     }
 }
 
-export const serverIdentity = new ServerIdentityService((headers) => auth.api.getSession({ headers }), webDatabase);
+export const serverIdentity = new ServerIdentityService((headers) => auth.api.getSession({ headers }));

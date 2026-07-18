@@ -1,15 +1,13 @@
 import { betterAuth } from "better-auth";
-import { createPool } from "mysql2/promise";
+import { genericOAuth } from "better-auth/plugins";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
-import { MySqlOAuthStateStore } from "./oauth-state";
-import { getOsuAuthorizationConfiguration } from "./osu-authorization";
+import { webDatabase } from "./database";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
 import { MySqlDiscordLinkTicketStore } from "./discord-link/tickets";
-
-if (!process.env.WEB_DATABASE_URL) {
-    throw new Error("WEB_DATABASE_URL environment variable is not set. Please provide it in your environment.");
-}
+import { createIdentityDatabaseHooks } from "./identities/auth-hooks";
+import { createOsuOAuthProvider } from "./identities/osu-provider";
+import { userIdentities } from "./identities/runtime";
 
 const baseURL = process.env.BETTER_AUTH_URL || "http://localhost:3000";
 const baseOrigin = new URL(baseURL).origin;
@@ -20,26 +18,31 @@ const developmentOrigins =
 
 export const trustedOrigins = [...new Set([baseOrigin, ...developmentOrigins])];
 
-export const webDatabase = createPool({
-    uri: process.env.WEB_DATABASE_URL,
-    timezone: "Z",
-});
-
 export const discordLinkTicketStore = new MySqlDiscordLinkTicketStore(webDatabase);
-export const osuOAuthStateStore = new MySqlOAuthStateStore(webDatabase);
 
 export const auth = betterAuth({
     database: webDatabase,
     baseURL,
     trustedOrigins,
+    databaseHooks: createIdentityDatabaseHooks(userIdentities),
     session: {
         freshAge: 15 * 60,
+    },
+    account: {
+        accountLinking: {
+            allowDifferentEmails: true,
+            disableImplicitLinking: true,
+            trustedProviders: ["discord", "osu"],
+            updateUserInfoOnLink: true,
+        },
     },
     plugins: [
         discordBotLinkPlugin({
             ticketStore: discordLinkTicketStore,
-            oauthStateStore: osuOAuthStateStore,
-            getOsuConfiguration: getOsuAuthorizationConfiguration,
+            identities: userIdentities,
+        }),
+        genericOAuth({
+            config: [createOsuOAuthProvider()],
         }),
     ],
     socialProviders: {
@@ -47,9 +50,8 @@ export const auth = betterAuth({
             clientId: process.env.DISCORD_CLIENT_ID as string,
             clientSecret: process.env.DISCORD_CLIENT_SECRET as string,
             mapProfileToUser: mapDiscordProfileToUser,
-            // Discord's provider account ID remains the identity anchor. Refreshing
-            // profile fields keeps names/avatars current and replaces a synthetic
-            // email if the provider later supplies a real one.
+            // Discord's provider account ID remains the identity anchor. Profile
+            // fields refresh without using provider email for account matching.
             overrideUserInfoOnSignIn: true,
         },
     },
@@ -57,3 +59,5 @@ export const auth = betterAuth({
         errorURL: "/login?returnTo=%2Fprofile",
     },
 });
+
+export { webDatabase };

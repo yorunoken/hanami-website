@@ -1,8 +1,8 @@
-import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, CircleUserRound, Loader2, MessageCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { claimPendingAttempt, signInWithDiscord, useSession } from "@/client/lib/auth";
+import { claimPendingAttempt, signInWithProvider, type IdentityProvider, useSession } from "@/client/lib/auth";
 import { getAuthenticatedLoginDestination, readOAuthError, readReturnTo } from "@/client/lib/auth-navigation";
 import { routes } from "@/client/routes/paths";
 import { AccountPage } from "@/components/account/account-shell";
@@ -20,7 +20,7 @@ export default function Login() {
     const oauthError = useMemo(() => readOAuthError(location.search), [location.search]);
     const accountDeleted = useMemo(() => new URLSearchParams(location.search).get("deleted") === "1", [location.search]);
     const initiationPending = useRef(false);
-    const [isRedirecting, setIsRedirecting] = useState(false);
+    const [redirectingProvider, setRedirectingProvider] = useState<IdentityProvider | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -28,17 +28,17 @@ export default function Login() {
         if (destination) navigate(destination, { replace: true });
     }, [isSessionPending, navigate, returnTo, session]);
 
-    async function handleSignIn() {
+    async function handleSignIn(provider: IdentityProvider) {
         if (!claimPendingAttempt(initiationPending)) return;
-        setIsRedirecting(true);
+        setRedirectingProvider(provider);
         setLocalError(null);
 
         try {
-            await signInWithDiscord(returnTo);
+            await signInWithProvider(provider, returnTo);
         } catch {
             initiationPending.current = false;
-            setLocalError("Discord sign-in could not be started. Check your connection and try again.");
-            setIsRedirecting(false);
+            setLocalError(`${provider === "osu" ? "osu!" : "Discord"} sign-in could not be started. Check your connection and try again.`);
+            setRedirectingProvider(null);
         }
     }
 
@@ -57,7 +57,7 @@ export default function Login() {
             <LoginPanel
                 error={localError || oauthError}
                 status={accountDeleted ? "Your Hanami account was deleted." : null}
-                isRedirecting={isRedirecting}
+                redirectingProvider={redirectingProvider}
                 onSignIn={handleSignIn}
             />
         </LoginScene>
@@ -102,13 +102,13 @@ function LoginScene({ children }: { children: ReactNode }) {
 export function LoginPanel({
     error,
     status = null,
-    isRedirecting,
+    redirectingProvider,
     onSignIn,
 }: {
     error: string | null;
     status?: string | null;
-    isRedirecting: boolean;
-    onSignIn: () => void;
+    redirectingProvider: IdentityProvider | null;
+    onSignIn: (provider: IdentityProvider) => void;
 }) {
     return (
         <section
@@ -123,7 +123,8 @@ export function LoginPanel({
                 Sign in to Hanami
             </h1>
             <p className="mt-6 max-w-[54ch] text-[clamp(1rem,1.5vw,1.12rem)] leading-[1.7] text-muted">
-                Discord is Hanami’s sign-in provider. We use your account ID and the profile details Discord makes available.
+                Discord and osu! are two login methods for one Hanami account. Link both later to use either provider with the same Hanami
+                user ID.
             </p>
 
             {status && (
@@ -140,19 +141,28 @@ export function LoginPanel({
                 </div>
             )}
 
-            <button
-                className={cn(primaryActionClass, "mt-8 w-[min(100%,23rem)]")}
-                type="button"
-                onClick={onSignIn}
-                disabled={isRedirecting}
-            >
-                {isRedirecting ? (
-                    <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
-                ) : (
-                    <MessageCircle aria-hidden="true" />
-                )}
-                {isRedirecting ? "Opening Discord…" : "Sign in with Discord"}
-            </button>
+            <div className="mt-8 grid w-[min(100%,23rem)] gap-3">
+                <ProviderButton
+                    provider="discord"
+                    label="Continue with Discord"
+                    pendingLabel="Opening Discord…"
+                    redirectingProvider={redirectingProvider}
+                    onSignIn={onSignIn}
+                    icon={<MessageCircle aria-hidden="true" />}
+                />
+                <ProviderButton
+                    provider="osu"
+                    label="Continue with osu!"
+                    pendingLabel="Opening osu!…"
+                    redirectingProvider={redirectingProvider}
+                    onSignIn={onSignIn}
+                    icon={<CircleUserRound aria-hidden="true" />}
+                />
+            </div>
+
+            <p className="mt-4 max-w-[54ch] text-[0.78rem] leading-[1.6] text-quiet">
+                Hanami never merges accounts from matching email addresses, usernames, or avatars.
+            </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4 border-t border-border pt-5">
                 <PrefetchLink className={textButtonClass} to={routes.home} prefetch="none">
@@ -160,6 +170,30 @@ export function LoginPanel({
                 </PrefetchLink>
             </div>
         </section>
+    );
+}
+
+function ProviderButton({
+    provider,
+    label,
+    pendingLabel,
+    redirectingProvider,
+    onSignIn,
+    icon,
+}: {
+    provider: IdentityProvider;
+    label: string;
+    pendingLabel: string;
+    redirectingProvider: IdentityProvider | null;
+    onSignIn: (provider: IdentityProvider) => void;
+    icon: ReactNode;
+}) {
+    const pending = redirectingProvider === provider;
+    return (
+        <button className={primaryActionClass} type="button" onClick={() => onSignIn(provider)} disabled={redirectingProvider !== null}>
+            {pending ? <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" /> : icon}
+            {pending ? pendingLabel : label}
+        </button>
     );
 }
 

@@ -35,8 +35,8 @@ export default function TermsOfService() {
             <LegalSection id="scope" title="2. Service scope">
                 <p>
                     The hosted services include this website and account area, Hanami Bot on Discord, and osu!guessr. Hanami Companion is a
-                    public-source but unreleased local prototype, and Map Analyzer is a separately distributed Rust library. Repository code,
-                    locally run copies, and third-party platforms are subject to their own licenses and terms.
+                    public-source but unreleased local prototype, and Map Analyzer is a separately distributed Rust library. Repository
+                    code, locally run copies, and third-party platforms are subject to their own licenses and terms.
                 </p>
                 <p>
                     Hanami provides osu!-related lookups, Discord commands, a beatmap guessing game, account-linking and preference tools,

@@ -1,7 +1,8 @@
 import { Elysia } from "elysia";
-import mysql from "mysql2/promise";
 
 import { auth, trustedOrigins, webDatabase } from "../auth";
+import { botIdentityCompatibility } from "../identities/runtime";
+import { hasTrustedOrigin } from "../security/http";
 import { createChallengeToken, hashChallengeToken, isFreshAuthentication, isValidConfirmationPhrase } from "./domain";
 import { AccountDeletionStoreError, MySqlAccountDeletionStore, type AccountDeletionStore } from "./store";
 
@@ -22,7 +23,7 @@ interface AccountDeletionRouteDependencies {
 
 const productionDependencies: AccountDeletionRouteDependencies = {
     getSession: (headers) => auth.api.getSession({ headers }),
-    store: new MySqlAccountDeletionStore(webDatabase, deleteBotAccountData),
+    store: new MySqlAccountDeletionStore(webDatabase, botIdentityCompatibility),
     now: () => new Date(),
 };
 
@@ -89,12 +90,12 @@ export function createAccountDeletionRoutes(dependencies: AccountDeletionRouteDe
             }
 
             try {
-                await dependencies.store.deleteAccount({
+                const result = await dependencies.store.deleteAccount({
                     userId: session.user.id,
                     tokenHash: await hashChallengeToken(parsed.challenge),
                     now: dependencies.now(),
                 });
-                return { deleted: true };
+                return { deleted: true, syncPending: result.syncPending };
             } catch (error) {
                 return handleStoreFailure(set, error, "The account could not be deleted.");
             }
@@ -103,27 +104,8 @@ export function createAccountDeletionRoutes(dependencies: AccountDeletionRouteDe
 
 export const accountDeletionRoutes = createAccountDeletionRoutes();
 
-async function deleteBotAccountData(discordAccountId: string): Promise<void> {
-    const databaseURL = process.env.BOT_DATABASE_URL;
-    if (!databaseURL) throw new AccountDeletionStoreError("service_unavailable");
-
-    const connection = await mysql.createConnection(databaseURL).catch(() => {
-        throw new AccountDeletionStoreError("service_unavailable");
-    });
-    try {
-        await connection.execute("DELETE FROM users WHERE id = ?", [discordAccountId]).catch(() => {
-            throw new AccountDeletionStoreError("service_unavailable");
-        });
-    } finally {
-        await connection.end();
-    }
-}
-
 function hasValidOrigin(request: Request): boolean {
-    const origin = request.headers.get("origin");
-    if (!origin) return false;
-    const requestOrigin = new URL(request.url).origin;
-    return origin === requestOrigin || trustedOrigins.includes(origin);
+    return hasTrustedOrigin(request, trustedOrigins);
 }
 
 function readChallenge(body: unknown): string | null {
@@ -145,7 +127,7 @@ function handleStoreFailure(set: { status?: number | string }, error: unknown, f
         switch (error.code) {
             case "challenge_invalid":
             case "challenge_stale":
-                return fail(set, 403, "Fresh Discord authentication is required. Please start again.");
+                return fail(set, 403, "Fresh provider authentication is required. Please start again.");
             case "account_not_found":
                 return fail(set, 404, "The signed-in account could not be found.");
             case "service_unavailable":

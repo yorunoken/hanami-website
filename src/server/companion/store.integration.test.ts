@@ -3,11 +3,12 @@ import mysql, { type RowDataPacket } from "mysql2/promise";
 
 import { runWebMigrations } from "../migrations";
 import { createSecureToken, hashToken } from "../security/tokens";
+import { prepareDisposableBetterAuthSchema, readDisposableDatabaseUrl } from "../testing/better-auth-schema";
 import { COMPANION_CLIENT_ID } from "./protocol";
 import { createPkceChallenge } from "./security";
 import { MySqlCompanionStore, type NewTokenSet } from "./store";
 
-const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const testDatabaseUrl = readDisposableDatabaseUrl("TEST_DATABASE_URL", process.env.WEB_DATABASE_URL);
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 const pool = testDatabaseUrl ? mysql.createPool({ uri: testDatabaseUrl, timezone: "Z" }) : null;
 const store = pool ? new MySqlCompanionStore(pool) : null;
@@ -19,7 +20,8 @@ const verifier = "a".repeat(43);
 describeDatabase("MySQL Companion token store", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
-        await runWebMigrations(pool);
+        await prepareDisposableBetterAuthSchema(pool);
+        await runWebMigrations(pool, { skipIdentityBackfill: true });
     });
 
     beforeEach(async () => {

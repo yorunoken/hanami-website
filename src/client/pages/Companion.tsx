@@ -36,9 +36,9 @@ export default function Companion() {
                     <h1 className={productTitleClass}>{product.name}</h1>
                     <h2 className={productSubtitleClass}>A local bridge for ideas that do not belong in a browser.</h2>
                     <p className={productBodyClass}>
-                        The public Tauri prototype uses Rust for process lifecycle, local play detection, and native authentication while React
-                        renders normalized state. It can connect to tosu, track local osu! activity, and sign in to Hanami Web; play upload
-                        remains unavailable.
+                        The public Tauri prototype uses Rust for process lifecycle, local play detection, and native authentication while
+                        React renders normalized state. It can connect to tosu, track local osu! activity, and sign in to Hanami Web; play
+                        upload remains unavailable.
                     </p>
                     <ActionLink className="mt-8" href={product.links.primary} external>
                         <Github aria-hidden="true" /> View the source
@@ -84,8 +84,8 @@ export default function Companion() {
                     <h2 className={sectionHeadingClass}>Local tracking first. Upload is deliberately unavailable.</h2>
                     <p className={sectionBodyClass}>
                         Recent attempts stay in memory for the current desktop session. Hanami sign-in uses the system browser and PKCE; the
-                        access token stays in Rust memory and the refresh token is stored in the operating system credential store. Hanami Web
-                        does not yet expose a production play-ingestion endpoint.
+                        access token stays in Rust memory and the refresh token is stored in the operating system credential store. Hanami
+                        Web does not yet expose a production play-ingestion endpoint.
                     </p>
                 </div>
                 <ProductSteps className="[&_svg]:text-cyan">

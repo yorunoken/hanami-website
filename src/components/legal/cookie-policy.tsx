@@ -58,13 +58,13 @@ export default function CookiePolicy() {
                 </LegalTable>
                 <p>
                     The current configuration does not enable Better Auth’s optional session-data cookie cache or account-data cookie.
-                    Hanami’s osu! linking state and bot-issued account links are stored server-side rather than in an OAuth-state cookie.
-                    Better Auth may use its server-side verification records during Discord sign-in.
+                    Provider OAuth state, PKCE material, and bot-issued account links are handled server-side. Better Auth may use its
+                    server-side verification records during Discord or osu! sign-in.
                 </p>
                 <p>
-                    Account deletion may require a new Discord OAuth round trip. It uses Better Auth’s existing necessary OAuth/session
-                    mechanisms plus a short-lived server-side challenge whose random browser value is removed from the address after the
-                    confirmation page reads it. The workflow does not add an analytics, advertising, or consent cookie.
+                    Account deletion may require a new linked-provider OAuth round trip. It uses Better Auth’s existing necessary
+                    OAuth/session mechanisms plus a short-lived server-side challenge whose random browser value is removed from the address
+                    after the confirmation page reads it. The workflow does not add an analytics, advertising, or consent cookie.
                 </p>
             </LegalSection>
 

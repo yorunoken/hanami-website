@@ -42,7 +42,8 @@ export default function PrivacyPolicy() {
             <LegalSection id="scope" title="2. Services covered">
                 <p>
                     This policy is intended to cover the Hanami ecosystem operated by the controller: this website and account area, Hanami
-                    Bot on Discord, the separately hosted osu!guessr service, and networked features in the public Hanami Companion prototype.
+                    Bot on Discord, the separately hosted osu!guessr service, and networked features in the public Hanami Companion
+                    prototype.
                 </p>
                 <p>
                     Map Analyzer 0.2.9 is a separately distributed Rust library. The published crate parses local files and has no network
@@ -53,14 +54,22 @@ export default function PrivacyPolicy() {
             </LegalSection>
 
             <LegalSection id="data" title="3. Data processed">
-                <h3>Hanami website and Discord sign-in</h3>
+                <h3>Hanami website and provider sign-in</h3>
                 <ul>
                     <li>
-                        Discord account ID, display name, avatar URL, provider scope, and an email address when Discord supplies one. For a
-                        phone-only Discord account, Hanami stores a stable non-deliverable address under the reserved <code>.invalid</code>{" "}
-                        domain required by the authentication schema; it is not treated as verified contact information or used for mail.
+                        Discord account ID, display name, avatar URL, and provider scope. Hanami maps Discord to a stable non-deliverable
+                        address under the reserved <code>.invalid</code> domain required by the authentication schema rather than using
+                        provider email for identity matching; it is not contact information or used for mail.
                     </li>
                     <li>OAuth account records, which may include Discord access or refresh tokens when Better Auth receives them.</li>
+                    <li>
+                        osu! account ID, username, avatar URL, and Better Auth provider tokens received through the <code>identify</code>{" "}
+                        scope. Provider tokens remain in Better Auth account storage and are not copied to the Hanami identity table.
+                    </li>
+                    <li>
+                        Hanami’s domain identity table stores provider, provider user ID, username or display name, avatar snapshot, and
+                        link and update dates against one canonical Hanami user ID.
+                    </li>
                     <li>Web session token, session dates, IP address, and user-agent string stored by Better Auth.</li>
                     <li>Short-lived OAuth verification values used to complete authentication safely.</li>
                     <li>
@@ -73,31 +82,26 @@ export default function PrivacyPolicy() {
                     </li>
                 </ul>
 
-                <h3>osu! linking and public profile lookup</h3>
+                <h3>osu! login and temporary Bot compatibility</h3>
                 <ul>
                     <li>
-                        The osu! user ID returned by the osu! <code>identify</code> scope is stored against the Discord ID in the bot
-                        database.
+                        The osu! user ID returned by the <code>identify</code> scope is a first-class login identity owned by Hanami Web.
                     </li>
                     <li>
-                        The link-status page requests public osu! username, avatar URL, and global rank for display. Those public profile
-                        fields are not written by that route.
+                        When the same canonical account also has Discord, a temporary retryable bridge mirrors the osu! ID to the
+                        Discord-keyed Bot row until Bot adopts canonical Hanami user IDs.
                     </li>
                     <li>
-                        The one-time osu! authorization token is used to call <code>/api/v2/me</code>; the audited callback does not persist
-                        that token in Hanami’s bot database.
-                    </li>
-                    <li>
-                        osu! authorization state is stored as a SHA-256 hash bound to the Hanami user and browser session, with creation,
-                        expiry, and consumption dates.
+                        Better Auth handles state and PKCE. Authorization codes, PKCE verifiers, secrets, and provider tokens are not sent
+                        to the React application or stored in the domain identity table.
                     </li>
                 </ul>
 
                 <h3>Immediate account deletion</h3>
                 <ul>
                     <li>
-                        A signed-in user may delete the website account and Discord-keyed Hanami Bot user data after a Discord sign-in from
-                        approximately the last 15 minutes and deliberate typed confirmation.
+                        A signed-in user may delete the canonical account after a linked provider sign-in from approximately the last 15
+                        minutes and deliberate typed confirmation.
                     </li>
                     <li>
                         A short-lived reauthentication challenge stores the Hanami user ID, a SHA-256 hash of a random challenge token,
@@ -105,8 +109,9 @@ export default function PrivacyPolicy() {
                         stored in that record.
                     </li>
                     <li>
-                        Successful deletion removes the Better Auth user, provider link and sessions, then removes the Hanami Bot user row
-                        keyed to the same Discord account. Separate osu!guessr profiles are not deleted by this action.
+                        Successful deletion removes the Better Auth user, provider accounts, domain identities, sessions, and Companion
+                        credentials. When Discord is linked, Bot-row deletion is queued for retry. Separate osu!guessr profiles are not
+                        deleted by this action.
                     </li>
                 </ul>
 
@@ -312,14 +317,14 @@ export default function PrivacyPolicy() {
                     Protection Law and, where it applies, the GDPR. Hanami will respond without undue delay and normally within 30 days.
                 </p>
                 <p>
-                    Signing out only ends a session. Disconnecting osu! only clears the Discord-to-osu! link. Signed-in users can
-                    immediately delete the website identity and Discord-keyed Hanami Bot account data from the{" "}
+                    Signing out only ends a session. Unlinking removes one provider login method and cannot remove the final method.
+                    Signed-in users can immediately delete the canonical Hanami account from the{" "}
                     <a href="/profile/privacy">account privacy area</a>. Separate osu!guessr profiles and provider-side data are outside
                     that action. See the <a href="/legal/data-deletion">data deletion page</a> for details.
                 </p>
                 <p>
-                    In-app deletion uses fresh Discord OAuth authentication bound to the signed-in Hanami user and a short-lived, single-use
-                    challenge. Users who cannot sign in or need deletion outside the immediate scope may email{" "}
+                    In-app deletion uses fresh linked-provider authentication bound to the signed-in Hanami user and a short-lived,
+                    single-use challenge. Users who cannot sign in or need deletion outside the immediate scope may email{" "}
                     <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>. Public usernames or numeric provider IDs alone
                     are not sufficient; proportionate additional verification may be required. Do not email government identity documents.
                     Hanami will explain any additional information needed and normally respond within 30 days.

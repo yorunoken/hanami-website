@@ -1,7 +1,9 @@
 import { AlertCircle } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import { fetchJson } from "@/client/lib/fetch-json";
+import { ApiError, fetchJson } from "@/client/lib/fetch-json";
+import { readOAuthError } from "@/client/lib/auth-navigation";
 import { AccountLayout, AccountPage, profileHeadingClass, profileLayoutClass } from "@/components/account/account-shell";
 import { useAuthenticatedSession } from "@/components/account/authenticated-route";
 import {
@@ -9,46 +11,75 @@ import {
     BotPreferencesSection,
     IdentitySection,
     type BotSettings,
-    type LinkStatus,
+    type IdentityResponse,
+    type LinkedIdentity,
     type ProfileAction,
 } from "@/components/account/profile-sections";
 import { Eyebrow } from "@/components/marketing";
 import { formMessageClass } from "@/components/ui/action-styles";
-import { getDiscordContactEmail } from "@/lib/discord-identity";
 import { cn } from "@/lib/utils";
+
+interface BotPreferencesResponse {
+    available: boolean;
+    settings: BotSettings | null;
+}
+
+interface LinkResponse {
+    alreadyLinked: boolean;
+    url: string | null;
+}
+
+interface UnlinkResponse {
+    unlinked: boolean;
+    syncPending: boolean;
+}
 
 export default function Profile() {
     const session = useAuthenticatedSession();
-    const [linkStatus, setLinkStatus] = useState<LinkStatus | null>(null);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const automaticLinkStarted = useRef(false);
+    const [identityState, setIdentityState] = useState<IdentityResponse | null>(null);
     const [settings, setSettings] = useState<BotSettings | null>(null);
-    const [linkLoading, setLinkLoading] = useState(true);
+    const [botPreferencesAvailable, setBotPreferencesAvailable] = useState(false);
+    const [identityLoading, setIdentityLoading] = useState(true);
     const [settingsLoading, setSettingsLoading] = useState(true);
     const [action, setAction] = useState<ProfileAction>(null);
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
+
+    const loadIdentities = useCallback(async (signal?: AbortSignal) => {
+        const result = await fetchJson<IdentityResponse>("/api/identities", signal);
+        setIdentityState(result);
+        if (result.syncPending) {
+            setNotice("Your Hanami identities are saved, but temporary Hanami Bot synchronization is still pending.");
+        }
+        return result;
+    }, []);
+
+    const loadBotPreferences = useCallback(async (signal?: AbortSignal) => {
+        const result = await fetchJson<BotPreferencesResponse>("/api/bot-preferences", signal);
+        setBotPreferencesAvailable(result.available);
+        setSettings(result.settings);
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
-        setLinkLoading(true);
+        setIdentityLoading(true);
         setSettingsLoading(true);
         setError(null);
 
-        void fetchJson<LinkStatus>("/api/osu-link/status", controller.signal)
-            .then((status) => {
-                setLinkStatus(status);
-            })
+        void loadIdentities(controller.signal)
             .catch((requestError: unknown) => {
                 if (requestError instanceof DOMException && requestError.name === "AbortError") return;
-                setError("The osu! link status could not be loaded. Please refresh and try again.");
+                setError("Linked accounts could not be loaded. Please refresh and try again.");
             })
             .finally(() => {
-                if (!controller.signal.aborted) setLinkLoading(false);
+                if (!controller.signal.aborted) setIdentityLoading(false);
             });
 
-        void fetchJson<BotSettings>("/api/osu-link/settings", controller.signal)
-            .then((botSettings) => {
-                setSettings(botSettings);
-            })
+        void loadBotPreferences(controller.signal)
             .catch((requestError: unknown) => {
                 if (requestError instanceof DOMException && requestError.name === "AbortError") return;
                 setError("Bot preferences could not be loaded. Please refresh and try again.");
@@ -58,38 +89,68 @@ export default function Profile() {
             });
 
         return () => controller.abort();
-    }, [session.user.id]);
+    }, [loadBotPreferences, loadIdentities, session.user.id]);
 
-    async function handleLinkOsu() {
-        setAction("linking");
-        setError(null);
-        try {
-            const data = await fetchJson<{ url?: string }>("/api/auth");
-            if (!data.url) throw new Error("Missing authorization URL");
-            window.location.assign(data.url);
-        } catch {
-            setError("osu! authorization could not be started.");
-            setAction(null);
-        }
-    }
+    const handleLink = useCallback(
+        async (provider: LinkedIdentity["provider"]) => {
+            setAction(`linking-${provider}`);
+            setError(null);
+            setNotice(null);
+            try {
+                const result = await fetchJson<LinkResponse>(`/api/identities/link/${provider}`, undefined, {
+                    method: "POST",
+                });
+                if (result.alreadyLinked) {
+                    await loadIdentities();
+                    setNotice(`${provider === "osu" ? "osu!" : "Discord"} is already linked to this Hanami account.`);
+                    setAction(null);
+                    return;
+                }
+                if (!result.url) throw new Error("Missing provider authorization URL");
+                window.location.assign(result.url);
+            } catch (requestError) {
+                setError(readIdentityActionError(requestError, provider, "link"));
+                setAction(null);
+            }
+        },
+        [loadIdentities],
+    );
 
-    async function handleUnlinkOsu() {
-        if (
-            !window.confirm(
-                "Disconnect this osu! account? This removes the ID link, but does not delete either provider account or your Hanami web account.",
-            )
-        )
+    useEffect(() => {
+        const parameters = new URLSearchParams(location.search);
+        if (parameters.has("linkError")) {
+            setError(
+                readOAuthError(location.search) ?? "That provider could not be linked. It may already belong to another Hanami account.",
+            );
+            navigate("/profile", { replace: true });
             return;
+        }
+        if (parameters.get("link") !== "osu" || automaticLinkStarted.current || identityLoading) return;
+        automaticLinkStarted.current = true;
+        navigate("/profile", { replace: true });
+        if (!identityState?.identities.some((identity) => identity.provider === "osu")) void handleLink("osu");
+    }, [handleLink, identityLoading, identityState, location.search, navigate]);
 
-        setAction("unlinking");
+    async function handleUnlink(provider: LinkedIdentity["provider"]) {
+        const label = provider === "osu" ? "osu!" : "Discord";
+        if (!window.confirm(`Unlink ${label}? You will continue to use the same Hanami account through your other login method.`)) return;
+
+        setAction(`unlinking-${provider}`);
         setError(null);
+        setNotice(null);
         try {
-            await fetchJson<{ success: boolean }>("/api/osu-link/unlink", undefined, {
+            const result = await fetchJson<UnlinkResponse>(`/api/identities/${provider}`, undefined, {
                 method: "DELETE",
             });
-            setLinkStatus({ linked: false });
-        } catch {
-            setError("The osu! account could not be disconnected.");
+            const refreshed = await loadIdentities();
+            await loadBotPreferences();
+            setNotice(
+                result.syncPending || refreshed.syncPending
+                    ? `${label} was unlinked from Hanami. Temporary Hanami Bot cleanup is queued and will retry safely.`
+                    : `${label} was unlinked. Your canonical Hanami account was not deleted.`,
+            );
+        } catch (requestError) {
+            setError(readIdentityActionError(requestError, provider, "unlink"));
         } finally {
             setAction(null);
         }
@@ -103,7 +164,7 @@ export default function Profile() {
         setError(null);
         setSaved(false);
         try {
-            await fetchJson<{ success: boolean }>("/api/osu-link/settings", undefined, {
+            await fetchJson<{ success: boolean }>("/api/bot-preferences", undefined, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
@@ -116,15 +177,13 @@ export default function Profile() {
         }
     }
 
-    const displayName = session.user.name || "Discord user";
-
     return (
         <AccountPage>
             <AccountLayout className={profileLayoutClass}>
                 <header className={profileHeadingClass}>
                     <Eyebrow>Account</Eyebrow>
-                    <h1>Linked accounts and bot preferences</h1>
-                    <p>Manage the Discord identity used for sign-in and the optional osu! ID stored by Hanami Bot.</p>
+                    <h1>Your Hanami account</h1>
+                    <p>Manage the provider identities that sign into one canonical Hanami user ID.</p>
                 </header>
 
                 {error && (
@@ -133,31 +192,39 @@ export default function Profile() {
                         {error}
                     </p>
                 )}
+                {notice && (
+                    <p className={cn(formMessageClass, "text-success")} role="status">
+                        {notice}
+                    </p>
+                )}
 
                 <IdentitySection
-                    discordUser={{
-                        name: displayName,
-                        email: getDiscordContactEmail(session.user.email),
-                        image: session.user.image,
-                    }}
-                    linkStatus={linkStatus}
-                    loading={linkLoading}
+                    identities={identityState?.identities ?? []}
+                    loading={identityLoading}
                     action={action}
-                    onLink={handleLinkOsu}
-                    onUnlink={handleUnlinkOsu}
+                    onLink={handleLink}
+                    onUnlink={handleUnlink}
                 />
 
-                <BotPreferencesSection
-                    settings={settings}
-                    loading={settingsLoading}
-                    action={action}
-                    saved={saved}
-                    onSettingsChange={setSettings}
-                    onSubmit={handleSaveSettings}
-                />
+                {botPreferencesAvailable && (
+                    <BotPreferencesSection
+                        settings={settings}
+                        loading={settingsLoading}
+                        action={action}
+                        saved={saved}
+                        onSettingsChange={setSettings}
+                        onSubmit={handleSaveSettings}
+                    />
+                )}
 
                 <AccountPrivacyAside />
             </AccountLayout>
         </AccountPage>
     );
+}
+
+function readIdentityActionError(error: unknown, provider: LinkedIdentity["provider"], action: "link" | "unlink"): string {
+    if (error instanceof ApiError && error.message) return error.message;
+    const label = provider === "osu" ? "osu!" : "Discord";
+    return `${label} could not be ${action === "link" ? "linked" : "unlinked"}.`;
 }

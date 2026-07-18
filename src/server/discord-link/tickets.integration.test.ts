@@ -3,9 +3,10 @@ import mysql from "mysql2/promise";
 
 import { runWebMigrations } from "../migrations";
 import { createSecureToken, hashToken } from "../security/tokens";
+import { prepareDisposableBetterAuthSchema, readDisposableDatabaseUrl } from "../testing/better-auth-schema";
 import { MySqlDiscordLinkTicketStore } from "./tickets";
 
-const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const testDatabaseUrl = readDisposableDatabaseUrl("TEST_DATABASE_URL", process.env.WEB_DATABASE_URL);
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 const pool = testDatabaseUrl ? mysql.createPool({ uri: testDatabaseUrl, timezone: "Z" }) : null;
 const store = pool ? new MySqlDiscordLinkTicketStore(pool) : null;
@@ -14,7 +15,8 @@ const now = new Date("2026-07-15T12:00:00.000Z");
 describeDatabase("MySQL Discord link tickets", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
-        await runWebMigrations(pool);
+        await prepareDisposableBetterAuthSchema(pool);
+        await runWebMigrations(pool, { skipIdentityBackfill: true });
     });
 
     beforeEach(async () => {

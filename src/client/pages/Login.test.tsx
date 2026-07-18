@@ -6,10 +6,11 @@ import { describeOAuthError } from "@/client/lib/auth-navigation";
 import { LoginPanel } from "./Login";
 
 describe("fallback login panel", () => {
-    it("shows one Discord action and a public-site exit", () => {
+    it("shows equal Discord and osu! actions and a public-site exit", () => {
         const markup = renderPanel(null);
-        expect(markup.match(/<button/g)).toHaveLength(1);
-        expect(markup).toContain("Sign in with Discord");
+        expect(markup.match(/<button/g)).toHaveLength(2);
+        expect(markup).toContain("Continue with Discord");
+        expect(markup).toContain("Continue with osu!");
         expect(markup).toContain('href="/"');
     });
 
@@ -24,7 +25,7 @@ describe("fallback login panel", () => {
         const message = describeOAuthError("access_denied");
         const markup = renderPanel(message);
         expect(markup).toContain('role="alert"');
-        expect(markup).toContain("Discord authorization was cancelled");
+        expect(markup).toContain("Provider authorization was cancelled");
         expect(markup).not.toContain("access_denied");
     });
 });
@@ -32,7 +33,7 @@ describe("fallback login panel", () => {
 function renderPanel(error: string | null, status?: string): string {
     return renderToStaticMarkup(
         <MemoryRouter>
-            <LoginPanel error={error} status={status} isRedirecting={false} onSignIn={() => {}} />
+            <LoginPanel error={error} status={status} redirectingProvider={null} onSignIn={() => {}} />
         </MemoryRouter>,
     );
 }

@@ -33,13 +33,13 @@ export default function DataDeletion() {
                             <td>Does not remove account or product data.</td>
                         </tr>
                         <tr>
-                            <td>Disconnect osu!</td>
-                            <td>Clears the Discord-to-osu! ID link used by Hanami Bot.</td>
-                            <td>Does not delete other account data or either provider account.</td>
+                            <td>Unlink a provider</td>
+                            <td>Removes that login method from the canonical Hanami account.</td>
+                            <td>The final usable login method cannot be removed.</td>
                         </tr>
                         <tr>
                             <td>Delete Hanami account</td>
-                            <td>Immediately removes the website identity and Discord-keyed Bot account data described below.</td>
+                            <td>Immediately removes the canonical account, linked identities, sessions, and Companion credentials.</td>
                             <td>Does not delete provider accounts, a separate osu!guessr profile, or operational logs.</td>
                         </tr>
                     </tbody>
@@ -51,7 +51,7 @@ export default function DataDeletion() {
                     <li>
                         Open <Link to="/profile/privacy">account privacy</Link> and review the signed-in identity.
                     </li>
-                    <li>Choose delete account. Hanami requires a Discord sign-in from approximately the last 15 minutes.</li>
+                    <li>Choose delete account. Hanami requires a provider sign-in from approximately the last 15 minutes.</li>
                     <li>
                         Type <code>DELETE MY HANAMI ACCOUNT</code> on the final confirmation screen.
                     </li>
@@ -59,13 +59,14 @@ export default function DataDeletion() {
                 </ol>
                 <p>The immediate action deletes:</p>
                 <ul>
-                    <li>the Better Auth website user, Discord provider link, and all website sessions;</li>
-                    <li>the Hanami Bot user row keyed to that Discord account, including its linked osu! ID and saved preferences; and</li>
+                    <li>the Better Auth website user, all linked provider identities and accounts, and all website sessions;</li>
+                    <li>Companion devices and token families linked through database cascades;</li>
+                    <li>the Hanami Bot user row when the account has a Discord identity; and</li>
                     <li>short-lived deletion reauthentication records and any legacy deletion-request record tied to the website user.</li>
                 </ul>
                 <p>
-                    If Hanami cannot reach the linked Bot database, the website account is kept and the action reports a temporary failure
-                    instead of claiming that deletion completed.
+                    Bot cleanup is recorded before the canonical account is deleted. If the Bot database is unavailable, that cleanup
+                    remains queued for an idempotent retry rather than rolling back or misrepresenting the canonical deletion.
                 </p>
             </LegalSection>
 
@@ -96,7 +97,7 @@ export default function DataDeletion() {
                 <p>
                     Operational logs, private error-channel messages, abuse-prevention records, and analytics limitations may require
                     separate review or temporary retention for justified security or legal reasons. The repositories do not document a
-                    production backup-retention schedule. Future Discord sign-in may create a new Hanami website account after deletion.
+                    production backup-retention schedule. A future provider sign-in may create a new Hanami account after deletion.
                 </p>
             </LegalSection>
         </LegalDocument>

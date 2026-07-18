@@ -1,10 +1,12 @@
 import { Elysia } from "elysia";
+import mysql from "mysql2/promise";
 
 import { getPageSeo, isKnownClientRoute } from "@/lib/seo";
 
 import { apiRoutes } from "./api";
 import { auth, webDatabase } from "./auth";
 import { companionOAuthRoutes } from "./companion/routes";
+import { botIdentityCompatibility } from "./identities/runtime";
 import { runWebMigrations } from "./migrations";
 import { injectRenderedPage } from "./page-renderer";
 import { injectSeoHead } from "./seo";
@@ -77,7 +79,24 @@ export default app;
 
 // Only listen if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    await runWebMigrations(webDatabase);
+    const botDatabaseUrl = process.env.BOT_DATABASE_URL;
+    if (!botDatabaseUrl) throw new Error("BOT_DATABASE_URL is required for canonical identity migration and compatibility.");
+    const botPool = mysql.createPool({ uri: botDatabaseUrl, timezone: "Z" });
+    try {
+        await runWebMigrations(webDatabase, {
+            botPool,
+            onIdentityBackfill: (summary) => {
+                console.log(
+                    `Canonical identity backfill: created=${summary.created} updated=${summary.updated} skipped=${summary.skipped} conflicts=${summary.conflicts.length}`,
+                );
+            },
+        });
+    } finally {
+        await botPool.end();
+    }
+    await botIdentityCompatibility.flushPending().catch(() => {
+        console.error("Temporary Bot identity synchronization remains pending.");
+    });
     app.listen(PORT);
     console.log(`🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`);
 }

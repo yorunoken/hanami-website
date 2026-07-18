@@ -3,8 +3,7 @@ import { createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import * as z from "zod";
 
-import { createOsuAuthorizationUrl, type OsuAuthorizationConfiguration } from "../osu-authorization";
-import type { OAuthStateStore } from "../oauth-state";
+import type { UserIdentityRepository } from "../identities/repository";
 import { logSafeFailure } from "../security/http";
 import { hashToken, isSecureToken } from "../security/tokens";
 import { resolveDiscordIdentity } from "./better-auth";
@@ -12,8 +11,7 @@ import type { DiscordLinkTicketStore } from "./tickets";
 
 interface DiscordBotLinkPluginDependencies {
     ticketStore: DiscordLinkTicketStore;
-    oauthStateStore: OAuthStateStore;
-    getOsuConfiguration(): OsuAuthorizationConfiguration | null;
+    identities: UserIdentityRepository;
     now?(): Date;
 }
 
@@ -35,12 +33,6 @@ export function discordBotLinkPlugin(dependencies: DiscordBotLinkPluginDependenc
                     const token = ctx.query.token;
                     if (!isSecureToken(token)) return redirectToLinkError(ctx);
 
-                    const osuConfiguration = dependencies.getOsuConfiguration();
-                    if (!osuConfiguration) {
-                        logSafeFailure("load osu! authorization configuration", new Error("Missing osu! OAuth configuration"));
-                        return redirectToLinkError(ctx);
-                    }
-
                     let ticket;
                     try {
                         ticket = await dependencies.ticketStore.consume(await hashToken(token), dependencies.now?.() ?? new Date());
@@ -50,24 +42,28 @@ export function discordBotLinkPlugin(dependencies: DiscordBotLinkPluginDependenc
                     }
                     if (!ticket) return redirectToLinkError(ctx);
 
-                    let osuAuthorizationUrl: string;
                     try {
                         const user = await resolveDiscordIdentity(ctx.context.internalAdapter, ticket);
+                        await dependencies.identities.linkIdentity(user.id, {
+                            provider: "discord",
+                            providerUserId: ticket.discordUserId,
+                            username: ticket.username,
+                            displayName: ticket.displayName,
+                            avatarUrl: ticket.avatarUrl,
+                        });
                         const session = await ctx.context.internalAdapter.createSession(user.id);
                         if (!session) throw new Error("Better Auth did not create a session");
 
-                        osuAuthorizationUrl = await createOsuAuthorizationUrl(
-                            dependencies.oauthStateStore,
-                            { userId: user.id, sessionId: session.id },
-                            osuConfiguration,
-                        );
                         await setSessionCookie(ctx, { session, user });
                     } catch (error) {
                         logSafeFailure("finish a Discord bot link", error);
                         return redirectToLinkError(ctx);
                     }
 
-                    throw ctx.redirect(osuAuthorizationUrl);
+                    const destination = new URL("/profile", ctx.context.baseURL);
+                    destination.searchParams.set("link", "osu");
+                    destination.searchParams.set("source", "bot");
+                    throw ctx.redirect(destination.toString());
                 },
             ),
         },

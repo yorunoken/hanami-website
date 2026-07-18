@@ -8,10 +8,10 @@ import {
 } from "./discord-identity";
 
 describe("Discord profile mapping", () => {
-    it("keeps a provider email and its verification state", () => {
+    it("uses a provider-specific placeholder even when Discord returns email", () => {
         expect(mapDiscordProfileToUser({ id: "123456789012345678", email: "player@example.com", verified: true })).toEqual({
-            email: "player@example.com",
-            emailVerified: true,
+            email: "discord-123456789012345678@users.hanami.invalid",
+            emailVerified: false,
         });
     });
 

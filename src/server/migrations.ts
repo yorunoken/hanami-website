@@ -1,5 +1,7 @@
 import type { Pool, PoolConnection, RowDataPacket } from "mysql2/promise";
 
+import { backfillCanonicalIdentities, type IdentityBackfillSummary } from "./identities/backfill";
+
 const migrationLockName = "hanami-web-schema-migrations";
 
 interface MigrationLockRow extends RowDataPacket {
@@ -195,9 +197,68 @@ const migrations = [
         run: ensureUniqueProviderAccountIndex,
     },
     companionOAuthMigration,
+    {
+        id: "20260718_canonical_user_identities",
+        statements: [
+            `CREATE TABLE IF NOT EXISTS userIdentity (
+                id VARCHAR(36) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                provider VARCHAR(32) NOT NULL,
+                providerUserId VARCHAR(255) NOT NULL,
+                username VARCHAR(255) NULL,
+                displayName VARCHAR(255) NULL,
+                avatarUrl TEXT NULL,
+                metadata JSON NULL,
+                linkedAt TIMESTAMP(3) NOT NULL,
+                updatedAt TIMESTAMP(3) NOT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY userIdentity_provider_subject_unique (provider, providerUserId),
+                UNIQUE KEY userIdentity_user_provider_unique (userId, provider),
+                KEY userIdentity_user_idx (userId),
+                CONSTRAINT userIdentity_user_fk
+                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            `CREATE TABLE IF NOT EXISTS botIdentitySync (
+                id VARCHAR(36) NOT NULL,
+                userId VARCHAR(36) NOT NULL,
+                dedupeKey VARCHAR(191) NOT NULL,
+                operation VARCHAR(32) NOT NULL,
+                discordProviderUserId VARCHAR(255) NOT NULL,
+                osuProviderUserId VARCHAR(255) NULL,
+                createdAt TIMESTAMP(3) NOT NULL,
+                updatedAt TIMESTAMP(3) NOT NULL,
+                attemptedAt TIMESTAMP(3) NULL,
+                completedAt TIMESTAMP(3) NULL,
+                attemptCount INT UNSIGNED NOT NULL DEFAULT 0,
+                lastErrorCode VARCHAR(80) NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY botIdentitySync_dedupe_unique (dedupeKey),
+                KEY botIdentitySync_user_pending_idx (userId, completedAt, updatedAt)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        ],
+        run: async (connection: PoolConnection, options: WebMigrationOptions) => {
+            if (options.skipIdentityBackfill) return;
+            if (!options.botPool) {
+                throw new Error("BOT_DATABASE_URL is required to backfill canonical identities");
+            }
+            const summary = await backfillCanonicalIdentities(connection, options.botPool);
+            options.onIdentityBackfill?.(summary);
+        },
+    },
+    {
+        id: "20260718_provider_account_ownership_constraints",
+        statements: [],
+        run: ensureUniqueUserProviderAccountIndex,
+    },
 ] as const;
 
-export async function runWebMigrations(pool: Pool): Promise<void> {
+export interface WebMigrationOptions {
+    botPool?: Pool;
+    skipIdentityBackfill?: boolean;
+    onIdentityBackfill?(summary: IdentityBackfillSummary): void;
+}
+
+export async function runWebMigrations(pool: Pool, options: WebMigrationOptions = {}): Promise<void> {
     const connection = await pool.getConnection();
     let lockAcquired = false;
 
@@ -220,9 +281,30 @@ export async function runWebMigrations(pool: Pool): Promise<void> {
             if (appliedRows[0]) continue;
 
             for (const statement of migration.statements) await connection.query(statement);
-            if ("run" in migration) await migration.run(connection);
+            if ("run" in migration) await migration.run(connection, options);
             await connection.execute("INSERT INTO webSchemaMigration (id) VALUES (?)", [migration.id]);
         }
+    } finally {
+        if (lockAcquired) await connection.execute("SELECT RELEASE_LOCK(?)", [migrationLockName]).catch(() => undefined);
+        connection.release();
+    }
+}
+
+export async function runIdentityBackfillWithLock(pool: Pool, botPool: Pool): Promise<IdentityBackfillSummary> {
+    const connection = await pool.getConnection();
+    let lockAcquired = false;
+    try {
+        const [lockRows] = await connection.execute<MigrationLockRow[]>("SELECT GET_LOCK(?, 30) AS acquired", [migrationLockName]);
+        lockAcquired = Number(lockRows[0]?.acquired) === 1;
+        if (!lockAcquired) throw new Error("Could not acquire the web database migration lock");
+
+        await connection.beginTransaction();
+        const summary = await backfillCanonicalIdentities(connection, botPool);
+        await connection.commit();
+        return summary;
+    } catch (error) {
+        await connection.rollback().catch(() => undefined);
+        throw error;
     } finally {
         if (lockAcquired) await connection.execute("SELECT RELEASE_LOCK(?)", [migrationLockName]).catch(() => undefined);
         connection.release();
@@ -249,4 +331,28 @@ async function ensureUniqueProviderAccountIndex(connection: PoolConnection): Pro
     if (duplicateRows[0]) throw new Error("Duplicate provider accounts must be resolved before applying this migration");
 
     await connection.query("ALTER TABLE account ADD UNIQUE KEY account_provider_account_unique (providerId(64), accountId(191))");
+}
+
+async function ensureUniqueUserProviderAccountIndex(connection: PoolConnection): Promise<void> {
+    const [indexRows] = await connection.execute<IndexRow[]>(
+        `SELECT COUNT(*) AS present
+           FROM information_schema.statistics
+          WHERE table_schema = DATABASE()
+            AND table_name = 'account'
+            AND index_name = 'account_user_provider_unique'`,
+    );
+    if (Number(indexRows[0]?.present) > 0) return;
+
+    const [duplicateRows] = await connection.query<RowDataPacket[]>(
+        `SELECT userId, providerId
+           FROM account
+          GROUP BY userId, providerId
+         HAVING COUNT(*) > 1
+          LIMIT 1`,
+    );
+    if (duplicateRows[0]) {
+        throw new Error("A canonical user has multiple accounts for one provider; resolve it before applying this migration");
+    }
+
+    await connection.query("ALTER TABLE account ADD UNIQUE KEY account_user_provider_unique (userId, providerId(64))");
 }

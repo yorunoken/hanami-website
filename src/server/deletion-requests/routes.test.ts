@@ -16,7 +16,7 @@ describe("immediate account deletion routes", () => {
         expect(response.status).toBe(401);
     });
 
-    it("requires Discord reauthentication for a stale session", async () => {
+    it("requires provider reauthentication for a stale session", async () => {
         const { app } = makeApp({ sessionAgeMinutes: 16 });
         const response = await post(app, "/account-deletion/reauth/start", {});
         expect(response.status).toBe(200);
@@ -56,7 +56,7 @@ describe("immediate account deletion routes", () => {
             confirmationPhrase: "DELETE  MY HANAMI ACCOUNT",
         });
         expect(response.status).toBe(200);
-        expect(await response.json()).toEqual({ deleted: true });
+        expect(await response.json()).toEqual({ deleted: true, syncPending: false });
         expect(store.lastDelete).toEqual({
             userId: "user-2",
             tokenHash: await hashChallengeToken(challenge),
@@ -167,9 +167,10 @@ class StubStore implements AccountDeletionStore {
         return input.now;
     }
 
-    async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<void> {
+    async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<{ syncPending: boolean }> {
         this.deleteCalls += 1;
         this.lastDelete = input;
         if (this.deleteError) throw this.deleteError;
+        return { syncPending: false };
     }
 }

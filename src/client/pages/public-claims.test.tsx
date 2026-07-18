@@ -18,12 +18,12 @@ describe("published product claims", () => {
         expect(html).not.toContain("rosu-pp");
     });
 
-    it("labels Companion capabilities as unpublished development work", () => {
+    it("labels Companion capabilities as public-source development work", () => {
         const html = render(Companion);
 
-        expect(html).toContain("public repository currently contains only its license");
-        expect(html).toContain("not yet available as public source or a release");
-        expect(html).not.toContain("Inspect the prototype");
+        expect(html).toContain("These capabilities are implemented in the public repository");
+        expect(html).toContain("No packaged release is published yet");
+        expect(html).toContain("View the source");
     });
 });
 

@@ -39,7 +39,7 @@ export function ConfirmationPage({
                 <h1 id="confirm-title">Delete your Hanami account</h1>
                 {verifying ? (
                     <p className={cn(loadingInlineClass, "justify-start")} role="status">
-                        <Loader2 aria-hidden="true" /> Verifying the recent Discord sign-in…
+                        <Loader2 aria-hidden="true" /> Verifying the recent provider sign-in…
                     </p>
                 ) : !challengePresent || !ready ? (
                     <>
@@ -52,8 +52,9 @@ export function ConfirmationPage({
                 ) : (
                     <form className="mt-6" onSubmit={onSubmit}>
                         <p className="text-[0.88rem] leading-[1.7] text-muted">
-                            Your website identity, provider link, sessions, and Discord-keyed Hanami Bot link and preferences will be
-                            deleted immediately. Discord, osu!, and a separate osu!guessr profile are not deleted.
+                            Your canonical Hanami user, linked provider methods, sessions, and Companion credentials will be deleted
+                            immediately. Discord-keyed Hanami Bot data is queued for deletion when applicable. Discord, osu!, and a separate
+                            osu!guessr profile are not deleted.
                         </p>
                         <p className="mt-3 text-[0.82rem] leading-[1.65] text-muted">
                             For other data, contact <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a>.

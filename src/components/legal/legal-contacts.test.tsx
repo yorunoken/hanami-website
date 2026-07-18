@@ -31,7 +31,7 @@ describe("legal contacts and request links", () => {
     });
 
     it("publishes effective documents without unresolved owner markers", () => {
-        expect(legalMetadata.effectiveDate).toBe("July 16, 2026");
+        expect(legalMetadata.effectiveDate).toBe("July 18, 2026");
 
         for (const Component of [LegalIndex, PrivacyPolicy, TermsOfService, CookiePolicy, DataDeletion]) {
             const html = render(Component);
@@ -52,7 +52,7 @@ describe("legal contacts and request links", () => {
         const deletion = render(DataDeletion);
 
         expect(cookies).toContain("hanami.account-deletion.challenge");
-        expect(cookies).toContain("does not delay those scripts behind its own consent control");
+        expect(cookies).toContain("loads after the production page starts");
         expect(privacy).toContain("Cloudflare’s privacy policy");
         expect(privacy).toContain("No repository-backed retention period was found");
         expect(privacy).toContain("does not replace the application methods required by law");

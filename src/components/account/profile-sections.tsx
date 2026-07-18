@@ -22,12 +22,20 @@ const identityPersonClass =
 const identityDetailsClass =
     "mt-7 mb-5 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-2.5 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
 
-export interface LinkStatus {
-    linked: boolean;
-    banchoId?: string;
-    username?: string;
-    avatarUrl?: string;
-    globalRank?: number | null;
+export interface LinkedIdentity {
+    provider: "discord" | "osu";
+    providerUserId: string;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    linkedAt: string;
+    updatedAt: string;
+}
+
+export interface IdentityResponse {
+    userId: string;
+    identities: LinkedIdentity[];
+    syncPending: boolean;
 }
 
 export interface BotSettings {
@@ -44,124 +52,140 @@ export const defaultSettings: BotSettings = {
     score_data: 0,
 };
 
-export type ProfileAction = "linking" | "unlinking" | "saving" | null;
+export type ProfileAction = "linking-discord" | "linking-osu" | "unlinking-discord" | "unlinking-osu" | "saving" | null;
 
 interface IdentitySectionProps {
-    discordUser: { name: string; email?: string | null; image?: string | null };
-    linkStatus: LinkStatus | null;
+    identities: LinkedIdentity[];
     loading: boolean;
     action: ProfileAction;
-    onLink: () => void;
-    onUnlink: () => void;
+    onLink: (provider: LinkedIdentity["provider"]) => void;
+    onUnlink: (provider: LinkedIdentity["provider"]) => void;
 }
 
-export function IdentitySection({ discordUser, linkStatus, loading, action, onLink, onUnlink }: IdentitySectionProps) {
+export function IdentitySection({ identities, loading, action, onLink, onUnlink }: IdentitySectionProps) {
     return (
         <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
-                <h2 id="identity-title">Identity</h2>
+                <h2 id="identity-title">Linked accounts</h2>
+                <p>Discord and osu! are login methods for this same Hanami account. Linking does not create another account.</p>
             </div>
 
             <div className="grid grid-cols-1 min-[821px]:grid-cols-2">
-                <article className={identityBlockClass}>
+                {(["discord", "osu"] as const).map((provider) => (
+                    <ProviderIdentity
+                        key={provider}
+                        provider={provider}
+                        identity={identities.find((identity) => identity.provider === provider) ?? null}
+                        identityCount={identities.length}
+                        loading={loading}
+                        action={action}
+                        onLink={onLink}
+                        onUnlink={onUnlink}
+                    />
+                ))}
+            </div>
+            <p className="mt-5 max-w-[76ch] text-[0.78rem] leading-[1.6] text-muted">
+                A provider already owned by another Hanami account cannot be moved or merged automatically.
+            </p>
+        </section>
+    );
+}
+
+function ProviderIdentity({
+    provider,
+    identity,
+    identityCount,
+    loading,
+    action,
+    onLink,
+    onUnlink,
+}: {
+    provider: LinkedIdentity["provider"];
+    identity: LinkedIdentity | null;
+    identityCount: number;
+    loading: boolean;
+    action: ProfileAction;
+    onLink: (provider: LinkedIdentity["provider"]) => void;
+    onUnlink: (provider: LinkedIdentity["provider"]) => void;
+}) {
+    const label = provider === "osu" ? "osu!" : "Discord";
+    const linking = action === `linking-${provider}`;
+    const unlinking = action === `unlinking-${provider}`;
+
+    return (
+        <article className={identityBlockClass}>
+            {loading ? (
+                <LoadingInline label={`Checking ${label}`} />
+            ) : identity ? (
+                <>
                     <div className={identityPersonClass}>
-                        <Avatar src={discordUser.image} name={discordUser.name} />
+                        <Avatar src={identity.avatarUrl} name={identity.displayName || identity.username || label} />
                         <div>
-                            <p>Discord sign-in</p>
-                            <h3>{discordUser.name}</h3>
-                            {discordUser.email && <span>{discordUser.email}</span>}
+                            <p>{label} login</p>
+                            <h3>
+                                {provider === "osu" ? (
+                                    <a href={`https://osu.ppy.sh/users/${identity.providerUserId}`} target="_blank" rel="noreferrer">
+                                        {identity.displayName || identity.username || "Linked osu! player"}
+                                        <ExternalLink aria-hidden="true" />
+                                    </a>
+                                ) : (
+                                    identity.displayName || identity.username || "Linked Discord user"
+                                )}
+                            </h3>
+                            <span>Linked to this Hanami account</span>
                         </div>
                     </div>
                     <dl className={identityDetailsClass}>
                         <div>
                             <dt>Provider</dt>
-                            <dd>Discord OAuth</dd>
+                            <dd>{label}</dd>
                         </div>
                         <div>
-                            <dt>Requested scope</dt>
-                            <dd>Identity; email when available</dd>
-                        </div>
-                        <div>
-                            <dt>Session</dt>
-                            <dd>Active</dd>
+                            <dt>Provider user ID</dt>
+                            <dd>{identity.providerUserId}</dd>
                         </div>
                     </dl>
-                </article>
-
-                <article className={identityBlockClass}>
-                    {loading ? (
-                        <LoadingInline label="Checking osu! link" />
-                    ) : linkStatus?.linked ? (
-                        <>
-                            <div className={identityPersonClass}>
-                                <Avatar src={linkStatus.avatarUrl} name={linkStatus.username || "osu! player"} />
-                                <div>
-                                    <p>osu! link</p>
-                                    <h3>
-                                        <a href={`https://osu.ppy.sh/users/${linkStatus.banchoId}`} target="_blank" rel="noreferrer">
-                                            {linkStatus.username || "Linked player"}
-                                            <ExternalLink aria-hidden="true" />
-                                        </a>
-                                    </h3>
-                                    <span>
-                                        {linkStatus.globalRank
-                                            ? `Global rank #${linkStatus.globalRank.toLocaleString()}`
-                                            : "Public rank unavailable"}
-                                    </span>
-                                </div>
-                            </div>
-                            <dl className={identityDetailsClass}>
-                                <div>
-                                    <dt>Stored link</dt>
-                                    <dd>Discord ID → osu! ID</dd>
-                                </div>
-                                <div>
-                                    <dt>osu! ID</dt>
-                                    <dd>{linkStatus.banchoId}</dd>
-                                </div>
-                            </dl>
-                            <button
-                                className={cn(textButtonClass, "text-danger")}
-                                type="button"
-                                onClick={onUnlink}
-                                disabled={action === "unlinking"}
-                            >
-                                <Unlink aria-hidden="true" />
-                                {action === "unlinking" ? "Disconnecting…" : "Disconnect osu!"}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <div className={identityPersonClass}>
-                                <span
-                                    className="osu-mark grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong text-[0.85rem] font-extrabold text-accent-soft"
-                                    aria-hidden="true"
-                                >
-                                    osu!
-                                </span>
-                                <div>
-                                    <p>osu! link</p>
-                                    <h3>Not connected</h3>
-                                    <span>Linking is optional.</span>
-                                </div>
-                            </div>
-                            <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
-                                Connect an osu! account to let supported bot commands use your profile by default.
-                            </p>
-                            <button
-                                className={cn(primaryActionClass, compactActionClass)}
-                                type="button"
-                                onClick={onLink}
-                                disabled={action === "linking"}
-                            >
-                                <Link2 aria-hidden="true" />
-                                {action === "linking" ? "Opening osu!…" : "Connect osu!"}
-                            </button>
-                        </>
-                    )}
-                </article>
-            </div>
-        </section>
+                    <button
+                        className={cn(textButtonClass, identityCount > 1 && "text-danger")}
+                        type="button"
+                        onClick={() => onUnlink(provider)}
+                        disabled={unlinking || identityCount <= 1}
+                        title={identityCount <= 1 ? "Link another login method before removing this one." : undefined}
+                    >
+                        <Unlink aria-hidden="true" />
+                        {unlinking ? `Unlinking ${label}…` : identityCount <= 1 ? "Final login method" : `Unlink ${label}`}
+                    </button>
+                </>
+            ) : (
+                <>
+                    <div className={identityPersonClass}>
+                        <span
+                            className="osu-mark grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong text-[0.78rem] font-extrabold text-accent-soft"
+                            aria-hidden="true"
+                        >
+                            {provider === "osu" ? "osu!" : "DC"}
+                        </span>
+                        <div>
+                            <p>{label} login</p>
+                            <h3>Not linked</h3>
+                            <span>Available as another login method.</span>
+                        </div>
+                    </div>
+                    <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
+                        Link {label} to this canonical Hanami account. Your existing account and user ID stay the same.
+                    </p>
+                    <button
+                        className={cn(primaryActionClass, compactActionClass)}
+                        type="button"
+                        onClick={() => onLink(provider)}
+                        disabled={linking || action !== null}
+                    >
+                        <Link2 aria-hidden="true" />
+                        {linking ? `Opening ${label}…` : `Link ${label}`}
+                    </button>
+                </>
+            )}
+        </article>
     );
 }
 

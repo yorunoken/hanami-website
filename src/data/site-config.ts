@@ -145,7 +145,8 @@ export const routeMetadata = {
     },
     "/companion": {
         title: "Hanami Companion — desktop prototype",
-        description: "Follow the public Hanami Companion prototype for local osu! tracking, tosu control, and native Hanami authentication.",
+        description:
+            "Follow the public Hanami Companion prototype for local osu! tracking, tosu control, and native Hanami authentication.",
         indexable: true,
         socialImage: "/products/companion-icon.png",
     },
@@ -201,7 +202,7 @@ export const routeMetadata = {
     },
     "/profile": {
         title: "Account — Hanami",
-        description: "Manage your linked Hanami and osu! account settings.",
+        description: "Manage Discord and osu! login methods for one canonical Hanami account.",
         indexable: false,
     },
     "/profile/privacy": {
@@ -211,12 +212,12 @@ export const routeMetadata = {
     },
     "/profile/privacy/confirm": {
         title: "Confirm account deletion — Hanami",
-        description: "Permanently delete website and Hanami Bot account data after fresh Discord authentication.",
+        description: "Permanently delete website and Hanami Bot account data after fresh provider authentication.",
         indexable: false,
     },
     "/login": {
         title: "Sign in — Hanami",
-        description: "Continue to Discord to access your Hanami account.",
+        description: "Continue with Discord or osu! to access your Hanami account.",
         indexable: false,
     },
     "/link-error": {

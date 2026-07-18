@@ -1,10 +1,15 @@
 import { createAuthClient } from "better-auth/react";
+import { genericOAuthClient } from "better-auth/client/plugins";
 
 import { createLoginPath, validateReturnTo } from "./auth-navigation";
 
-export const { signIn, signOut, useSession } = createAuthClient({
+const authClient = createAuthClient({
     basePath: "/api/auth",
+    plugins: [genericOAuthClient()],
 });
+
+export const { signIn, signOut, useSession } = authClient;
+export type IdentityProvider = "discord" | "osu";
 
 interface AuthOperationResult {
     error?: unknown;
@@ -30,14 +35,40 @@ export async function signInWithDiscord(returnTo?: string, execute: SocialSignIn
     return result;
 }
 
-export async function reauthenticateWithDiscord(callbackURL: string, errorCallbackURL: string) {
-    const result = await signIn.social({
-        provider: "discord",
-        callbackURL: validateReturnTo(callbackURL),
-        errorCallbackURL: validateReturnTo(errorCallbackURL, "/profile/privacy"),
+export async function signInWithOsu(returnTo?: string) {
+    const callbackURL = validateReturnTo(returnTo);
+    const result = await signIn.oauth2({
+        providerId: "osu",
+        callbackURL,
+        errorCallbackURL: createLoginPath(callbackURL),
+        requestSignUp: true,
     });
 
-    if (result.error) throw new Error("Discord reauthentication could not be started.");
+    if (result.error) throw new Error("osu! sign-in could not be started.");
+    return result;
+}
+
+export async function signInWithProvider(provider: IdentityProvider, returnTo?: string) {
+    return provider === "discord" ? signInWithDiscord(returnTo) : signInWithOsu(returnTo);
+}
+
+export async function reauthenticateWithProvider(provider: IdentityProvider, callbackURL: string, errorCallbackURL: string) {
+    const safeCallbackURL = validateReturnTo(callbackURL);
+    const safeErrorCallbackURL = validateReturnTo(errorCallbackURL, "/profile/privacy");
+    const result =
+        provider === "discord"
+            ? await signIn.social({
+                  provider: "discord",
+                  callbackURL: safeCallbackURL,
+                  errorCallbackURL: safeErrorCallbackURL,
+              })
+            : await signIn.oauth2({
+                  providerId: "osu",
+                  callbackURL: safeCallbackURL,
+                  errorCallbackURL: safeErrorCallbackURL,
+              });
+
+    if (result.error) throw new Error(`${provider === "osu" ? "osu!" : "Discord"} reauthentication could not be started.`);
     return result;
 }
 
