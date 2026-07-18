@@ -28,7 +28,6 @@ describeDatabase("empty database migration bootstrap", () => {
             secret: "empty-database-test-secret-at-least-thirty-two-characters",
         });
         const options = {
-            skipIdentityBackfill: true,
             prepareAuthenticationSchema: () => runBetterAuthSchemaMigrations(testAuth.options),
         };
 
@@ -39,30 +38,15 @@ describeDatabase("empty database migration bootstrap", () => {
             `SELECT TABLE_NAME
                FROM information_schema.tables
               WHERE table_schema = DATABASE()
-                AND TABLE_NAME IN ('user', 'session', 'account', 'verification', 'userIdentity')
+                AND TABLE_NAME IN ('user', 'session', 'account', 'verification', 'userIdentity', 'botIdentitySync')
               ORDER BY TABLE_NAME`,
         );
-        expect(tableRows.map((row) => row.TABLE_NAME)).toEqual(["account", "session", "user", "userIdentity", "verification"]);
-
-        const [foreignKeyRows] = await pool.query<RowDataPacket[]>(
-            `SELECT COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-               FROM information_schema.key_column_usage
-              WHERE table_schema = DATABASE()
-                AND table_name = 'userIdentity'
-                AND referenced_table_name IS NOT NULL`,
-        );
-        expect(foreignKeyRows).toEqual([
-            expect.objectContaining({
-                COLUMN_NAME: "userId",
-                REFERENCED_TABLE_NAME: "user",
-                REFERENCED_COLUMN_NAME: "id",
-            }),
-        ]);
+        expect(tableRows.map((row) => row.TABLE_NAME)).toEqual(["account", "session", "user", "verification"]);
     });
 
     it("fails with an actionable message when an empty database bypasses authentication bootstrap", async () => {
         if (!pool) throw new Error("A disposable TEST_EMPTY_DATABASE_URL is required");
-        await expect(runWebMigrations(pool, { skipIdentityBackfill: true })).rejects.toThrow("Better Auth database tables are missing");
+        await expect(runWebMigrations(pool)).rejects.toThrow("Better Auth database tables are missing");
     });
 });
 

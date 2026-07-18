@@ -21,7 +21,7 @@ describeDatabase("MySQL Companion token store", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
         await prepareDisposableBetterAuthSchema(pool);
-        await runWebMigrations(pool, { skipIdentityBackfill: true });
+        await runWebMigrations(pool);
     });
 
     beforeEach(async () => {

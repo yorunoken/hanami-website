@@ -26,7 +26,7 @@ export async function prepareDisposableBetterAuthSchema(pool: Pool): Promise<voi
         updatedAt DATETIME(3) NOT NULL,
         PRIMARY KEY (id),
         UNIQUE KEY user_email_unique (email)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS session (
         id VARCHAR(36) NOT NULL,
@@ -42,7 +42,7 @@ export async function prepareDisposableBetterAuthSchema(pool: Pool): Promise<voi
         KEY session_user_idx (userId),
         CONSTRAINT session_user_fk
             FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS account (
         id VARCHAR(36) NOT NULL,
@@ -62,7 +62,7 @@ export async function prepareDisposableBetterAuthSchema(pool: Pool): Promise<voi
         KEY account_user_idx (userId),
         CONSTRAINT account_user_fk
             FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
     await pool.query("ALTER TABLE account MODIFY providerId VARCHAR(255) NOT NULL");
 
     await pool.query(`CREATE TABLE IF NOT EXISTS verification (
@@ -74,5 +74,5 @@ export async function prepareDisposableBetterAuthSchema(pool: Pool): Promise<voi
         updatedAt DATETIME(3) NULL,
         PRIMARY KEY (id),
         KEY verification_identifier_idx (identifier)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 }

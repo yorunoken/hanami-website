@@ -2,16 +2,16 @@ import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 
-import { IdentitySection, type LinkedIdentity } from "./profile-sections";
+import { IdentitySection, type LoginMethod } from "./profile-sections";
 
-const discordIdentity = makeIdentity("discord", "123456789012345678");
-const osuIdentity = makeIdentity("osu", "24680");
+const discordMethod = makeLoginMethod("discord", "123456789012345678");
+const osuMethod = makeLoginMethod("osu", "24680");
 
 describe("linked account controls", () => {
     it("keeps both provider cards visible and explains how a Discord-only user can enable unlinking", () => {
-        const markup = render([discordIdentity]);
+        const markup = render([discordMethod]);
 
-        expect(markup).toContain("Linked Discord user");
+        expect(markup).toContain("Hanami user");
         expect(markup).toContain("Link osu!");
         expect(markup).toContain("Link osu! before unlinking Discord.");
         expect(markup).toContain(">Unlink Discord</button>");
@@ -19,9 +19,9 @@ describe("linked account controls", () => {
     });
 
     it("explains the inverse safeguard for an osu!-only user", () => {
-        const markup = render([osuIdentity]);
+        const markup = render([osuMethod]);
 
-        expect(markup).toContain("Linked osu! player");
+        expect(markup).toContain("Hanami user");
         expect(markup).toContain("Link Discord");
         expect(markup).toContain("Link Discord before unlinking osu!.");
         expect(markup).toContain(">Unlink osu!</button>");
@@ -29,7 +29,7 @@ describe("linked account controls", () => {
     });
 
     it("enables both unlink controls after the second provider is linked", () => {
-        const markup = render([discordIdentity, osuIdentity]);
+        const markup = render([discordMethod, osuMethod]);
 
         expect(markup).toContain(">Unlink Discord</button>");
         expect(markup).toContain(">Unlink osu!</button>");
@@ -37,40 +37,33 @@ describe("linked account controls", () => {
         expect(markup).not.toContain('type="button" disabled=""');
     });
 
-    it("shows a mismatched projection as requiring repair instead of a login method", () => {
-        const repairIdentity: LinkedIdentity = {
-            ...osuIdentity,
-            canAuthenticate: false,
-            status: "repair_required",
-        };
-        const markup = render([discordIdentity, repairIdentity]);
-
-        expect(markup).toContain("Needs repair");
-        expect(markup).toContain("not currently available for sign-in");
-        expect(markup).not.toContain(">Unlink osu!</button>");
-        expect(markup).not.toContain(">Link osu!</button>");
-        expect(markup).toContain("Link osu! before unlinking Discord.");
+    it("never renders reconciliation or repair states", () => {
+        const markup = render([discordMethod, osuMethod]);
+        expect(markup).not.toContain("Needs repair");
+        expect(markup).not.toContain("reconciliation");
     });
 });
 
-function render(identities: LinkedIdentity[]): string {
+function render(loginMethods: LoginMethod[]): string {
     return renderToStaticMarkup(
         <MemoryRouter>
-            <IdentitySection identities={identities} loading={false} action={null} onLink={() => {}} onUnlink={() => {}} />
+            <IdentitySection
+                profile={{ name: "Hanami user", image: null }}
+                loginMethods={loginMethods}
+                loginMethodCount={loginMethods.length}
+                loading={false}
+                action={null}
+                onLink={() => {}}
+                onUnlink={() => {}}
+            />
         </MemoryRouter>,
     );
 }
 
-function makeIdentity(provider: LinkedIdentity["provider"], providerUserId: string): LinkedIdentity {
+function makeLoginMethod(provider: LoginMethod["provider"], providerUserId: string): LoginMethod {
     return {
         provider,
         providerUserId,
-        username: null,
-        displayName: null,
-        avatarUrl: null,
-        linkedAt: "2026-07-18T00:00:00.000Z",
-        updatedAt: "2026-07-18T00:00:00.000Z",
-        canAuthenticate: true,
-        status: "linked",
+        createdAt: "2026-07-18T00:00:00.000Z",
     };
 }

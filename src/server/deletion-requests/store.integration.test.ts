@@ -10,13 +10,11 @@ const testDatabaseUrl = readDisposableDatabaseUrl("TEST_DATABASE_URL", process.e
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 const pool = testDatabaseUrl ? mysql.createPool({ uri: testDatabaseUrl, timezone: "Z" }) : null;
 const deletedBotAccounts: string[] = [];
-let syncPending = false;
 const compatibility = {
-    accountDeleted: async (_connection: unknown, _userId: string, discordAccountId: string) => {
+    deleteDiscordUser: async (discordAccountId: string) => {
         deletedBotAccounts.push(discordAccountId);
     },
-    flushPendingForUser: async () => ({ pending: syncPending }),
-    hasPendingForUser: async () => syncPending,
+    runBestEffort: async (_operation: string, callback: () => Promise<void>) => callback(),
 };
 const store = pool ? new MySqlAccountDeletionStore(pool, compatibility) : null;
 const now = new Date("2026-07-14T18:00:00.000Z");
@@ -25,14 +23,12 @@ describeDatabase("MySQL immediate account deletion store", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
         await prepareDisposableBetterAuthSchema(pool);
-        await runWebMigrations(pool, { skipIdentityBackfill: true });
+        await runWebMigrations(pool);
     });
 
     beforeEach(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
         deletedBotAccounts.length = 0;
-        syncPending = false;
-        await pool.execute("DELETE FROM botIdentitySync");
         await pool.execute("DELETE FROM accountDeletionReauthChallenge");
         await pool.execute("DELETE FROM session");
         await pool.execute("DELETE FROM account");
@@ -63,13 +59,11 @@ describeDatabase("MySQL immediate account deletion store", () => {
         expect(challenges).toHaveLength(0);
     });
 
-    it("deletes a Discord-plus-osu! user while reporting queued Bot cleanup", async () => {
+    it("deletes a Discord-plus-osu! user", async () => {
         if (!pool || !store) throw new Error("Database test store is unavailable");
-        syncPending = true;
         const tokenHash = await hashChallengeToken(createChallengeToken());
         await store.startReauthentication({ userId: "user-1", tokenHash, now, alreadyFresh: true });
-        const result = await store.deleteAccount({ userId: "user-1", tokenHash, now: new Date(now.getTime() + 1_000) });
-        expect(result).toEqual({ syncPending: true });
+        await store.deleteAccount({ userId: "user-1", tokenHash, now: new Date(now.getTime() + 1_000) });
         const [users] = await pool.execute<RowDataPacket[]>("SELECT id FROM user WHERE id = ?", ["user-1"]);
         expect(users).toHaveLength(0);
     });
@@ -79,8 +73,7 @@ describeDatabase("MySQL immediate account deletion store", () => {
         await seedUser("user-osu", "24680", "session-osu", ["osu"]);
         const tokenHash = await hashChallengeToken(createChallengeToken());
         await store.startReauthentication({ userId: "user-osu", tokenHash, now, alreadyFresh: true });
-        const result = await store.deleteAccount({ userId: "user-osu", tokenHash, now: new Date(now.getTime() + 1_000) });
-        expect(result).toEqual({ syncPending: false });
+        await store.deleteAccount({ userId: "user-osu", tokenHash, now: new Date(now.getTime() + 1_000) });
         expect(deletedBotAccounts).toEqual([]);
     });
 });
@@ -100,12 +93,6 @@ async function seedUser(userId: string, providerId: string, sessionId: string, p
               (id, accountId, providerId, userId, createdAt, updatedAt)
              VALUES (?, ?, ?, ?, ?, ?)`,
             [`account-${userId}-${provider}`, subject, provider, userId, now, now],
-        );
-        await pool.execute(
-            `INSERT INTO userIdentity
-              (id, userId, provider, providerUserId, username, displayName, avatarUrl, metadata, linkedAt, updatedAt)
-             VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`,
-            [`identity-${userId}-${provider}`, userId, provider, subject, userId, userId, now, now],
         );
     }
     await pool.execute(

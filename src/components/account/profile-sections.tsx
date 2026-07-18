@@ -22,22 +22,20 @@ const identityPersonClass =
 const identityDetailsClass =
     "mt-7 mb-5 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-2.5 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
 
-export interface LinkedIdentity {
+export interface LoginMethod {
     provider: "discord" | "osu";
     providerUserId: string;
-    username: string | null;
-    displayName: string | null;
-    avatarUrl: string | null;
-    linkedAt: string;
-    updatedAt: string;
-    canAuthenticate: boolean;
-    status: "linked" | "repair_required";
+    createdAt: string;
 }
 
-export interface IdentityResponse {
+export interface LoginMethodsResponse {
     userId: string;
-    identities: LinkedIdentity[];
-    syncPending: boolean;
+    profile: {
+        name: string;
+        image: string | null;
+    };
+    loginMethods: LoginMethod[];
+    loginMethodCount: number;
 }
 
 export interface BotSettings {
@@ -57,15 +55,16 @@ export const defaultSettings: BotSettings = {
 export type ProfileAction = "linking-discord" | "linking-osu" | "unlinking-discord" | "unlinking-osu" | "saving" | null;
 
 interface IdentitySectionProps {
-    identities: LinkedIdentity[];
+    profile: LoginMethodsResponse["profile"] | null;
+    loginMethods: LoginMethod[];
+    loginMethodCount: number;
     loading: boolean;
     action: ProfileAction;
-    onLink: (provider: LinkedIdentity["provider"]) => void;
-    onUnlink: (provider: LinkedIdentity["provider"]) => void;
+    onLink: (provider: LoginMethod["provider"]) => void;
+    onUnlink: (provider: LoginMethod["provider"]) => void;
 }
 
-export function IdentitySection({ identities, loading, action, onLink, onUnlink }: IdentitySectionProps) {
-    const authenticationMethodCount = identities.filter((identity) => identity.canAuthenticate).length;
+export function IdentitySection({ profile, loginMethods, loginMethodCount, loading, action, onLink, onUnlink }: IdentitySectionProps) {
     return (
         <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
@@ -78,8 +77,9 @@ export function IdentitySection({ identities, loading, action, onLink, onUnlink 
                     <ProviderIdentity
                         key={provider}
                         provider={provider}
-                        identity={identities.find((identity) => identity.provider === provider) ?? null}
-                        authenticationMethodCount={authenticationMethodCount}
+                        profile={profile}
+                        loginMethod={loginMethods.find((method) => method.provider === provider) ?? null}
+                        authenticationMethodCount={loginMethodCount}
                         loading={loading}
                         action={action}
                         onLink={onLink}
@@ -96,20 +96,22 @@ export function IdentitySection({ identities, loading, action, onLink, onUnlink 
 
 function ProviderIdentity({
     provider,
-    identity,
+    profile,
+    loginMethod,
     authenticationMethodCount,
     loading,
     action,
     onLink,
     onUnlink,
 }: {
-    provider: LinkedIdentity["provider"];
-    identity: LinkedIdentity | null;
+    provider: LoginMethod["provider"];
+    profile: LoginMethodsResponse["profile"] | null;
+    loginMethod: LoginMethod | null;
     authenticationMethodCount: number;
     loading: boolean;
     action: ProfileAction;
-    onLink: (provider: LinkedIdentity["provider"]) => void;
-    onUnlink: (provider: LinkedIdentity["provider"]) => void;
+    onLink: (provider: LoginMethod["provider"]) => void;
+    onUnlink: (provider: LoginMethod["provider"]) => void;
 }) {
     const label = provider === "osu" ? "osu!" : "Discord";
     const otherLabel = provider === "osu" ? "Discord" : "osu!";
@@ -121,35 +123,20 @@ function ProviderIdentity({
         <article className={identityBlockClass}>
             {loading ? (
                 <LoadingInline label={`Checking ${label}`} />
-            ) : identity?.status === "repair_required" ? (
+            ) : loginMethod ? (
                 <>
                     <div className={identityPersonClass}>
-                        <Avatar src={identity.avatarUrl} name={identity.displayName || identity.username || label} />
-                        <div>
-                            <p>{label} login</p>
-                            <h3>Needs repair</h3>
-                            <span>This provider is not currently available for sign-in.</span>
-                        </div>
-                    </div>
-                    <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
-                        The provider account and Hanami identity record do not match. Run identity reconciliation before linking or
-                        unlinking {label}.
-                    </p>
-                </>
-            ) : identity ? (
-                <>
-                    <div className={identityPersonClass}>
-                        <Avatar src={identity.avatarUrl} name={identity.displayName || identity.username || label} />
+                        <Avatar src={profile?.image ?? null} name={profile?.name ?? label} />
                         <div>
                             <p>{label} login</p>
                             <h3>
                                 {provider === "osu" ? (
-                                    <a href={`https://osu.ppy.sh/users/${identity.providerUserId}`} target="_blank" rel="noreferrer">
-                                        {identity.displayName || identity.username || "Linked osu! player"}
+                                    <a href={`https://osu.ppy.sh/users/${loginMethod.providerUserId}`} target="_blank" rel="noreferrer">
+                                        {profile?.name ?? "Linked osu! player"}
                                         <ExternalLink aria-hidden="true" />
                                     </a>
                                 ) : (
-                                    identity.displayName || identity.username || "Linked Discord user"
+                                    (profile?.name ?? "Linked Discord user")
                                 )}
                             </h3>
                             <span>Linked to this Hanami account</span>
@@ -162,7 +149,7 @@ function ProviderIdentity({
                         </div>
                         <div>
                             <dt>Provider user ID</dt>
-                            <dd>{identity.providerUserId}</dd>
+                            <dd>{loginMethod.providerUserId}</dd>
                         </div>
                     </dl>
                     <button

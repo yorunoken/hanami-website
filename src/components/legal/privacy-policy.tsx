@@ -109,9 +109,9 @@ export default function PrivacyPolicy() {
                         stored in that record.
                     </li>
                     <li>
-                        Successful deletion removes the Better Auth user, provider accounts, domain identities, sessions, and Companion
-                        credentials. When Discord is linked, Bot-row deletion is queued for retry. Separate osu!guessr profiles are not
-                        deleted by this action.
+                        Successful deletion removes the Better Auth user, provider accounts, sessions, and Companion credentials. When
+                        Discord is linked, Bot-row deletion is queued for retry. Separate osu!guessr profiles are not deleted by this
+                        action.
                     </li>
                 </ul>
 

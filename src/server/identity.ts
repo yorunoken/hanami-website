@@ -1,5 +1,5 @@
 import { auth } from "./auth";
-import { userIdentities } from "./identities/runtime";
+import { accountService } from "./accounts/runtime";
 
 export interface HanamiIdentity {
     userId: string;
@@ -27,8 +27,8 @@ export class ServerIdentityService implements IdentityService {
     }
 
     async resolveDiscordId(userId: string): Promise<string | null> {
-        const identities = await userIdentities.getUserAuthenticationIdentities(userId);
-        return identities.find((identity) => identity.provider === "discord" && identity.canAuthenticate)?.providerUserId ?? null;
+        const methods = await accountService.listLoginMethods(userId);
+        return methods.find((method) => method.provider === "discord")?.providerUserId ?? null;
     }
 }
 

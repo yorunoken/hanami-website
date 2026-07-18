@@ -56,7 +56,7 @@ describe("immediate account deletion routes", () => {
             confirmationPhrase: "DELETE  MY HANAMI ACCOUNT",
         });
         expect(response.status).toBe(200);
-        expect(await response.json()).toEqual({ deleted: true, syncPending: false });
+        expect(await response.json()).toEqual({ deleted: true });
         expect(store.lastDelete).toEqual({
             userId: "user-2",
             tokenHash: await hashChallengeToken(challenge),
@@ -167,10 +167,9 @@ class StubStore implements AccountDeletionStore {
         return input.now;
     }
 
-    async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<{ syncPending: boolean }> {
+    async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<void> {
         this.deleteCalls += 1;
         this.lastDelete = input;
         if (this.deleteError) throw this.deleteError;
-        return { syncPending: false };
     }
 }

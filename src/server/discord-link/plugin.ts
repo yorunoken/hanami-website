@@ -3,7 +3,6 @@ import { createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import * as z from "zod";
 
-import type { UserIdentityRepository } from "../identities/repository";
 import { logSafeFailure } from "../security/http";
 import { hashToken, isSecureToken } from "../security/tokens";
 import { resolveDiscordIdentity } from "./better-auth";
@@ -11,7 +10,6 @@ import type { DiscordLinkTicketStore } from "./tickets";
 
 interface DiscordBotLinkPluginDependencies {
     ticketStore: DiscordLinkTicketStore;
-    identities: UserIdentityRepository;
     now?(): Date;
 }
 
@@ -44,13 +42,6 @@ export function discordBotLinkPlugin(dependencies: DiscordBotLinkPluginDependenc
 
                     try {
                         const user = await resolveDiscordIdentity(ctx.context.internalAdapter, ticket);
-                        await dependencies.identities.linkIdentity(user.id, {
-                            provider: "discord",
-                            providerUserId: ticket.discordUserId,
-                            username: ticket.username,
-                            displayName: ticket.displayName,
-                            avatarUrl: ticket.avatarUrl,
-                        });
                         const session = await ctx.context.internalAdapter.createSession(user.id);
                         if (!session) throw new Error("Better Auth did not create a session");
 

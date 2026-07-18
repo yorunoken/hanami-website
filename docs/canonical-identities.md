@@ -1,8 +1,10 @@
-# Canonical Hanami identities
+# Canonical Hanami accounts
 
-Better Auth `user.id` is the only canonical Hanami user ID. Better Auth’s `account` table is authoritative for usable authentication methods. The Hanami-owned `userIdentity` table is a token-free projection of the same provider ownership plus stable profile fields for domain consumers; provider tokens remain only in `account`.
+Better Auth `user.id` is the only canonical Hanami user ID. Better Auth’s `account` table is the only source of provider ownership and usable login methods. Hanami Web owns these tables, its authentication configuration, provider rules, and the internal account service that other Hanami systems can consume later.
 
-Initial providers are `discord` and `osu`. A provider subject can belong to only one canonical user, and a canonical user can have at most one identity from each provider. Matching email addresses, usernames, display names, or avatars never merge accounts.
+Initial providers are `discord` and `osu`. Database constraints allow a provider account to belong to only one canonical user and allow a canonical user at most one account from each provider. Matching email addresses, usernames, display names, or avatars never merge accounts. Linking another provider does not update the canonical `user.name` or `user.image`.
+
+The authenticated profile API returns only provider name, provider account ID, and link date. OAuth access tokens, refresh tokens, ID tokens, scopes, and expiry data remain private in Better Auth’s `account` table.
 
 ## OAuth callbacks
 
@@ -16,27 +18,30 @@ osu!:
 - local: `http://localhost:3000/api/auth/oauth2/callback/osu`
 - production: `https://hanami.yorunoken.com/api/auth/oauth2/callback/osu`
 
-The osu! application requests only `identify`. Its registered callback must match exactly. Use the dedicated `OSU_AUTH_CLIENT_ID` and `OSU_AUTH_CLIENT_SECRET` settings instead of reusing an application registered for the removed `/api/callback` linking flow.
+The osu! application requests only `identify` and uses Authorization Code flow with S256 PKCE. Its registered callback must match exactly. Use `OSU_AUTH_CLIENT_ID` and `OSU_AUTH_CLIENT_SECRET` rather than an older application registered for a different callback.
 
-## Existing-user backfill
+## Legacy osu! account import
 
-On an empty database, startup and `bun run db:migrate` first apply the schema reported by the installed Better Auth version, then apply Hanami-owned migrations while holding the existing Web migration lock. Do not create the Better Auth tables from a separate handwritten schema.
+Deployments with verified legacy Bot mappings should run this once before enabling osu! login for existing users:
 
-The Hanami migration then creates the identity schema and reconciles:
+```bash
+bun run db:import-legacy-osu-accounts
+```
 
-1. every Better Auth Discord account into a Discord domain identity;
-2. the Bot `users.banchoId` into both an osu! Better Auth account and an osu! domain identity when the same Discord subject maps to a canonical Web user.
+The command requires `WEB_DATABASE_URL` and `BOT_DATABASE_URL`. Under the Web migration lock and one Web transaction, it matches Better Auth Discord `account.accountId` values to Bot `users.id`, validates `users.banchoId`, and creates a tokenless Better Auth osu! account for the same `user.id`.
 
-The `20260718_reconcile_legacy_osu_auth_accounts` repair migration is additive so installations that already applied the original identity migration are repaired. Migrated account rows use normal generated IDs and null OAuth token fields. Malformed or empty Bot osu! IDs are skipped. Duplicate ownership, a different provider subject in either store, or disagreement between `account` and `userIdentity` stops reconciliation before writes. The command reports accounts created, identities created or updated, already-consistent mappings, skipped invalid mappings, and conflicts.
+The import is idempotent. It stops before writing if an osu! account belongs to another canonical user, a canonical user already has another osu! account, one legacy osu! ID maps to multiple users, or duplicate provider accounts exist. Invalid legacy IDs are skipped and reported. OAuth token fields remain null.
 
-`bun run db:backfill-identities` reruns the idempotent reconciliation in one transaction under the same lock. Integration tests must provide separate disposable `TEST_DATABASE_URL` and `TEST_BOT_DATABASE_URL` databases.
-
-The profile API joins these two views logically and marks a provider `canAuthenticate: true` only when both stores contain the same subject for the same canonical user. A mismatch is displayed as requiring repair and cannot be linked or unlinked through the profile.
-
-`bun run db:diagnose-orphan-auth-users` is read-only. It reports redacted osu! placeholder users that have no session, domain identity, or Companion data and either have no Better Auth accounts or have a provider account whose domain identity is owned by another user. It never deletes rows.
+The feature branch previously created `userIdentity` and `botIdentitySync`. Existing copies are inert and intentionally not dropped automatically. Fresh databases do not create them. They can be removed in a later destructive cleanup migration after this account-only model has been verified.
 
 ## Temporary Bot compatibility
 
-Web is authoritative. When a canonical account has both Discord and osu!, Web queues an idempotent `set_osu` mirror into Bot `users.banchoId`. Unlinking osu! queues a conditional clear, and account deletion queues Discord-keyed Bot cleanup. Canonical Web changes commit first; failed Bot work remains in `botIdentitySync` with retry state and is retried on startup and profile access.
+Normal Web startup and authentication do not require `BOT_DATABASE_URL`. When it is configured, a small best-effort adapter mirrors a Discord-plus-osu! account pair to Bot `users.banchoId`, conditionally clears it after osu! unlink, and removes the Discord-keyed Bot row after Discord unlink or Hanami account deletion. A Bot failure is safely logged and cannot roll back or reject the canonical Better Auth operation.
 
-This adapter and queue are temporary. Remove them after Bot stores `hanami_user_id` and resolves provider identities through an authenticated internal Hanami identity contract.
+There is no queue, worker, retry state, or profile polling. Operators can explicitly repair the mirror from current Better Auth accounts:
+
+```bash
+bun run db:sync-bot-accounts
+```
+
+Remove this adapter after Bot stores `hanami_user_id` and resolves login methods through an authenticated internal Hanami Web contract.

@@ -1,13 +1,10 @@
 import { Elysia } from "elysia";
-import mysql from "mysql2/promise";
 
 import { getPageSeo, isKnownClientRoute } from "@/lib/seo";
 
 import { apiRoutes } from "./api";
 import { auth, prepareAuthenticationSchema, webDatabase } from "./auth";
 import { companionOAuthRoutes } from "./companion/routes";
-import { botIdentityCompatibility } from "./identities/runtime";
-import { formatBackfillConflicts, formatBackfillSummary, IdentityBackfillConflictError } from "./identities/backfill";
 import { runWebMigrations } from "./migrations";
 import { injectRenderedPage } from "./page-renderer";
 import { injectSeoHead } from "./seo";
@@ -80,26 +77,7 @@ export default app;
 
 // Only listen if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    const botDatabaseUrl = process.env.BOT_DATABASE_URL;
-    if (!botDatabaseUrl) throw new Error("BOT_DATABASE_URL is required for canonical identity migration and compatibility.");
-    const botPool = mysql.createPool({ uri: botDatabaseUrl, timezone: "Z" });
-    try {
-        await runWebMigrations(webDatabase, {
-            botPool,
-            prepareAuthenticationSchema,
-            onIdentityBackfill: (summary) => {
-                console.log(`Canonical identity reconciliation: ${formatBackfillSummary(summary)}`);
-            },
-        });
-    } catch (error) {
-        if (error instanceof IdentityBackfillConflictError) console.error(formatBackfillConflicts(error));
-        throw error;
-    } finally {
-        await botPool.end();
-    }
-    await botIdentityCompatibility.flushPending().catch(() => {
-        console.error("Temporary Bot identity synchronization remains pending.");
-    });
+    await runWebMigrations(webDatabase, { prepareAuthenticationSchema });
     app.listen(PORT);
     console.log(`🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`);
 }

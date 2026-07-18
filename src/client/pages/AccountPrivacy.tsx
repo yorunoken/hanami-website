@@ -9,7 +9,7 @@ import { routes } from "@/client/routes/paths";
 import { AccountLayout, AccountPage, profileHeadingClass, sectionHeadingClass } from "@/components/account/account-shell";
 import { useAuthenticatedSession } from "@/components/account/authenticated-route";
 import { ConfirmationPage, ErrorMessage } from "@/components/account/privacy-views";
-import type { IdentityResponse } from "@/components/account/profile-sections";
+import type { LoginMethodsResponse } from "@/components/account/profile-sections";
 import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import { dangerOutlineActionClass, primaryActionClass } from "@/components/ui/action-styles";
@@ -29,7 +29,7 @@ export default function AccountPrivacy() {
     const [challenge, setChallenge] = useState<string | null>(
         () => readChallengeFromHash(location.hash) ?? (isConfirmation ? readPendingDeletionChallenge() : null),
     );
-    const [identityState, setIdentityState] = useState<IdentityResponse | null>(null);
+    const [loginMethodState, setLoginMethodState] = useState<LoginMethodsResponse | null>(null);
     const [identitiesUnavailable, setIdentitiesUnavailable] = useState(false);
     const [loading, setLoading] = useState(true);
     const [action, setAction] = useState<"starting" | "verifying" | "deleting" | null>(null);
@@ -52,9 +52,9 @@ export default function AccountPrivacy() {
 
         const controller = new AbortController();
         setLoading(true);
-        fetchJson<IdentityResponse>("/api/identities", controller.signal)
+        fetchJson<LoginMethodsResponse>("/api/login-methods", controller.signal)
             .then((result) => {
-                setIdentityState(result);
+                setLoginMethodState(result);
                 setIdentitiesUnavailable(false);
             })
             .catch(() => setIdentitiesUnavailable(true))
@@ -97,7 +97,7 @@ export default function AccountPrivacy() {
         try {
             const result = await fetchJson<StartResponse>("/api/account-deletion/reauth/start", undefined, jsonRequest({}));
             if (result.reauthenticationRequired) {
-                const provider = identityState?.identities.find((identity) => identity.canAuthenticate)?.provider;
+                const provider = loginMethodState?.loginMethods[0]?.provider;
                 if (!provider) throw new Error("A linked login method is required before account deletion can continue.");
                 const callbackURL = prepareDeletionReauthentication(result.confirmationPath);
                 try {
@@ -181,11 +181,11 @@ export default function AccountPrivacy() {
                                 <small>Canonical Hanami user ID {session.user.id}</small>
                             </div>
                         ) : (
-                            identityState?.identities.map((identity) => (
-                                <div key={identity.provider}>
-                                    <dt>{identity.provider === "osu" ? "osu! login" : "Discord login"}</dt>
-                                    <dd>{identity.displayName || identity.username || "Linked provider"}</dd>
-                                    <small>Provider user ID {identity.providerUserId}</small>
+                            loginMethodState?.loginMethods.map((method) => (
+                                <div key={method.provider}>
+                                    <dt>{method.provider === "osu" ? "osu! login" : "Discord login"}</dt>
+                                    <dd>{loginMethodState.profile.name}</dd>
+                                    <small>Provider user ID {method.providerUserId}</small>
                                 </div>
                             ))
                         )}
@@ -203,7 +203,7 @@ export default function AccountPrivacy() {
                         </h2>
                         <p className="mt-3 max-w-[68ch] text-[0.88rem] leading-[1.7] text-muted">
                             Immediately deletes your canonical Hanami account, linked login methods, sessions, and Companion credentials.
-                            Discord-keyed Bot data is also queued for deletion when a Discord identity exists. This cannot be undone.
+                            Discord-keyed Bot data is also removed on a best-effort basis when Discord is linked. This cannot be undone.
                         </p>
                     </div>
                     <button

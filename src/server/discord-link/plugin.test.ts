@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import { betterAuth } from "better-auth";
 import { memoryAdapter, type MemoryDB } from "better-auth/adapters/memory";
 
-import type { UserIdentityRepository } from "../identities/repository";
 import { createSecureToken } from "../security/tokens";
 import { discordBotLinkPlugin } from "./plugin";
 import type { DiscordLinkTicket, DiscordLinkTicketStore } from "./tickets";
@@ -14,13 +13,6 @@ describe("Discord bot link Better Auth plugin", () => {
         const database: MemoryDB = { user: [], account: [], session: [], verification: [] };
         const token = createSecureToken();
         const ticketStore = new SingleUseTicketStore(makeTicket());
-        const linkedIdentities: Array<{ userId: string; providerUserId: string }> = [];
-        const identities = {
-            linkIdentity: async (userId: string, input: { providerUserId: string }) => {
-                linkedIdentities.push({ userId, providerUserId: input.providerUserId });
-                return {};
-            },
-        } as unknown as UserIdentityRepository;
         const testAuth = betterAuth({
             database: memoryAdapter(database),
             baseURL: "https://hanami.yorunoken.com",
@@ -28,7 +20,6 @@ describe("Discord bot link Better Auth plugin", () => {
             plugins: [
                 discordBotLinkPlugin({
                     ticketStore,
-                    identities,
                     now: () => now,
                 }),
             ],
@@ -48,8 +39,6 @@ describe("Discord bot link Better Auth plugin", () => {
             accountId: "123456789012345678",
             userId: database.user[0].id,
         });
-        expect(linkedIdentities).toEqual([{ userId: database.user[0].id, providerUserId: "123456789012345678" }]);
-
         const replay = await testAuth.handler(makeRequest(token));
         expect(replay.status).toBe(302);
         expect(replay.headers.get("location")).toBe("https://hanami.yorunoken.com/link-error");

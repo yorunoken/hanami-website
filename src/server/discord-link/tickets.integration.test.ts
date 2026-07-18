@@ -16,7 +16,7 @@ describeDatabase("MySQL Discord link tickets", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
         await prepareDisposableBetterAuthSchema(pool);
-        await runWebMigrations(pool, { skipIdentityBackfill: true });
+        await runWebMigrations(pool);
     });
 
     beforeEach(async () => {

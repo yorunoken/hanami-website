@@ -2,14 +2,14 @@ import { betterAuth } from "better-auth";
 import { genericOAuth } from "better-auth/plugins";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
+import { createAccountHooks } from "./accounts/hooks";
+import { botAccountCompatibility } from "./accounts/runtime";
 import { validateProductionOAuthConfiguration } from "./auth-configuration";
 import { runBetterAuthSchemaMigrations } from "./auth-schema";
 import { webDatabase } from "./database";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
 import { MySqlDiscordLinkTicketStore } from "./discord-link/tickets";
-import { createIdentityDatabaseHooks } from "./identities/auth-hooks";
 import { createOsuOAuthProvider } from "./identities/osu-provider";
-import { userIdentities } from "./identities/runtime";
 
 validateProductionOAuthConfiguration();
 
@@ -28,7 +28,7 @@ export const auth = betterAuth({
     database: webDatabase,
     baseURL,
     trustedOrigins,
-    databaseHooks: createIdentityDatabaseHooks(userIdentities),
+    databaseHooks: createAccountHooks(botAccountCompatibility),
     session: {
         freshAge: 15 * 60,
     },
@@ -37,13 +37,12 @@ export const auth = betterAuth({
             allowDifferentEmails: true,
             disableImplicitLinking: true,
             trustedProviders: ["discord", "osu"],
-            updateUserInfoOnLink: true,
+            updateUserInfoOnLink: false,
         },
     },
     plugins: [
         discordBotLinkPlugin({
             ticketStore: discordLinkTicketStore,
-            identities: userIdentities,
         }),
         genericOAuth({
             config: [createOsuOAuthProvider()],

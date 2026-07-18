@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 import { auth, trustedOrigins, webDatabase } from "../auth";
-import { botIdentityCompatibility } from "../identities/runtime";
+import { botAccountCompatibility } from "../accounts/runtime";
 import { hasTrustedOrigin, logSafeFailure } from "../security/http";
 import { createChallengeToken, hashChallengeToken, isFreshAuthentication, isValidConfirmationPhrase } from "./domain";
 import { AccountDeletionStoreError, MySqlAccountDeletionStore, type AccountDeletionStore } from "./store";
@@ -23,7 +23,7 @@ interface AccountDeletionRouteDependencies {
 
 const productionDependencies: AccountDeletionRouteDependencies = {
     getSession: (headers) => auth.api.getSession({ headers }),
-    store: new MySqlAccountDeletionStore(webDatabase, botIdentityCompatibility),
+    store: new MySqlAccountDeletionStore(webDatabase, botAccountCompatibility),
     now: () => new Date(),
 };
 
@@ -90,12 +90,12 @@ export function createAccountDeletionRoutes(dependencies: AccountDeletionRouteDe
             }
 
             try {
-                const result = await dependencies.store.deleteAccount({
+                await dependencies.store.deleteAccount({
                     userId: session.user.id,
                     tokenHash: await hashChallengeToken(parsed.challenge),
                     now: dependencies.now(),
                 });
-                return { deleted: true, syncPending: result.syncPending };
+                return { deleted: true };
             } catch (error) {
                 return handleStoreFailure(set, error, "The account could not be deleted.");
             }

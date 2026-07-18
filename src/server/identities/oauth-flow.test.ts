@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { betterAuth, type Account } from "better-auth";
+import { betterAuth } from "better-auth";
 import { memoryAdapter, type MemoryDB } from "better-auth/adapters/memory";
 import { genericOAuth } from "better-auth/plugins";
 
@@ -15,13 +15,11 @@ afterEach(() => {
 
 describe("Better Auth provider login lifecycle", () => {
     it("creates one canonical user for a new Discord identity and reuses it on later login", async () => {
-        const projection = new IdentityProjection();
         const database: MemoryDB = { user: [], account: [], session: [], verification: [] };
         const testAuth = betterAuth({
             database: memoryAdapter(database),
             baseURL,
             secret,
-            databaseHooks: projection.hooks,
             socialProviders: {
                 discord: {
                     clientId: "discord-client",
@@ -43,18 +41,15 @@ describe("Better Auth provider login lifecycle", () => {
             accountId: "123456789012345678",
             userId: database.user[0]?.id,
         });
-        expect(projection.values.get("discord:123456789012345678")).toBe(database.user[0]?.id);
     });
 
     it("creates one canonical user for a new osu! identity, uses PKCE, and reuses it on later login", async () => {
-        const projection = new IdentityProjection();
         const database: MemoryDB = { user: [], account: [], session: [], verification: [] };
         const codeVerifiers: string[] = [];
         const testAuth = betterAuth({
             database: memoryAdapter(database),
             baseURL,
             secret,
-            databaseHooks: projection.hooks,
             plugins: [
                 genericOAuth({
                     config: [
@@ -72,7 +67,7 @@ describe("Better Auth provider login lifecycle", () => {
                             },
                             getUserInfo: async () => ({
                                 id: "24680",
-                                name: "Yoru",
+                                name: "osu! Yoru",
                                 email: createOsuPlaceholderEmail("24680"),
                                 emailVerified: false,
                                 image: "https://a.ppy.sh/24680",
@@ -96,11 +91,10 @@ describe("Better Auth provider login lifecycle", () => {
             accountId: "24680",
             userId: database.user[0]?.id,
         });
-        expect(projection.values.get("osu:24680")).toBe(database.user[0]?.id);
     });
 
     it("links an unowned osu! identity to the signed-in Discord canonical user", async () => {
-        const { testAuth, database, projection } = createUnifiedAuth();
+        const { testAuth, database } = createUnifiedAuth();
         mockDiscordProvider();
         const discordLogin = await completeDiscordLogin(testAuth);
         const sessionCookie = readSessionCookie(discordLogin);
@@ -108,14 +102,13 @@ describe("Better Auth provider login lifecycle", () => {
         await linkGenericProvider(testAuth, "osu", sessionCookie);
 
         expect(database.user).toHaveLength(1);
+        expect(database.user[0]?.name).toBe("Yoru");
         expect(database.account).toHaveLength(2);
         expect(new Set(database.account.map((account) => account.userId))).toEqual(new Set([database.user[0]?.id]));
-        expect(projection.values.get("discord:123456789012345678")).toBe(database.user[0]?.id);
-        expect(projection.values.get("osu:24680")).toBe(database.user[0]?.id);
     });
 
     it("links an unowned Discord identity to the signed-in osu! canonical user", async () => {
-        const { testAuth, database, projection } = createUnifiedAuth();
+        const { testAuth, database } = createUnifiedAuth();
         mockDiscordProvider();
         const osuLogin = await completeGenericLogin(testAuth, "osu");
         const sessionCookie = readSessionCookie(osuLogin);
@@ -123,14 +116,13 @@ describe("Better Auth provider login lifecycle", () => {
         await linkDiscordProvider(testAuth, sessionCookie);
 
         expect(database.user).toHaveLength(1);
+        expect(database.user[0]?.name).toBe("osu! Yoru");
         expect(database.account).toHaveLength(2);
         expect(new Set(database.account.map((account) => account.userId))).toEqual(new Set([database.user[0]?.id]));
-        expect(projection.values.get("osu:24680")).toBe(database.user[0]?.id);
-        expect(projection.values.get("discord:123456789012345678")).toBe(database.user[0]?.id);
     });
 
     it("fails closed when the provider identity already belongs to another canonical user", async () => {
-        const { testAuth, database, projection } = createUnifiedAuth();
+        const { testAuth, database } = createUnifiedAuth();
         mockDiscordProvider();
         const discordLogin = await completeDiscordLogin(testAuth);
         const discordSession = readSessionCookie(discordLogin);
@@ -141,27 +133,26 @@ describe("Better Auth provider login lifecycle", () => {
         expect(conflict.headers.get("location")).toContain("account_already_linked_to_different_user");
         expect(database.user).toHaveLength(2);
         expect(database.account).toHaveLength(2);
-        expect(projection.values.get("discord:123456789012345678")).not.toBe(projection.values.get("osu:24680"));
+        expect(new Set(database.account.map((account) => account.userId)).size).toBe(2);
     });
 
     it("lets a Discord-only user link osu!, unlink Discord, and keep the same osu!-authenticated canonical user", async () => {
-        const { testAuth, database, projection } = createUnifiedAuth();
+        const { testAuth, database } = createUnifiedAuth();
         mockDiscordProvider();
         const discordLogin = await completeDiscordLogin(testAuth);
         const sessionCookie = readSessionCookie(discordLogin);
         const canonicalUserId = database.user[0]?.id;
 
-        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord"]);
+        expect(database.account.map((account) => account.providerId)).toEqual(["discord"]);
 
         await linkGenericProvider(testAuth, "osu", sessionCookie);
-        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord", "osu"]);
+        expect(database.account.map((account) => account.providerId).sort()).toEqual(["discord", "osu"]);
 
         const unlinkDiscord = await unlinkProvider(testAuth, "discord", "123456789012345678", sessionCookie);
         expect(unlinkDiscord.status).toBe(200);
         expect(database.user).toHaveLength(1);
         expect(database.user[0]?.id).toBe(canonicalUserId);
         expect(database.account).toEqual([expect.objectContaining({ providerId: "osu", userId: canonicalUserId })]);
-        expect(projection.identitiesFor(canonicalUserId)).toEqual(["osu"]);
 
         await completeGenericLogin(testAuth, "osu");
         expect(database.user).toHaveLength(1);
@@ -169,23 +160,22 @@ describe("Better Auth provider login lifecycle", () => {
     });
 
     it("lets an osu!-only user link Discord, unlink osu!, and keep the same Discord-authenticated canonical user", async () => {
-        const { testAuth, database, projection } = createUnifiedAuth();
+        const { testAuth, database } = createUnifiedAuth();
         mockDiscordProvider();
         const osuLogin = await completeGenericLogin(testAuth, "osu");
         const sessionCookie = readSessionCookie(osuLogin);
         const canonicalUserId = database.user[0]?.id;
 
-        expect(projection.identitiesFor(canonicalUserId)).toEqual(["osu"]);
+        expect(database.account.map((account) => account.providerId)).toEqual(["osu"]);
 
         await linkDiscordProvider(testAuth, sessionCookie);
-        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord", "osu"]);
+        expect(database.account.map((account) => account.providerId).sort()).toEqual(["discord", "osu"]);
 
         const unlinkOsu = await unlinkProvider(testAuth, "osu", "24680", sessionCookie);
         expect(unlinkOsu.status).toBe(200);
         expect(database.user).toHaveLength(1);
         expect(database.user[0]?.id).toBe(canonicalUserId);
         expect(database.account).toEqual([expect.objectContaining({ providerId: "discord", userId: canonicalUserId })]);
-        expect(projection.identitiesFor(canonicalUserId)).toEqual(["discord"]);
 
         await completeDiscordLogin(testAuth);
         expect(database.user).toHaveLength(1);
@@ -193,7 +183,7 @@ describe("Better Auth provider login lifecycle", () => {
     });
 
     it("unlinks only one provider and refuses to remove the final login method", async () => {
-        const { testAuth, database, projection } = createUnifiedAuth();
+        const { testAuth, database } = createUnifiedAuth();
         mockDiscordProvider();
         const discordLogin = await completeDiscordLogin(testAuth);
         const sessionCookie = readSessionCookie(discordLogin);
@@ -202,8 +192,7 @@ describe("Better Auth provider login lifecycle", () => {
         const unlinkOsu = await unlinkProvider(testAuth, "osu", "24680", sessionCookie);
         expect(unlinkOsu.status).toBe(200);
         expect(database.account).toHaveLength(1);
-        expect(projection.values.has("osu:24680")).toBe(false);
-        expect(projection.values.has("discord:123456789012345678")).toBe(true);
+        expect(database.account[0]).toMatchObject({ providerId: "discord", accountId: "123456789012345678" });
 
         const unlinkFinal = await unlinkProvider(testAuth, "discord", "123456789012345678", sessionCookie);
         expect(unlinkFinal.status).toBe(400);
@@ -211,59 +200,18 @@ describe("Better Auth provider login lifecycle", () => {
     });
 });
 
-class IdentityProjection {
-    readonly values = new Map<string, string>();
-
-    identitiesFor(userId: string | undefined): string[] {
-        if (!userId) return [];
-        return [...this.values.entries()]
-            .filter(([, owner]) => owner === userId)
-            .map(([key]) => key.split(":", 1)[0]!)
-            .sort();
-    }
-
-    readonly hooks = {
-        account: {
-            create: {
-                after: async (account: Account) => {
-                    this.link(account);
-                },
-            },
-            update: {
-                after: async (account: Account) => {
-                    this.link(account);
-                },
-            },
-            delete: {
-                after: async (account: Account) => {
-                    this.values.delete(`${account.providerId}:${account.accountId}`);
-                },
-            },
-        },
-    };
-
-    private link(account: Account): void {
-        const key = `${account.providerId}:${account.accountId}`;
-        const owner = this.values.get(key);
-        if (owner && owner !== account.userId) throw new Error("identity conflict");
-        this.values.set(key, account.userId);
-    }
-}
-
 function createUnifiedAuth() {
-    const projection = new IdentityProjection();
     const database: MemoryDB = { user: [], account: [], session: [], verification: [] };
     const testAuth = betterAuth({
         database: memoryAdapter(database),
         baseURL,
         secret,
-        databaseHooks: projection.hooks,
         account: {
             accountLinking: {
                 allowDifferentEmails: true,
                 disableImplicitLinking: true,
                 trustedProviders: ["discord", "osu"],
-                updateUserInfoOnLink: true,
+                updateUserInfoOnLink: false,
             },
         },
         socialProviders: {
@@ -288,7 +236,7 @@ function createUnifiedAuth() {
                         getToken: async () => ({ accessToken: "server-only-access-token" }),
                         getUserInfo: async () => ({
                             id: "24680",
-                            name: "Yoru",
+                            name: "osu! Yoru",
                             email: createOsuPlaceholderEmail("24680"),
                             emailVerified: false,
                             image: "https://a.ppy.sh/24680",
@@ -299,7 +247,7 @@ function createUnifiedAuth() {
             }),
         ],
     });
-    return { testAuth, database, projection };
+    return { testAuth, database };
 }
 
 function mockDiscordProvider(): void {

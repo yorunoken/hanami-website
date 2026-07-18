@@ -1,8 +1,6 @@
 import type { Pool, PoolConnection, RowDataPacket } from "mysql2/promise";
 
-import { backfillCanonicalIdentities, type IdentityBackfillSummary } from "./identities/backfill";
-
-const migrationLockName = "hanami-web-schema-migrations";
+export const migrationLockName = "hanami-web-schema-migrations";
 
 interface MigrationLockRow extends RowDataPacket {
     acquired: number | string | null;
@@ -46,7 +44,7 @@ const companionOAuthMigration = {
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE,
                 CONSTRAINT companionAuthorizationRequest_session_fk
                     FOREIGN KEY (sessionId) REFERENCES session (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS companionAuthorizationCode (
                 id VARCHAR(36) NOT NULL,
                 codeHash CHAR(64) NOT NULL,
@@ -66,7 +64,7 @@ const companionOAuthMigration = {
                 KEY companionAuthorizationCode_expiry_idx (expiresAt, usedAt),
                 CONSTRAINT companionAuthorizationCode_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS companionDevice (
                 id VARCHAR(36) NOT NULL,
                 userId VARCHAR(36) NOT NULL,
@@ -80,7 +78,7 @@ const companionOAuthMigration = {
                 KEY companionDevice_user_active_idx (userId, revokedAt),
                 CONSTRAINT companionDevice_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS companionTokenFamily (
                 id VARCHAR(36) NOT NULL,
                 deviceId VARCHAR(36) NOT NULL,
@@ -96,7 +94,7 @@ const companionOAuthMigration = {
                     FOREIGN KEY (deviceId) REFERENCES companionDevice (id) ON DELETE CASCADE,
                 CONSTRAINT companionTokenFamily_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS companionAccessToken (
                 id VARCHAR(36) NOT NULL,
                 tokenHash CHAR(64) NOT NULL,
@@ -118,7 +116,7 @@ const companionOAuthMigration = {
                     FOREIGN KEY (deviceId) REFERENCES companionDevice (id) ON DELETE CASCADE,
                 CONSTRAINT companionAccessToken_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         `CREATE TABLE IF NOT EXISTS companionRefreshToken (
                 id VARCHAR(36) NOT NULL,
                 tokenHash CHAR(64) NOT NULL,
@@ -136,7 +134,7 @@ const companionOAuthMigration = {
                 KEY companionRefreshToken_parent_idx (parentTokenId),
                 CONSTRAINT companionRefreshToken_family_fk
                     FOREIGN KEY (familyId) REFERENCES companionTokenFamily (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
 } as const;
 
@@ -158,7 +156,7 @@ const migrations = [
                 KEY accountDeletionReauthChallenge_expiry_idx (expiresAt),
                 CONSTRAINT accountDeletionReauthChallenge_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         ],
     },
     {
@@ -179,7 +177,7 @@ const migrations = [
                 UNIQUE KEY discordLinkTicket_tokenHash_unique (tokenHash),
                 KEY discordLinkTicket_discord_active_idx (discordUserId, consumedAt, invalidatedAt),
                 KEY discordLinkTicket_expiresAt_idx (expiresAt)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
             `CREATE TABLE IF NOT EXISTS osuOAuthState (
                 id VARCHAR(36) NOT NULL,
                 stateHash CHAR(64) NOT NULL,
@@ -196,83 +194,20 @@ const migrations = [
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE,
                 CONSTRAINT osuOAuthState_session_fk
                     FOREIGN KEY (sessionId) REFERENCES session (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
         ],
         run: ensureUniqueProviderAccountIndex,
     },
     companionOAuthMigration,
     {
-        id: "20260718_canonical_user_identities",
-        statements: [
-            `CREATE TABLE IF NOT EXISTS userIdentity (
-                id VARCHAR(36) NOT NULL,
-                userId VARCHAR(36) NOT NULL,
-                provider VARCHAR(32) NOT NULL,
-                providerUserId VARCHAR(255) NOT NULL,
-                username VARCHAR(255) NULL,
-                displayName VARCHAR(255) NULL,
-                avatarUrl TEXT NULL,
-                metadata JSON NULL,
-                linkedAt TIMESTAMP(3) NOT NULL,
-                updatedAt TIMESTAMP(3) NOT NULL,
-                PRIMARY KEY (id),
-                UNIQUE KEY userIdentity_provider_subject_unique (provider, providerUserId),
-                UNIQUE KEY userIdentity_user_provider_unique (userId, provider),
-                KEY userIdentity_user_idx (userId),
-                CONSTRAINT userIdentity_user_fk
-                    FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-            `CREATE TABLE IF NOT EXISTS botIdentitySync (
-                id VARCHAR(36) NOT NULL,
-                userId VARCHAR(36) NOT NULL,
-                dedupeKey VARCHAR(191) NOT NULL,
-                operation VARCHAR(32) NOT NULL,
-                discordProviderUserId VARCHAR(255) NOT NULL,
-                osuProviderUserId VARCHAR(255) NULL,
-                createdAt TIMESTAMP(3) NOT NULL,
-                updatedAt TIMESTAMP(3) NOT NULL,
-                attemptedAt TIMESTAMP(3) NULL,
-                completedAt TIMESTAMP(3) NULL,
-                attemptCount INT UNSIGNED NOT NULL DEFAULT 0,
-                lastErrorCode VARCHAR(80) NULL,
-                PRIMARY KEY (id),
-                UNIQUE KEY botIdentitySync_dedupe_unique (dedupeKey),
-                KEY botIdentitySync_user_pending_idx (userId, completedAt, updatedAt)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-        ],
-        run: async (connection: PoolConnection, options: WebMigrationOptions) => {
-            if (options.skipIdentityBackfill) return;
-            if (!options.botPool) {
-                throw new Error("BOT_DATABASE_URL is required to backfill canonical identities");
-            }
-            const summary = await runIdentityReconciliationTransaction(connection, options.botPool);
-            options.onIdentityBackfill?.(summary);
-        },
-    },
-    {
         id: "20260718_provider_account_ownership_constraints",
         statements: [],
         run: ensureUniqueUserProviderAccountIndex,
     },
-    {
-        id: "20260718_reconcile_legacy_osu_auth_accounts",
-        statements: [],
-        run: async (connection: PoolConnection, options: WebMigrationOptions) => {
-            if (options.skipIdentityBackfill) return;
-            if (!options.botPool) {
-                throw new Error("BOT_DATABASE_URL is required to reconcile canonical authentication accounts");
-            }
-            const summary = await runIdentityReconciliationTransaction(connection, options.botPool);
-            options.onIdentityBackfill?.(summary);
-        },
-    },
 ] as const;
 
 export interface WebMigrationOptions {
-    botPool?: Pool;
-    skipIdentityBackfill?: boolean;
     prepareAuthenticationSchema?(): Promise<void>;
-    onIdentityBackfill?(summary: IdentityBackfillSummary): void;
 }
 
 export async function runWebMigrations(pool: Pool, options: WebMigrationOptions = {}): Promise<void> {
@@ -291,7 +226,7 @@ export async function runWebMigrations(pool: Pool, options: WebMigrationOptions 
             id VARCHAR(191) NOT NULL,
             appliedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
             PRIMARY KEY (id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
         for (const migration of migrations) {
             const [appliedRows] = await connection.execute<AppliedMigrationRow[]>(
@@ -301,7 +236,7 @@ export async function runWebMigrations(pool: Pool, options: WebMigrationOptions 
             if (appliedRows[0]) continue;
 
             for (const statement of migration.statements) await connection.query(statement);
-            if ("run" in migration) await migration.run(connection, options);
+            if ("run" in migration) await migration.run(connection);
             await connection.execute("INSERT INTO webSchemaMigration (id) VALUES (?)", [migration.id]);
         }
     } finally {
@@ -321,27 +256,6 @@ async function assertBetterAuthSchemaPresent(connection: PoolConnection): Promis
         throw new Error(
             "Better Auth database tables are missing. Run migrations through the application bootstrap or `bun run db:migrate`.",
         );
-    }
-}
-
-export async function runIdentityBackfillWithLock(pool: Pool, botPool: Pool): Promise<IdentityBackfillSummary> {
-    const connection = await pool.getConnection();
-    let lockAcquired = false;
-    try {
-        const [lockRows] = await connection.execute<MigrationLockRow[]>("SELECT GET_LOCK(?, 30) AS acquired", [migrationLockName]);
-        lockAcquired = Number(lockRows[0]?.acquired) === 1;
-        if (!lockAcquired) throw new Error("Could not acquire the web database migration lock");
-
-        await connection.beginTransaction();
-        const summary = await backfillCanonicalIdentities(connection, botPool);
-        await connection.commit();
-        return summary;
-    } catch (error) {
-        await connection.rollback().catch(() => undefined);
-        throw error;
-    } finally {
-        if (lockAcquired) await connection.execute("SELECT RELEASE_LOCK(?)", [migrationLockName]).catch(() => undefined);
-        connection.release();
     }
 }
 
@@ -365,18 +279,6 @@ async function ensureUniqueProviderAccountIndex(connection: PoolConnection): Pro
     if (duplicateRows[0]) throw new Error("Duplicate provider accounts must be resolved before applying this migration");
 
     await connection.query("ALTER TABLE account ADD UNIQUE KEY account_provider_account_unique (providerId(64), accountId(191))");
-}
-
-async function runIdentityReconciliationTransaction(connection: PoolConnection, botPool: Pool): Promise<IdentityBackfillSummary> {
-    await connection.beginTransaction();
-    try {
-        const summary = await backfillCanonicalIdentities(connection, botPool);
-        await connection.commit();
-        return summary;
-    } catch (error) {
-        await connection.rollback();
-        throw error;
-    }
 }
 
 async function ensureUniqueUserProviderAccountIndex(connection: PoolConnection): Promise<void> {

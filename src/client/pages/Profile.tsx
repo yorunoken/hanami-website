@@ -11,8 +11,8 @@ import {
     BotPreferencesSection,
     IdentitySection,
     type BotSettings,
-    type IdentityResponse,
-    type LinkedIdentity,
+    type LoginMethod,
+    type LoginMethodsResponse,
     type ProfileAction,
 } from "@/components/account/profile-sections";
 import { Eyebrow } from "@/components/marketing";
@@ -31,7 +31,6 @@ interface LinkResponse {
 
 interface UnlinkResponse {
     unlinked: boolean;
-    syncPending: boolean;
 }
 
 export default function Profile() {
@@ -39,7 +38,7 @@ export default function Profile() {
     const location = useLocation();
     const navigate = useNavigate();
     const automaticLinkStarted = useRef(false);
-    const [identityState, setIdentityState] = useState<IdentityResponse | null>(null);
+    const [loginMethodState, setLoginMethodState] = useState<LoginMethodsResponse | null>(null);
     const [settings, setSettings] = useState<BotSettings | null>(null);
     const [botPreferencesAvailable, setBotPreferencesAvailable] = useState(false);
     const [identityLoading, setIdentityLoading] = useState(true);
@@ -49,12 +48,9 @@ export default function Profile() {
     const [notice, setNotice] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
-    const loadIdentities = useCallback(async (signal?: AbortSignal) => {
-        const result = await fetchJson<IdentityResponse>("/api/identities", signal);
-        setIdentityState(result);
-        if (result.syncPending) {
-            setNotice("Your Hanami identities are saved, but temporary Hanami Bot synchronization is still pending.");
-        }
+    const loadLoginMethods = useCallback(async (signal?: AbortSignal) => {
+        const result = await fetchJson<LoginMethodsResponse>("/api/login-methods", signal);
+        setLoginMethodState(result);
         return result;
     }, []);
 
@@ -70,7 +66,7 @@ export default function Profile() {
         setSettingsLoading(true);
         setError(null);
 
-        void loadIdentities(controller.signal)
+        void loadLoginMethods(controller.signal)
             .catch((requestError: unknown) => {
                 if (requestError instanceof DOMException && requestError.name === "AbortError") return;
                 setError("Linked accounts could not be loaded. Please refresh and try again.");
@@ -89,19 +85,19 @@ export default function Profile() {
             });
 
         return () => controller.abort();
-    }, [loadBotPreferences, loadIdentities, session.user.id]);
+    }, [loadBotPreferences, loadLoginMethods, session.user.id]);
 
     const handleLink = useCallback(
-        async (provider: LinkedIdentity["provider"]) => {
+        async (provider: LoginMethod["provider"]) => {
             setAction(`linking-${provider}`);
             setError(null);
             setNotice(null);
             try {
-                const result = await fetchJson<LinkResponse>(`/api/identities/link/${provider}`, undefined, {
+                const result = await fetchJson<LinkResponse>(`/api/login-methods/link/${provider}`, undefined, {
                     method: "POST",
                 });
                 if (result.alreadyLinked) {
-                    await loadIdentities();
+                    await loadLoginMethods();
                     setNotice(`${provider === "osu" ? "osu!" : "Discord"} is already linked to this Hanami account.`);
                     setAction(null);
                     return;
@@ -113,7 +109,7 @@ export default function Profile() {
                 setAction(null);
             }
         },
-        [loadIdentities],
+        [loadLoginMethods],
     );
 
     useEffect(() => {
@@ -128,10 +124,10 @@ export default function Profile() {
         if (parameters.get("link") !== "osu" || automaticLinkStarted.current || identityLoading) return;
         automaticLinkStarted.current = true;
         navigate("/profile", { replace: true });
-        if (!identityState?.identities.some((identity) => identity.provider === "osu")) void handleLink("osu");
-    }, [handleLink, identityLoading, identityState, location.search, navigate]);
+        if (!loginMethodState?.loginMethods.some((method) => method.provider === "osu")) void handleLink("osu");
+    }, [handleLink, identityLoading, loginMethodState, location.search, navigate]);
 
-    async function handleUnlink(provider: LinkedIdentity["provider"]) {
+    async function handleUnlink(provider: LoginMethod["provider"]) {
         const label = provider === "osu" ? "osu!" : "Discord";
         if (!window.confirm(`Unlink ${label}? You will continue to use the same Hanami account through your other login method.`)) return;
 
@@ -139,16 +135,12 @@ export default function Profile() {
         setError(null);
         setNotice(null);
         try {
-            const result = await fetchJson<UnlinkResponse>(`/api/identities/${provider}`, undefined, {
+            await fetchJson<UnlinkResponse>(`/api/login-methods/${provider}`, undefined, {
                 method: "DELETE",
             });
-            const refreshed = await loadIdentities();
+            await loadLoginMethods();
             await loadBotPreferences();
-            setNotice(
-                result.syncPending || refreshed.syncPending
-                    ? `${label} was unlinked from Hanami. Temporary Hanami Bot cleanup is queued and will retry safely.`
-                    : `${label} was unlinked. Your canonical Hanami account was not deleted.`,
-            );
+            setNotice(`${label} was unlinked. Your canonical Hanami account was not deleted.`);
         } catch (requestError) {
             setError(readIdentityActionError(requestError, provider, "unlink"));
         } finally {
@@ -183,7 +175,7 @@ export default function Profile() {
                 <header className={profileHeadingClass}>
                     <Eyebrow>Account</Eyebrow>
                     <h1>Your Hanami account</h1>
-                    <p>Manage the provider identities that sign into one canonical Hanami user ID.</p>
+                    <p>Manage the login methods attached to one canonical Hanami user ID.</p>
                 </header>
 
                 {error && (
@@ -199,7 +191,9 @@ export default function Profile() {
                 )}
 
                 <IdentitySection
-                    identities={identityState?.identities ?? []}
+                    profile={loginMethodState?.profile ?? null}
+                    loginMethods={loginMethodState?.loginMethods ?? []}
+                    loginMethodCount={loginMethodState?.loginMethodCount ?? 0}
                     loading={identityLoading}
                     action={action}
                     onLink={handleLink}
@@ -223,7 +217,7 @@ export default function Profile() {
     );
 }
 
-function readIdentityActionError(error: unknown, provider: LinkedIdentity["provider"], action: "link" | "unlink"): string {
+function readIdentityActionError(error: unknown, provider: LoginMethod["provider"], action: "link" | "unlink"): string {
     if (error instanceof ApiError && error.message) return error.message;
     const label = provider === "osu" ? "osu!" : "Discord";
     return `${label} could not be ${action === "link" ? "linked" : "unlinked"}.`;
