@@ -181,11 +181,11 @@ export default function AccountPrivacy() {
                                 <small>Canonical Hanami user ID {session.user.id}</small>
                             </div>
                         ) : (
-                            loginMethodState?.loginMethods.map((method) => (
-                                <div key={method.provider}>
-                                    <dt>{method.provider === "osu" ? "osu! login" : "Discord login"}</dt>
-                                    <dd>{loginMethodState.profile.name}</dd>
-                                    <small>Provider user ID {method.providerUserId}</small>
+                            loginMethodState?.linkedAccounts.map((account) => (
+                                <div key={account.providerId}>
+                                    <dt>{account.providerId === "osu" ? "osu! login" : "Discord login"}</dt>
+                                    <dd>{account.displayName ?? "Linked provider account"}</dd>
+                                    <small>Provider user ID {account.accountId}</small>
                                 </div>
                             ))
                         )}

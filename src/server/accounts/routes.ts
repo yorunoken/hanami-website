@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 
 import { accountService } from "./runtime";
-import { isLoginProvider, type LoginMethod, type LoginProvider } from "./service";
+import { isLoginProvider, type LinkedAccountView, type LoginMethod, type LoginProvider } from "./service";
 import { auth, trustedOrigins } from "../auth";
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import { serverIdentity } from "../identity";
@@ -18,9 +18,10 @@ export const loginMethodRoutes = new Elysia({ prefix: "/login-methods" })
         if (!current) return fail(set, 401, "Unauthorized");
 
         try {
-            const [user, loginMethods, loginMethodCount] = await Promise.all([
+            const [user, loginMethods, linkedAccounts, loginMethodCount] = await Promise.all([
                 accountService.getCanonicalUser(current.userId),
                 accountService.listLoginMethods(current.userId),
+                accountService.listLinkedAccountViews(current.userId),
                 accountService.countLoginMethods(current.userId),
             ]);
             if (!user) return fail(set, 404, "Hanami account was not found.");
@@ -28,6 +29,7 @@ export const loginMethodRoutes = new Elysia({ prefix: "/login-methods" })
                 userId: user.id,
                 profile: { name: user.name, image: user.image },
                 loginMethods: loginMethods.map(toClientLoginMethod),
+                linkedAccounts: linkedAccounts.map(toClientLinkedAccount),
                 loginMethodCount,
             };
         } catch (error) {
@@ -125,6 +127,16 @@ function toClientLoginMethod(method: LoginMethod) {
         provider: method.provider,
         providerUserId: method.providerUserId,
         createdAt: method.createdAt.toISOString(),
+    };
+}
+
+function toClientLinkedAccount(account: LinkedAccountView) {
+    return {
+        providerId: account.providerId,
+        accountId: account.accountId,
+        displayName: account.displayName,
+        avatarUrl: account.avatarUrl,
+        profileUrl: account.profileUrl,
     };
 }
 

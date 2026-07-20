@@ -2,11 +2,15 @@ import type { BetterAuthOptions } from "better-auth";
 
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import type { TemporaryBotAccountCompatibility } from "./bot-compatibility";
+import type { ProviderProfileStore } from "./provider-profiles";
 import { isLoginProvider } from "./service";
 
 type DatabaseHooks = NonNullable<BetterAuthOptions["databaseHooks"]>;
 
-export function createAccountHooks(botCompatibility: TemporaryBotAccountCompatibility): DatabaseHooks {
+export function createAccountHooks(
+    botCompatibility: TemporaryBotAccountCompatibility,
+    providerProfiles: ProviderProfileStore,
+): DatabaseHooks {
     return {
         account: {
             create: {
@@ -21,6 +25,7 @@ export function createAccountHooks(botCompatibility: TemporaryBotAccountCompatib
                 },
                 after: async (account) => {
                     if (!isLoginProvider(account.providerId)) return;
+                    await providerProfiles.captureOAuthAccount(account).catch(() => undefined);
                     await botCompatibility.runBestEffort("synchronize linked accounts", () =>
                         botCompatibility.synchronizeUser(account.userId),
                     );
@@ -30,6 +35,7 @@ export function createAccountHooks(botCompatibility: TemporaryBotAccountCompatib
                 after: async (account) => {
                     if (!isLoginProvider(account.providerId)) return;
                     const provider = account.providerId;
+                    await providerProfiles.remove(provider, account.accountId).catch(() => undefined);
                     await botCompatibility.runBestEffort("remove unlinked account", () =>
                         botCompatibility.accountRemoved(account.userId, provider, account.accountId),
                     );

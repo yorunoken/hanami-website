@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 
-import { IdentitySection, type LoginMethod } from "./profile-sections";
+import { IdentitySection, type LinkedAccountView, type LoginMethod } from "./profile-sections";
 
 const discordMethod = makeLoginMethod("discord", "123456789012345678");
 const osuMethod = makeLoginMethod("osu", "24680");
@@ -42,14 +42,41 @@ describe("linked account controls", () => {
         expect(markup).not.toContain("Needs repair");
         expect(markup).not.toContain("reconciliation");
     });
+
+    it("renders each linked provider's own avatar and profile details", () => {
+        const markup = render(
+            [discordMethod, osuMethod],
+            [
+                makeLinkedAccount(
+                    "discord",
+                    discordMethod.providerUserId,
+                    "Discord Yoru",
+                    "https://cdn.discordapp.com/avatars/123/avatar.png",
+                ),
+                makeLinkedAccount("osu", osuMethod.providerUserId, "osu! Yoru", "https://a.ppy.sh/24680", "https://osu.ppy.sh/users/24680"),
+            ],
+        );
+
+        expect(markup).toContain('src="https://cdn.discordapp.com/avatars/123/avatar.png"');
+        expect(markup).toContain('src="https://a.ppy.sh/24680"');
+        expect(markup).toContain("Discord Yoru");
+        expect(markup).toContain('href="https://osu.ppy.sh/users/24680"');
+        expect(markup).not.toContain("Hanami user avatar");
+    });
+
+    it("uses a provider-specific placeholder when a provider snapshot has no avatar", () => {
+        const markup = render([discordMethod], [makeLinkedAccount("discord", discordMethod.providerUserId, null, null)]);
+
+        expect(markup).toContain(">DC</span>");
+        expect(markup).not.toContain("Hanami user avatar");
+    });
 });
 
-function render(loginMethods: LoginMethod[]): string {
+function render(loginMethods: LoginMethod[], linkedAccounts: LinkedAccountView[] = loginMethods.map(toLinkedAccount)): string {
     return renderToStaticMarkup(
         <MemoryRouter>
             <IdentitySection
-                profile={{ name: "Hanami user", image: null }}
-                loginMethods={loginMethods}
+                linkedAccounts={linkedAccounts}
                 loginMethodCount={loginMethods.length}
                 loading={false}
                 action={null}
@@ -60,10 +87,30 @@ function render(loginMethods: LoginMethod[]): string {
     );
 }
 
+function toLinkedAccount(method: LoginMethod): LinkedAccountView {
+    return makeLinkedAccount(
+        method.provider,
+        method.providerUserId,
+        "Hanami user",
+        null,
+        method.provider === "osu" ? `https://osu.ppy.sh/users/${method.providerUserId}` : null,
+    );
+}
+
 function makeLoginMethod(provider: LoginMethod["provider"], providerUserId: string): LoginMethod {
     return {
         provider,
         providerUserId,
         createdAt: "2026-07-18T00:00:00.000Z",
     };
+}
+
+function makeLinkedAccount(
+    providerId: LoginMethod["provider"],
+    accountId: string,
+    displayName: string | null,
+    avatarUrl: string | null,
+    profileUrl: string | null = null,
+): LinkedAccountView {
+    return { providerId, accountId, displayName, avatarUrl, profileUrl };
 }

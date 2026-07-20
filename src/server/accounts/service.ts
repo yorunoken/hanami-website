@@ -17,6 +17,14 @@ export interface LoginMethod {
     createdAt: Date;
 }
 
+export interface LinkedAccountView {
+    providerId: LoginProvider;
+    accountId: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    profileUrl: string | null;
+}
+
 interface UserRow extends RowDataPacket {
     id: string;
     name: string;
@@ -29,6 +37,11 @@ interface AccountRow extends RowDataPacket {
     providerId: LoginProvider;
     accountId: string;
     createdAt: Date;
+}
+
+interface LinkedAccountRow extends AccountRow {
+    displayName: string | null;
+    avatarUrl: string | null;
 }
 
 interface CountRow extends RowDataPacket {
@@ -60,6 +73,19 @@ export class AccountService {
         }));
     }
 
+    async listLinkedAccountViews(userId: string): Promise<LinkedAccountView[]> {
+        const [rows] = await this.pool.execute<LinkedAccountRow[]>(
+            `SELECT account.providerId, account.accountId, account.createdAt, profile.displayName, profile.avatarUrl
+               FROM account
+               LEFT JOIN linkedAccountProfile AS profile
+                 ON profile.providerId = account.providerId AND profile.accountId = account.accountId
+              WHERE account.userId = ? AND account.providerId IN ('discord', 'osu')
+              ORDER BY FIELD(account.providerId, 'discord', 'osu'), account.createdAt`,
+            [userId],
+        );
+        return rows.map(toLinkedAccountView);
+    }
+
     async findUserByProviderAccount(provider: LoginProvider, providerUserId: string): Promise<CanonicalUser | null> {
         const [rows] = await this.pool.execute<UserRow[]>(
             `SELECT user.id, user.name, user.image, user.createdAt, user.updatedAt
@@ -76,6 +102,28 @@ export class AccountService {
         const [rows] = await this.pool.execute<CountRow[]>("SELECT COUNT(*) AS count FROM account WHERE userId = ?", [userId]);
         return Number(rows[0]?.count ?? 0);
     }
+}
+
+export function toLinkedAccountView(
+    row: Pick<LinkedAccountRow, "providerId" | "accountId" | "displayName" | "avatarUrl">,
+): LinkedAccountView {
+    const providerId = row.providerId;
+    if (providerId === "osu") {
+        return {
+            providerId,
+            accountId: row.accountId,
+            displayName: row.displayName,
+            avatarUrl: row.avatarUrl || `https://a.ppy.sh/${encodeURIComponent(row.accountId)}`,
+            profileUrl: `https://osu.ppy.sh/users/${encodeURIComponent(row.accountId)}`,
+        };
+    }
+    return {
+        providerId,
+        accountId: row.accountId,
+        displayName: row.displayName,
+        avatarUrl: row.avatarUrl,
+        profileUrl: null,
+    };
 }
 
 export function isLoginProvider(value: unknown): value is LoginProvider {

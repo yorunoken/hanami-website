@@ -28,6 +28,14 @@ export interface LoginMethod {
     createdAt: string;
 }
 
+export interface LinkedAccountView {
+    providerId: LoginMethod["provider"];
+    accountId: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    profileUrl: string | null;
+}
+
 export interface LoginMethodsResponse {
     userId: string;
     profile: {
@@ -35,6 +43,7 @@ export interface LoginMethodsResponse {
         image: string | null;
     };
     loginMethods: LoginMethod[];
+    linkedAccounts: LinkedAccountView[];
     loginMethodCount: number;
 }
 
@@ -55,8 +64,7 @@ export const defaultSettings: BotSettings = {
 export type ProfileAction = "linking-discord" | "linking-osu" | "unlinking-discord" | "unlinking-osu" | "saving" | null;
 
 interface IdentitySectionProps {
-    profile: LoginMethodsResponse["profile"] | null;
-    loginMethods: LoginMethod[];
+    linkedAccounts: LinkedAccountView[];
     loginMethodCount: number;
     loading: boolean;
     action: ProfileAction;
@@ -64,7 +72,7 @@ interface IdentitySectionProps {
     onUnlink: (provider: LoginMethod["provider"]) => void;
 }
 
-export function IdentitySection({ profile, loginMethods, loginMethodCount, loading, action, onLink, onUnlink }: IdentitySectionProps) {
+export function IdentitySection({ linkedAccounts, loginMethodCount, loading, action, onLink, onUnlink }: IdentitySectionProps) {
     return (
         <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
@@ -77,8 +85,7 @@ export function IdentitySection({ profile, loginMethods, loginMethodCount, loadi
                     <ProviderIdentity
                         key={provider}
                         provider={provider}
-                        profile={profile}
-                        loginMethod={loginMethods.find((method) => method.provider === provider) ?? null}
+                        linkedAccount={linkedAccounts.find((account) => account.providerId === provider) ?? null}
                         authenticationMethodCount={loginMethodCount}
                         loading={loading}
                         action={action}
@@ -96,8 +103,7 @@ export function IdentitySection({ profile, loginMethods, loginMethodCount, loadi
 
 function ProviderIdentity({
     provider,
-    profile,
-    loginMethod,
+    linkedAccount,
     authenticationMethodCount,
     loading,
     action,
@@ -105,8 +111,7 @@ function ProviderIdentity({
     onUnlink,
 }: {
     provider: LoginMethod["provider"];
-    profile: LoginMethodsResponse["profile"] | null;
-    loginMethod: LoginMethod | null;
+    linkedAccount: LinkedAccountView | null;
     authenticationMethodCount: number;
     loading: boolean;
     action: ProfileAction;
@@ -123,20 +128,20 @@ function ProviderIdentity({
         <article className={identityBlockClass}>
             {loading ? (
                 <LoadingInline label={`Checking ${label}`} />
-            ) : loginMethod ? (
+            ) : linkedAccount ? (
                 <>
                     <div className={identityPersonClass}>
-                        <Avatar src={profile?.image ?? null} name={profile?.name ?? label} />
+                        <Avatar provider={provider} src={linkedAccount.avatarUrl} name={linkedAccount.displayName ?? label} />
                         <div>
                             <p>{label} login</p>
                             <h3>
-                                {provider === "osu" ? (
-                                    <a href={`https://osu.ppy.sh/users/${loginMethod.providerUserId}`} target="_blank" rel="noreferrer">
-                                        {profile?.name ?? "Linked osu! player"}
+                                {linkedAccount.profileUrl ? (
+                                    <a href={linkedAccount.profileUrl} target="_blank" rel="noreferrer">
+                                        {linkedAccount.displayName ?? "Linked osu! player"}
                                         <ExternalLink aria-hidden="true" />
                                     </a>
                                 ) : (
-                                    (profile?.name ?? "Linked Discord user")
+                                    (linkedAccount.displayName ?? "Linked Discord user")
                                 )}
                             </h3>
                             <span>Linked to this Hanami account</span>
@@ -149,7 +154,7 @@ function ProviderIdentity({
                         </div>
                         <div>
                             <dt>Provider user ID</dt>
-                            <dd>{loginMethod.providerUserId}</dd>
+                            <dd>{linkedAccount.accountId}</dd>
                         </div>
                     </dl>
                     <button
@@ -315,7 +320,7 @@ export function LoadingInline({ label }: { label: string }) {
     );
 }
 
-function Avatar({ src, name }: { src?: string | null; name: string }) {
+function Avatar({ provider, src, name }: { provider: LoginMethod["provider"]; src?: string | null; name: string }) {
     if (src)
         return (
             <img
@@ -331,7 +336,7 @@ function Avatar({ src, name }: { src?: string | null; name: string }) {
             className="account-avatar grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong font-extrabold text-white"
             aria-hidden="true"
         >
-            {name.slice(0, 1).toUpperCase()}
+            {provider === "discord" ? "DC" : "osu!"}
         </span>
     );
 }

@@ -13,6 +13,7 @@ describe("Discord bot link Better Auth plugin", () => {
         const database: MemoryDB = { user: [], account: [], session: [], verification: [] };
         const token = createSecureToken();
         const ticketStore = new SingleUseTicketStore(makeTicket());
+        const snapshots: Array<{ provider: string; accountId: string; displayName: string | null; avatarUrl: string | null }> = [];
         const testAuth = betterAuth({
             database: memoryAdapter(database),
             baseURL: "https://hanami.yorunoken.com",
@@ -20,6 +21,11 @@ describe("Discord bot link Better Auth plugin", () => {
             plugins: [
                 discordBotLinkPlugin({
                     ticketStore,
+                    providerProfiles: {
+                        save: async (snapshot) => {
+                            snapshots.push(snapshot);
+                        },
+                    },
                     now: () => now,
                 }),
             ],
@@ -39,6 +45,14 @@ describe("Discord bot link Better Auth plugin", () => {
             accountId: "123456789012345678",
             userId: database.user[0].id,
         });
+        expect(snapshots).toEqual([
+            {
+                provider: "discord",
+                accountId: "123456789012345678",
+                displayName: "Yoru",
+                avatarUrl: "https://cdn.discordapp.com/avatars/123456789012345678/avatar.png",
+            },
+        ]);
         const replay = await testAuth.handler(makeRequest(token));
         expect(replay.status).toBe(302);
         expect(replay.headers.get("location")).toBe("https://hanami.yorunoken.com/link-error");

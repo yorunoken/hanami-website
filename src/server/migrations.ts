@@ -204,6 +204,19 @@ const migrations = [
         statements: [],
         run: ensureUniqueUserProviderAccountIndex,
     },
+    {
+        id: "20260720_linked_account_profile_snapshots",
+        statements: [
+            `CREATE TABLE IF NOT EXISTS linkedAccountProfile (
+                providerId VARCHAR(64) NOT NULL,
+                accountId VARCHAR(191) NOT NULL,
+                displayName VARCHAR(255) NULL,
+                avatarUrl TEXT NULL,
+                updatedAt TIMESTAMP(3) NOT NULL,
+                PRIMARY KEY (providerId, accountId)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+        ],
+    },
 ] as const;
 
 export interface WebMigrationOptions {

@@ -191,8 +191,7 @@ export default function Profile() {
                 )}
 
                 <IdentitySection
-                    profile={loginMethodState?.profile ?? null}
-                    loginMethods={loginMethodState?.loginMethods ?? []}
+                    linkedAccounts={loginMethodState?.linkedAccounts ?? []}
                     loginMethodCount={loginMethodState?.loginMethodCount ?? 0}
                     loading={identityLoading}
                     action={action}

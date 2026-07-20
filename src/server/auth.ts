@@ -3,7 +3,7 @@ import { genericOAuth } from "better-auth/plugins";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
 import { createAccountHooks } from "./accounts/hooks";
-import { botAccountCompatibility } from "./accounts/runtime";
+import { botAccountCompatibility, providerProfileStore } from "./accounts/runtime";
 import { validateProductionOAuthConfiguration } from "./auth-configuration";
 import { runBetterAuthSchemaMigrations } from "./auth-schema";
 import { webDatabase } from "./database";
@@ -28,7 +28,7 @@ export const auth = betterAuth({
     database: webDatabase,
     baseURL,
     trustedOrigins,
-    databaseHooks: createAccountHooks(botAccountCompatibility),
+    databaseHooks: createAccountHooks(botAccountCompatibility, providerProfileStore),
     session: {
         freshAge: 15 * 60,
     },
@@ -43,6 +43,7 @@ export const auth = betterAuth({
     plugins: [
         discordBotLinkPlugin({
             ticketStore: discordLinkTicketStore,
+            providerProfiles: providerProfileStore,
         }),
         genericOAuth({
             config: [createOsuOAuthProvider()],

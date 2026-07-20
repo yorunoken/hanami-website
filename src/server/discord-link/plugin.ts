@@ -5,11 +5,13 @@ import * as z from "zod";
 
 import { logSafeFailure } from "../security/http";
 import { hashToken, isSecureToken } from "../security/tokens";
+import type { ProviderProfileStore } from "../accounts/provider-profiles";
 import { resolveDiscordIdentity } from "./better-auth";
 import type { DiscordLinkTicketStore } from "./tickets";
 
 interface DiscordBotLinkPluginDependencies {
     ticketStore: DiscordLinkTicketStore;
+    providerProfiles?: Pick<ProviderProfileStore, "save">;
     now?(): Date;
 }
 
@@ -42,6 +44,14 @@ export function discordBotLinkPlugin(dependencies: DiscordBotLinkPluginDependenc
 
                     try {
                         const user = await resolveDiscordIdentity(ctx.context.internalAdapter, ticket);
+                        await dependencies.providerProfiles
+                            ?.save({
+                                provider: "discord",
+                                accountId: ticket.discordUserId,
+                                displayName: ticket.displayName || ticket.username,
+                                avatarUrl: ticket.avatarUrl,
+                            })
+                            .catch(() => undefined);
                         const session = await ctx.context.internalAdapter.createSession(user.id);
                         if (!session) throw new Error("Better Auth did not create a session");
 
