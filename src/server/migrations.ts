@@ -40,7 +40,7 @@ const companionOAuthMigration = {
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE,
                 CONSTRAINT companionAuthorizationRequest_session_fk
                     FOREIGN KEY (sessionId) REFERENCES session (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         `CREATE TABLE IF NOT EXISTS companionAuthorizationCode (
                 id VARCHAR(36) NOT NULL,
                 codeHash CHAR(64) NOT NULL,
@@ -60,7 +60,7 @@ const companionOAuthMigration = {
                 KEY companionAuthorizationCode_expiry_idx (expiresAt, usedAt),
                 CONSTRAINT companionAuthorizationCode_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         `CREATE TABLE IF NOT EXISTS companionDevice (
                 id VARCHAR(36) NOT NULL,
                 userId VARCHAR(36) NOT NULL,
@@ -74,7 +74,7 @@ const companionOAuthMigration = {
                 KEY companionDevice_user_active_idx (userId, revokedAt),
                 CONSTRAINT companionDevice_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         `CREATE TABLE IF NOT EXISTS companionTokenFamily (
                 id VARCHAR(36) NOT NULL,
                 deviceId VARCHAR(36) NOT NULL,
@@ -90,7 +90,7 @@ const companionOAuthMigration = {
                     FOREIGN KEY (deviceId) REFERENCES companionDevice (id) ON DELETE CASCADE,
                 CONSTRAINT companionTokenFamily_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         `CREATE TABLE IF NOT EXISTS companionAccessToken (
                 id VARCHAR(36) NOT NULL,
                 tokenHash CHAR(64) NOT NULL,
@@ -112,7 +112,7 @@ const companionOAuthMigration = {
                     FOREIGN KEY (deviceId) REFERENCES companionDevice (id) ON DELETE CASCADE,
                 CONSTRAINT companionAccessToken_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         `CREATE TABLE IF NOT EXISTS companionRefreshToken (
                 id VARCHAR(36) NOT NULL,
                 tokenHash CHAR(64) NOT NULL,
@@ -130,7 +130,7 @@ const companionOAuthMigration = {
                 KEY companionRefreshToken_parent_idx (parentTokenId),
                 CONSTRAINT companionRefreshToken_family_fk
                     FOREIGN KEY (familyId) REFERENCES companionTokenFamily (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
     ],
 } as const;
 
@@ -152,7 +152,7 @@ const migrations = [
                 KEY accountDeletionReauthChallenge_expiry_idx (expiresAt),
                 CONSTRAINT accountDeletionReauthChallenge_user_fk
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         ],
     },
     {
@@ -173,7 +173,7 @@ const migrations = [
                 UNIQUE KEY discordLinkTicket_tokenHash_unique (tokenHash),
                 KEY discordLinkTicket_discord_active_idx (discordUserId, consumedAt, invalidatedAt),
                 KEY discordLinkTicket_expiresAt_idx (expiresAt)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
             `CREATE TABLE IF NOT EXISTS osuOAuthState (
                 id VARCHAR(36) NOT NULL,
                 stateHash CHAR(64) NOT NULL,
@@ -190,14 +190,18 @@ const migrations = [
                     FOREIGN KEY (userId) REFERENCES user (id) ON DELETE CASCADE,
                 CONSTRAINT osuOAuthState_session_fk
                     FOREIGN KEY (sessionId) REFERENCES session (id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+            ) ENGINE=InnoDB`,
         ],
         run: ensureUniqueProviderAccountIndex,
     },
     companionOAuthMigration,
 ] as const;
 
-export async function runWebMigrations(pool: Pool): Promise<void> {
+export interface WebMigrationOptions {
+    prepareAuthenticationSchema?(): Promise<void>;
+}
+
+export async function runWebMigrations(pool: Pool, options: WebMigrationOptions = {}): Promise<void> {
     const connection = await pool.getConnection();
     let lockAcquired = false;
 
@@ -206,11 +210,13 @@ export async function runWebMigrations(pool: Pool): Promise<void> {
         lockAcquired = Number(lockRows[0]?.acquired) === 1;
         if (!lockAcquired) throw new Error("Could not acquire the web database migration lock");
 
+        await options.prepareAuthenticationSchema?.();
+
         await connection.query(`CREATE TABLE IF NOT EXISTS webSchemaMigration (
             id VARCHAR(191) NOT NULL,
             appliedAt TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
             PRIMARY KEY (id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+        ) ENGINE=InnoDB`);
 
         for (const migration of migrations) {
             const [appliedRows] = await connection.execute<AppliedMigrationRow[]>(

@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { getPageSeo, isKnownClientRoute } from "@/lib/seo";
 
 import { apiRoutes } from "./api";
-import { auth, webDatabase } from "./auth";
+import { auth, prepareAuthenticationSchema, webDatabase } from "./auth";
 import { companionOAuthRoutes } from "./companion/routes";
 import { runWebMigrations } from "./migrations";
 import { injectRenderedPage } from "./page-renderer";
@@ -77,7 +77,7 @@ export default app;
 
 // Only listen if this file is run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    await runWebMigrations(webDatabase);
+    await runWebMigrations(webDatabase, { prepareAuthenticationSchema });
     app.listen(PORT);
     console.log(`🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`);
 }

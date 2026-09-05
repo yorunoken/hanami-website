@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { createPool } from "mysql2/promise";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
+import { runBetterAuthSchemaMigrations } from "./auth-schema";
 import { MySqlOAuthStateStore } from "./oauth-state";
 import { getOsuAuthorizationConfiguration } from "./osu-authorization";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
@@ -57,3 +58,7 @@ export const auth = betterAuth({
         errorURL: "/login?returnTo=%2Fprofile",
     },
 });
+
+export function prepareAuthenticationSchema(): Promise<void> {
+    return runBetterAuthSchemaMigrations(auth.options);
+}
