@@ -10,6 +10,7 @@ export interface StaticOAuthClientConfig {
     grantTypes: ["authorization_code", "refresh_token"];
     requirePKCE: true;
     subjectType: "public";
+    skipConsent: true;
 }
 
 export interface OAuthClientUpsertDatabase {
@@ -39,6 +40,7 @@ export function getOsuGuessrClientConfig(environment: NodeJS.ProcessEnv = proces
         grantTypes: ["authorization_code", "refresh_token"],
         requirePKCE: true,
         subjectType: "public",
+        skipConsent: true,
     };
 }
 
@@ -60,20 +62,17 @@ export async function reconcileOsuGuessrClient(
         grantTypes: config.grantTypes,
         requirePKCE: config.requirePKCE,
         subjectType: config.subjectType,
+        skipConsent: config.skipConsent,
         disabled: false,
     };
 
-    const upsert = database.oauthClient.upsert as unknown as (args: {
-        where: { clientId: string };
-        update: Record<string, unknown>;
-        create: Record<string, unknown>;
-    }) => Promise<unknown>;
-
-    return upsert({
-        where: { clientId: config.clientId },
-        update: persisted,
-        create: { id: crypto.randomUUID(), ...persisted },
-    });
+    return database.oauthClient.upsert(
+        {
+            where: { clientId: config.clientId },
+            update: persisted,
+            create: { id: crypto.randomUUID(), ...persisted },
+        } as never,
+    );
 }
 
 function isAllowedRedirectUri(value: string): boolean {

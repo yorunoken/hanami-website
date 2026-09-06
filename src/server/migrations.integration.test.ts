@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 
 import { assertDisposableTestDatabase } from "./database/config";
-import { expectedLegacyWebTables } from "../scripts/migration-state";
+import { expectedCurrentWebTables } from "../scripts/migration-state";
 
 const databaseUrl = process.env.TEST_EMPTY_DATABASE_URL;
 const describeDatabase = databaseUrl ? describe : describe.skip;
@@ -45,7 +45,7 @@ describeDatabase("empty database migration bootstrap", () => {
         const [tableRows] = await pool.query<RowDataPacket[]>(
             "SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY TABLE_NAME",
         );
-        expect(new Set(tableRows.map((row) => row.TABLE_NAME))).toEqual(new Set(["_prisma_migrations", ...expectedLegacyWebTables]));
+        expect(new Set(tableRows.map((row) => row.TABLE_NAME))).toEqual(new Set(["_prisma_migrations", ...expectedCurrentWebTables]));
 
         const [databaseRows] = await pool.query<RowDataPacket[]>(
             "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.schemata WHERE schema_name = DATABASE()",
@@ -58,9 +58,9 @@ describeDatabase("empty database migration bootstrap", () => {
         const [migrationRows] = await pool.query<RowDataPacket[]>(
             "SELECT migration_name, finished_at, rolled_back_at FROM _prisma_migrations",
         );
-        expect(migrationRows).toHaveLength(1);
-        expect(migrationRows[0]?.migration_name).toBe("0_init");
-        expect(migrationRows[0]?.finished_at).not.toBeNull();
-        expect(migrationRows[0]?.rolled_back_at).toBeNull();
+        expect(migrationRows).toHaveLength(2);
+        expect(migrationRows.map((row) => row.migration_name).sort()).toEqual(["0_init", "1_central_identity"]);
+        expect(migrationRows.every((row) => row.finished_at !== null)).toBe(true);
+        expect(migrationRows.every((row) => row.rolled_back_at === null)).toBe(true);
     });
 });

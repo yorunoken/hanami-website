@@ -19,6 +19,7 @@ describe("osu!guessr OAuth client configuration", () => {
             grantTypes: ["authorization_code", "refresh_token"],
             requirePKCE: true,
             subjectType: "public",
+            skipConsent: true,
             scopes: ["openid", "osu", "offline_access"],
         });
     });
@@ -57,13 +58,27 @@ describe("osu!guessr OAuth client configuration", () => {
         expect(calls).toHaveLength(2);
         expect(calls[0]).toMatchObject({
             where: { clientId: "guessr-client" },
-            update: { redirectUris },
-            create: { clientId: "guessr-client", redirectUris },
+            update: { redirectUris, skipConsent: true },
+            create: { clientId: "guessr-client", redirectUris, skipConsent: true },
         });
         expect(calls[1]).toMatchObject({
             where: { clientId: "guessr-client" },
-            update: { redirectUris },
-            create: { clientId: "guessr-client", redirectUris },
+            update: { redirectUris, skipConsent: true },
+            create: { clientId: "guessr-client", redirectUris, skipConsent: true },
         });
+    });
+
+    test("safely skips reconciliation when client configuration is absent", async () => {
+        let writes = 0;
+        const prisma = {
+            oauthClient: {
+                upsert: async () => {
+                    writes += 1;
+                },
+            },
+        };
+
+        await expect(reconcileOsuGuessrClient(prisma, {} as NodeJS.ProcessEnv)).resolves.toBeNull();
+        expect(writes).toBe(0);
     });
 });

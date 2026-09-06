@@ -19,6 +19,20 @@ export const expectedLegacyWebTables = [
 
 export const expectedLegacyWebMigrationIds = expectedWebMigrationIds;
 
+export const expectedCentralIdentityWebTables = [
+    "osuProfile",
+    "jwks",
+    "oauthClient",
+    "oauthResource",
+    "oauthClientResource",
+    "oauthRefreshToken",
+    "oauthAccessToken",
+    "oauthConsent",
+    "oauthClientAssertion",
+] as const;
+
+export const expectedCurrentWebTables = [...expectedLegacyWebTables, ...expectedCentralIdentityWebTables] as const;
+
 export interface PrismaMigrationRecord {
     migrationName: string;
     finished: boolean;
@@ -34,6 +48,10 @@ export const allowedPrismaWebStates: readonly AllowedPrismaWebState[] = [
     {
         migrationNames: ["0_init"],
         tableNames: expectedLegacyWebTables,
+    },
+    {
+        migrationNames: ["0_init", "1_central_identity"],
+        tableNames: expectedCurrentWebTables,
     },
 ];
 

@@ -19,7 +19,23 @@ const legacyTables = [
     "companionRefreshToken",
 ];
 
+const centralIdentityTables = [
+    "osuProfile",
+    "jwks",
+    "oauthClient",
+    "oauthResource",
+    "oauthClientResource",
+    "oauthRefreshToken",
+    "oauthAccessToken",
+    "oauthConsent",
+    "oauthClientAssertion",
+];
+
 const successfulPrismaHistory = [{ migrationName: "0_init", finished: true, rolledBack: false }];
+const successfulCentralIdentityHistory = [
+    ...successfulPrismaHistory,
+    { migrationName: "1_central_identity", finished: true, rolledBack: false },
+];
 
 describe("classifyWebDatabaseTables", () => {
     test("recognizes an empty database", () => {
@@ -31,6 +47,15 @@ describe("classifyWebDatabaseTables", () => {
             classifyWebDatabaseTables({
                 tableNames: ["_prisma_migrations", ...legacyTables],
                 prismaMigrations: successfulPrismaHistory,
+            }),
+        ).toBe("prisma-history");
+    });
+
+    test("recognizes the completed central identity history on restart", () => {
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables],
+                prismaMigrations: successfulCentralIdentityHistory,
             }),
         ).toBe("prisma-history");
     });
@@ -75,8 +100,35 @@ describe("classifyWebDatabaseTables", () => {
         ).toBe("unexpected");
         expect(
             classifyWebDatabaseTables({
-                tableNames: ["_prisma_migrations", ...legacyTables],
-                prismaMigrations: [{ migrationName: "0_init", finished: true, rolledBack: true }],
+                tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables],
+                prismaMigrations: [...successfulPrismaHistory, { migrationName: "1_central_identity", finished: false, rolledBack: false }],
+            }),
+        ).toBe("unexpected");
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables],
+                prismaMigrations: [...successfulPrismaHistory, { migrationName: "1_central_identity", finished: true, rolledBack: true }],
+            }),
+        ).toBe("unexpected");
+    });
+
+    test("rejects partial and extra central identity histories", () => {
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables.slice(0, -1)],
+                prismaMigrations: successfulCentralIdentityHistory,
+            }),
+        ).toBe("unexpected");
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables, "unexpectedTable"],
+                prismaMigrations: successfulCentralIdentityHistory,
+            }),
+        ).toBe("unexpected");
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables],
+                prismaMigrations: [...successfulCentralIdentityHistory, { migrationName: "2_unknown", finished: true, rolledBack: false }],
             }),
         ).toBe("unexpected");
     });

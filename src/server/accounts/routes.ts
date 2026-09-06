@@ -4,6 +4,7 @@ import { auth, botAccountCompatibility, trustedOrigins } from "../auth";
 import { webPrisma } from "../database/web";
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import { serverIdentity, type HanamiIdentity } from "../identity";
+import { deleteOsuProfile } from "../identities/osu-profile";
 import { logSafeFailure } from "../security/http";
 import { CanonicalAccountService, createCanonicalAccountDatabase, isLoginProvider, type LoginMethod, type LoginProvider } from "./service";
 
@@ -18,6 +19,7 @@ export interface AccountRouteDependencies {
         errorCallbackURL: string;
     }): Promise<{ url: string; headers: Headers }>;
     clearBotLink(input: { userId: string; provider: LoginProvider; providerAccountId: string }): Promise<void>;
+    clearOsuProfile(input: { userId: string; providerAccountId: string }): Promise<void>;
     unlink(input: { userId: string; provider: LoginProvider; providerAccountId: string; headers: Headers }): Promise<void>;
     isFreshSession(sessionCreatedAt: Date): boolean;
 }
@@ -90,6 +92,12 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
                     provider: params.provider,
                     providerAccountId: target.providerUserId,
                 });
+                if (params.provider === "osu") {
+                    await dependencies.clearOsuProfile({
+                        userId: identity.userId,
+                        providerAccountId: target.providerUserId,
+                    });
+                }
                 await dependencies.unlink({
                     userId: identity.userId,
                     provider: params.provider,
@@ -128,6 +136,7 @@ export const accountRoutes = createAccountRoutes({
     },
     clearBotLink: ({ userId, provider, providerAccountId }) =>
         botAccountCompatibility.synchronizeUser(userId, { provider, providerUserId: providerAccountId }),
+    clearOsuProfile: ({ userId, providerAccountId }) => deleteOsuProfile(userId, providerAccountId, webPrisma),
     unlink: async ({ headers, userId, provider, providerAccountId }) => {
         const account = await webPrisma.account.findFirst({
             where: { userId, providerId: provider, accountId: providerAccountId },

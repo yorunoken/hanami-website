@@ -73,11 +73,14 @@ describe("canonical account routes", () => {
         expect(await response.json()).toEqual({ error: "Your final sign-in method cannot be removed." });
     });
 
-    it("clears Bot compatibility before unlinking the Web provider", async () => {
+    it("clears Bot compatibility and the osu profile before unlinking the Web provider", async () => {
         const events: string[] = [];
         const dependencies = makeDependencies();
         dependencies.clearBotLink = mock(async () => {
             events.push("bot");
+        });
+        dependencies.clearOsuProfile = mock(async () => {
+            events.push("profile");
         });
         dependencies.unlink = mock(async () => {
             events.push("web");
@@ -92,12 +95,31 @@ describe("canonical account routes", () => {
         );
 
         expect(response.status).toBe(200);
-        expect(events).toEqual(["bot", "web"]);
+        expect(events).toEqual(["bot", "profile", "web"]);
         expect(dependencies.clearBotLink).toHaveBeenCalledWith({
             userId: "user-1",
             provider: "osu",
             providerAccountId: "24680",
         });
+    });
+
+    it("keeps the Web provider linked when durable osu profile cleanup fails", async () => {
+        const dependencies = makeDependencies();
+        dependencies.clearOsuProfile = mock(async () => {
+            throw new Error("Web database unavailable");
+        });
+        dependencies.unlink = mock(async () => undefined);
+        const app = new Elysia({ prefix: "/api" }).use(createAccountRoutes(dependencies));
+
+        const response = await app.handle(
+            new Request("http://localhost:3000/api/account/providers/osu", {
+                method: "DELETE",
+                headers: { Origin: "http://localhost:3000" },
+            }),
+        );
+
+        expect(response.status).toBe(500);
+        expect(dependencies.unlink).not.toHaveBeenCalled();
     });
 
     it("keeps the Web provider linked when Bot cleanup fails", async () => {
@@ -129,6 +151,7 @@ function makeDependencies(): AccountRouteDependencies {
         ],
         beginLink: mock(async () => ({ url: "https://osu.ppy.sh/oauth/authorize?state=link", headers: new Headers() })),
         clearBotLink: mock(async () => undefined),
+        clearOsuProfile: mock(async () => undefined),
         unlink: async () => undefined,
         isFreshSession: () => true,
     };

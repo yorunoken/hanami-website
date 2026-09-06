@@ -1,5 +1,7 @@
 const osuClaimPrefix = "https://hanami.yorunoken.com/claims/";
 
+export const osuClaimNames = [`${osuClaimPrefix}osu_id`, `${osuClaimPrefix}osu_username`, `${osuClaimPrefix}osu_avatar`] as const;
+
 export interface OsuClaimsDatabase {
     osuProfile: {
         findUnique(args: { where: { userId: string }; select: { osuId: true; username: true; avatarUrl: true } }): Promise<{
@@ -24,8 +26,8 @@ export async function buildOsuClaims(
     });
     if (!profile) return claims;
 
-    claims[`${osuClaimPrefix}osu_id`] = profile.osuId;
-    claims[`${osuClaimPrefix}osu_username`] = profile.username;
-    if (profile.avatarUrl) claims[`${osuClaimPrefix}osu_avatar`] = profile.avatarUrl;
+    claims[osuClaimNames[0]] = profile.osuId;
+    claims[osuClaimNames[1]] = profile.username;
+    if (profile.avatarUrl) claims[osuClaimNames[2]] = profile.avatarUrl;
     return claims;
 }

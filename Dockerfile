@@ -32,4 +32,4 @@ COPY tsconfig.json ./
 EXPOSE 3000
 
 # Run the Elysia server
-CMD ["sh", "-c", "bun run db:migrate && exec bun src/server/index.ts"]
+CMD ["sh", "-c", "bun run db:migrate && bun run db:reconcile-oauth-client && exec bun src/server/index.ts"]
