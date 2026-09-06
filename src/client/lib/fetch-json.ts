@@ -1,4 +1,6 @@
-export class ApiError extends Error {
+import { isRecord } from "@/lib/record";
+
+class ApiError extends Error {
     constructor(
         message: string,
         public readonly status: number,
@@ -14,8 +16,4 @@ export async function fetchJson<T>(url: string, signal?: AbortSignal, init?: Req
     const error = isRecord(data) && typeof data.error === "string" ? data.error : null;
     if (!response.ok || error) throw new ApiError(error || `Request failed with status ${response.status}`, response.status);
     return data as T;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
 }

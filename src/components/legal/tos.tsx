@@ -21,8 +21,14 @@ export default function TermsOfService() {
     return (
         <LegalDocument
             title="Terms of service"
-            summary="Terms for the hosted Hanami website, Hanami Bot, and osu!guessr service, with clear boundaries for open-source code and prototypes."
+            summary="Rules for using Hanami Web, Hanami Bot, and osu!guessr, and terms that apply to the open-source projects."
             toc={toc}
+            atAGlance={[
+                "These terms apply to hosted Hanami services and their linked-account features.",
+                "Discord, osu!, and other providers remain independent services with their own rules.",
+                "Community-run and unfinished features can change, pause, or be discontinued.",
+                "Use only accounts and data you are authorized to control.",
+            ]}
         >
             <LegalSection id="acceptance" title="1. Acceptance">
                 <p>
@@ -105,10 +111,10 @@ export default function TermsOfService() {
                     never be released. The operator may modify or retire products and integrations, with reasonable notice where practical.
                 </p>
                 <p>
-                    Signed-in account deletion immediately removes the website identity and Discord-keyed Hanami Bot account data described
-                    in the privacy notice. Separate osu!guessr profiles, provider-side records, and operational logs may require separate
-                    action or temporary retention as described in the privacy and deletion notices. The repositories do not document a
-                    production backup-retention schedule.
+                    Signed-in account deletion immediately removes the Hanami Web account, all connected provider records, and Discord-keyed
+                    Hanami Bot account data described in the privacy notice. Separate osu!guessr profiles, provider-side records, and
+                    operational logs may require separate action or temporary retention as described in the privacy and deletion notices.
+                    The repositories do not document a production backup-retention schedule.
                 </p>
             </LegalSection>
 
@@ -132,9 +138,9 @@ export default function TermsOfService() {
 
             <LegalSection id="ip" title="8. Intellectual property and open-source software">
                 <p>
-                    Yorunoken and the relevant contributors—not “Hanami Bot” as a software object—hold rights in original branding, artwork,
-                    hosted-service presentation, and code to the extent those rights exist. Hanami does not claim that a name or mark is
-                    registered unless it is expressly identified as registered.
+                    Yorunoken and the relevant contributors, not “Hanami Bot” as a software object, hold rights in original branding,
+                    artwork, hosted-service presentation, and code to the extent those rights exist. Hanami does not claim that a name or
+                    mark is registered unless it is expressly identified as registered.
                 </p>
                 <p>
                     Source code published in a repository is licensed under the license in that repository. Map Analyzer, for example, is

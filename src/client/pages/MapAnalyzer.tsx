@@ -1,6 +1,6 @@
 import { Activity, Github, Package, Route } from "lucide-react";
 
-import { ActionLink, Eyebrow, SectionIntro, StatusLine } from "@/components/marketing";
+import { ActionLink, Eyebrow, SectionIntro } from "@/components/marketing";
 import {
     HeroActions,
     ProductHero,
@@ -29,7 +29,6 @@ export default function MapAnalyzer() {
             <ProductHero className="bg-[linear-gradient(rgba(180,218,122,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(180,218,122,0.045)_1px,transparent_1px),#0a0d0a] bg-size-[48px_48px]">
                 <div className={productHeroCopyClass}>
                     <Eyebrow>Rust library</Eyebrow>
-                    <StatusLine status={product.status} detail="Crate version 0.2.9" tone={product.tone} />
                     <h1 className={productTitleClass}>{product.name}</h1>
                     <h2 className={productSubtitleClass}>Inspect stream and jump patterns in a local .osu file.</h2>
                     <p className={productBodyClass}>
@@ -69,13 +68,13 @@ export default function MapAnalyzer() {
             <ProductSection>
                 <SectionIntro
                     eyebrow="Output"
-                    title="Two focused analyzers in the published crate."
-                    body="The release exposes classification-oriented stream and jump results as Rust values. Broader reports and dataset tooling are development work, not part of version 0.2.9."
+                    title="Stream and jump analysis"
+                    body="Version 0.2.9 returns stream and jump analysis as Rust values. Reports and dataset tools are still in development."
                 />
-                <div className="border-t border-border-strong">
+                <div className="grid gap-6">
                     {outputs.map(([Icon, title, description]) => (
                         <article
-                            className="grid grid-cols-[2rem_1fr] gap-5 border-b border-border py-[1.55rem] max-[600px]:grid-cols-[1.5rem_1fr] max-[600px]:gap-[0.8rem]"
+                            className="grid grid-cols-[2rem_1fr] gap-5 py-2 max-[600px]:grid-cols-[1.5rem_1fr] max-[600px]:gap-[0.8rem]"
                             key={title}
                         >
                             <Icon className="size-4.75 text-lime" aria-hidden="true" />
@@ -91,7 +90,7 @@ export default function MapAnalyzer() {
             <ProductSplit>
                 <div>
                     <Eyebrow>Install</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Add the library to a Rust project.</h2>
+                    <h2 className={sectionHeadingClass}>Install the library</h2>
                     <p className={sectionBodyClass}>
                         The published package is Apache-2.0 licensed and depends on rosu-map. It does not contain a binary target, so
                         <code className="mx-1">cargo install</code> is not an installation path for this release.
@@ -101,7 +100,7 @@ export default function MapAnalyzer() {
                     </ActionLink>
                 </div>
                 <div
-                    className="grid border-t border-border-strong [&_code]:border-b [&_code]:border-border [&_code]:py-[1.15rem] [&_code]:font-mono [&_code]:text-[0.78rem] [&_code]:leading-[1.6] [&_code]:text-[#d7d1d8] [&_span]:mr-[0.65rem] [&_span]:text-lime"
+                    className="grid gap-5 [&_code]:font-mono [&_code]:text-[0.78rem] [&_code]:leading-[1.6] [&_code]:text-[#d7d1d8] [&_span]:mr-[0.65rem] [&_span]:text-lime"
                     aria-label="Map Analyzer installation commands"
                 >
                     <code>

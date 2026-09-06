@@ -22,6 +22,12 @@ export default function PrivacyPolicy() {
             title="Privacy policy"
             summary="How the Hanami website, Hanami Bot, osu!guessr, and Map Analyzer process information."
             toc={toc}
+            atAGlance={[
+                "The website, Bot, and osu!guessr have different data stores and service roles.",
+                "Discord and osu! identities can be linked to one Hanami account when you choose to do so.",
+                "Provider data and separate osu!guessr profiles are outside Hanami account deletion.",
+                "Privacy questions and requests go to privacy@yorunoken.com.",
+            ]}
         >
             <LegalSection id="controller" title="1. Who operates Hanami">
                 <p>
@@ -41,8 +47,8 @@ export default function PrivacyPolicy() {
 
             <LegalSection id="scope" title="2. Services covered">
                 <p>
-                    This policy is intended to cover the Hanami ecosystem operated by the controller: this website and account area, Hanami
-                    Bot on Discord, and the separately hosted osu!guessr service.
+                    This policy covers the Hanami services operated by the controller: this website and account area, Hanami Bot on Discord,
+                    and the separately hosted osu!guessr service.
                 </p>
                 <p>
                     Map Analyzer 0.2.9 is a separately distributed Rust library. The published crate parses local files and has no network
@@ -52,14 +58,17 @@ export default function PrivacyPolicy() {
             </LegalSection>
 
             <LegalSection id="data" title="3. Data processed">
-                <h3>Hanami website and Discord sign-in</h3>
+                <h3>Hanami Web and connected sign-in methods</h3>
                 <ul>
                     <li>
                         Discord account ID, display name, avatar URL, provider scope, and an email address when Discord supplies one. For a
                         phone-only Discord account, Hanami stores a stable non-deliverable address under the reserved <code>.invalid</code>{" "}
                         domain required by the authentication schema; it is not treated as verified contact information or used for mail.
                     </li>
-                    <li>OAuth account records, which may include Discord access or refresh tokens when Better Auth receives them.</li>
+                    <li>osu! account ID, username, avatar URL, and provider scope when you sign in or connect with osu!.</li>
+                    <li>
+                        OAuth account records, which may include Discord or osu! access and refresh tokens when Better Auth receives them.
+                    </li>
                     <li>Web session token, session dates, IP address, and user-agent string stored by Better Auth.</li>
                     <li>Short-lived OAuth verification values used to complete authentication safely.</li>
                     <li>
@@ -72,23 +81,19 @@ export default function PrivacyPolicy() {
                     </li>
                 </ul>
 
-                <h3>osu! linking and public profile lookup</h3>
+                <h3>Accounts linked to Hanami Bot</h3>
                 <ul>
                     <li>
-                        The osu! user ID returned by the osu! <code>identify</code> scope is stored against the Discord ID in the bot
-                        database.
+                        When one Hanami account owns both a Discord and osu! identity, Hanami mirrors those provider IDs into the Bot
+                        database so supported commands can use the linked osu! profile.
                     </li>
                     <li>
-                        The link-status page requests public osu! username, avatar URL, and global rank for display. Those public profile
-                        fields are not written by that route.
+                        Disconnecting either provider removes the corresponding Bot association. The Bot database remains separate from the
+                        Hanami Web account database.
                     </li>
                     <li>
-                        The one-time osu! authorization token is used to call <code>/api/v2/me</code>; the audited callback does not persist
-                        that token in Hanami’s bot database.
-                    </li>
-                    <li>
-                        osu! authorization state is stored as a SHA-256 hash bound to the Hanami user and browser session, with creation,
-                        expiry, and consumption dates.
+                        The Bot status view may request a public osu! username, avatar URL, and global rank for display. Those returned
+                        profile fields are not written by that route.
                     </li>
                 </ul>
 
@@ -104,8 +109,9 @@ export default function PrivacyPolicy() {
                         stored in that record.
                     </li>
                     <li>
-                        Successful deletion removes the Better Auth user, provider link and sessions, then removes the Hanami Bot user row
-                        keyed to the same Discord account. Separate osu!guessr profiles are not deleted by this action.
+                        Successful deletion removes the Hanami Web user, all connected provider records, osu! profile data, and sessions,
+                        then removes the Hanami Bot user row keyed to the connected Discord account. Separate osu!guessr profiles are not
+                        deleted by this action.
                     </li>
                 </ul>
 
@@ -247,7 +253,7 @@ export default function PrivacyPolicy() {
                     </li>
                     <li>
                         Bot file logging keeps at most 30 <code>.log</code> files in the configured directory and removes older named files
-                        when a new log file is selected. No repository-backed retention period was found for container, host, Cloudflare,
+                        when a new log file is selected. The code does not specify a retention period for container, host, Cloudflare,
                         Discord error-channel, or other operational logs.
                     </li>
                     <li>
@@ -276,11 +282,11 @@ export default function PrivacyPolicy() {
 
             <LegalSection id="security" title="7. Security">
                 <p>
-                    Hanami uses measures visible in the audited code, including HTTP-only same-site session cookies, hashed osu!guessr API
-                    keys, OAuth state or verification records, parameterized database queries, rate limits, and log redaction for common
-                    secret patterns. Application configuration expects secrets in environment variables, and the repositories instruct
-                    contributors not to commit production credentials. Repository inspection cannot verify every deployment control or
-                    guarantee absolute security.
+                    The code we reviewed includes HTTP-only same-site session cookies, hashed osu!guessr API keys, OAuth state or
+                    verification records, parameterized database queries, rate limits, and log redaction for common secret patterns.
+                    Application configuration expects secrets in environment variables, and the repositories instruct contributors not to
+                    commit production credentials. Repository inspection cannot verify every deployment control or guarantee absolute
+                    security.
                 </p>
             </LegalSection>
 
@@ -291,8 +297,9 @@ export default function PrivacyPolicy() {
                     Protection Law and, where it applies, the GDPR. Hanami will respond without undue delay and normally within 30 days.
                 </p>
                 <p>
-                    Signing out only ends a session. Disconnecting osu! only clears the Discord-to-osu! link. Signed-in users can
-                    immediately delete the website identity and Discord-keyed Hanami Bot account data from the{" "}
+                    Signing out only ends a session. Disconnecting a Discord or osu! identity removes that sign-in method from the Hanami
+                    account, and the final sign-in method cannot be removed. Signed-in users with a connected Discord identity can
+                    immediately delete the Hanami account and Discord-keyed Hanami Bot data from the{" "}
                     <a href="/profile/privacy">account privacy area</a>. Separate osu!guessr profiles and provider-side data are outside
                     that action. See the <a href="/legal/data-deletion">data deletion page</a> for details.
                 </p>

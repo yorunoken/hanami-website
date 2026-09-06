@@ -1,21 +1,20 @@
-import Footer from "@/components/footer";
-import Header from "@/components/header";
-import { siteContainerClass, sitePageClass } from "@/components/layout/styles";
-import { ActionLink, Eyebrow } from "@/components/marketing";
-import { cn } from "@/lib/utils";
+import { AccountLayout, AccountPage, AccountPageIntro, AccountPanel } from "@/components/account/account-shell";
+import { ActionLink } from "@/components/marketing";
 
 export default function NotFound() {
     return (
-        <div className={sitePageClass}>
-            <Header />
-            <main className={cn(siteContainerClass, "flex min-h-155 flex-col items-start justify-center py-20")}>
-                <Eyebrow>Lost in the mapset</Eyebrow>
-                <h1 className="mb-8 max-w-180 text-[clamp(2.8rem,7vw,5.4rem)] leading-none tracking-[-0.06em]">
-                    This route does not exist.
-                </h1>
-                <ActionLink href="/">Return home</ActionLink>
-            </main>
-            <Footer />
-        </div>
+        <AccountPage>
+            <AccountLayout className="grid min-h-155 place-items-center py-20">
+                <AccountPanel className="w-[min(100%,700px)] p-[clamp(1.75rem,5vw,3.5rem)]">
+                    <AccountPageIntro
+                        className="mb-8"
+                        eyebrow="Page not found"
+                        title="This page does not exist."
+                        description="Check the address or return to the homepage."
+                    />
+                    <ActionLink href="/">Return home</ActionLink>
+                </AccountPanel>
+            </AccountLayout>
+        </AccountPage>
     );
 }

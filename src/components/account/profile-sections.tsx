@@ -1,7 +1,8 @@
-import { Check, ExternalLink, Loader2, Unlink } from "lucide-react";
+import { Check, ExternalLink, Loader2, Shield, Unlink } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 
 import { routes } from "@/client/routes/paths";
+import { AccountPanel, AccountPanelHeader, accountPanelClass } from "@/components/account/account-shell";
 import { DiscordLogo, OsuLogo } from "@/components/icons/provider-icons";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import {
@@ -13,11 +14,10 @@ import {
     textButtonClass,
 } from "@/components/ui/action-styles";
 import { cn } from "@/lib/utils";
-
-import { sectionHeadingClass } from "./account-shell";
+import { defaultSettings, type BotSettings } from "@/lib/bot-settings";
 
 const identityBlockClass =
-    "flex min-h-44 flex-col border-b border-border p-[clamp(1.35rem,3vw,2rem)] min-[821px]:border-r last:min-[821px]:border-r-0";
+    "flex min-h-44 flex-col border-b border-border p-[clamp(1.35rem,3vw,2rem)] last:border-b-0 min-[821px]:border-r min-[821px]:border-b-0 last:min-[821px]:border-r-0";
 const identityPersonClass =
     "flex items-center gap-[1.1rem] [&_h3]:text-xl [&_h3_a]:inline-flex [&_h3_a]:items-center [&_h3_a]:gap-[0.45rem] [&_h3_a]:no-underline [&_h3_svg]:size-3.75 [&_p]:mb-[0.3rem] [&_p]:font-mono [&_p]:text-[0.68rem] [&_p]:text-quiet [&_p]:uppercase [&_span:not(.account-avatar):not(.osu-mark)]:mt-1 [&_span:not(.account-avatar):not(.osu-mark)]:block [&_span:not(.account-avatar):not(.osu-mark)]:text-[0.78rem] [&_span:not(.account-avatar):not(.osu-mark)]:text-muted";
 const identityActionClass = "mt-auto pt-8";
@@ -29,21 +29,7 @@ export interface LoginMethod {
     avatarUrl?: string | null;
 }
 
-export interface BotSettings {
-    mode: "osu" | "mania" | "taiko" | "fruits";
-    score_embeds: 0 | 1;
-    embed_type: "hanami" | "bathbot" | "owobot";
-    score_data: 0 | 1;
-}
-
-export const defaultSettings: BotSettings = {
-    mode: "osu",
-    score_embeds: 1,
-    embed_type: "hanami",
-    score_data: 0,
-};
-
-export type ProfileAction = "linking" | "unlinking" | "saving" | null;
+export type ProfileAction = { type: "linking" | "unlinking"; provider: "discord" | "osu" } | { type: "saving" } | null;
 
 interface IdentitySectionProps {
     currentUser: { name: string; image?: string | null };
@@ -57,11 +43,13 @@ interface IdentitySectionProps {
 export function IdentitySection({ currentUser, loginMethods, loading, action, onLink, onUnlink }: IdentitySectionProps) {
     const linked = new Set(loginMethods.map((method) => method.provider));
     const osuMethod = loginMethods.find((method) => method.provider === "osu");
+    const linkingDiscord = action?.type === "linking" && action.provider === "discord";
+    const linkingOsu = action?.type === "linking" && action.provider === "osu";
+    const unlinkingDiscord = action?.type === "unlinking" && action.provider === "discord";
+    const unlinkingOsu = action?.type === "unlinking" && action.provider === "osu";
     return (
-        <section className="mt-10" aria-labelledby="identity-title">
-            <div className={sectionHeadingClass}>
-                <h2 id="identity-title">Identity</h2>
-            </div>
+        <AccountPanel aria-labelledby="identity-title">
+            <AccountPanelHeader id="identity-title" title="Sign-in methods" description="Sign in with either of your linked accounts." />
 
             <div className="grid grid-cols-1 min-[821px]:grid-cols-2">
                 <article className={identityBlockClass}>
@@ -85,10 +73,10 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                     className={cn(textButtonClass, "text-danger")}
                                     type="button"
                                     onClick={() => onUnlink("discord")}
-                                    disabled={action === "unlinking"}
+                                    disabled={action !== null}
                                 >
                                     <Unlink aria-hidden="true" />
-                                    {action === "unlinking" ? "Disconnecting…" : "Disconnect Discord"}
+                                    {unlinkingDiscord ? "Disconnecting…" : "Disconnect Discord"}
                                 </button>
                             </div>
                         )
@@ -98,10 +86,10 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                 className={cn(primaryActionClass, compactActionClass)}
                                 type="button"
                                 onClick={() => onLink("discord")}
-                                disabled={action === "linking"}
+                                disabled={action !== null}
                             >
                                 <DiscordLogo aria-hidden="true" />
-                                {action === "linking" ? "Opening Discord…" : "Connect Discord"}
+                                {linkingDiscord ? "Opening Discord…" : "Connect Discord"}
                             </button>
                         </div>
                     )}
@@ -130,10 +118,10 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                         className={cn(textButtonClass, "text-danger")}
                                         type="button"
                                         onClick={() => onUnlink("osu")}
-                                        disabled={action === "unlinking"}
+                                        disabled={action !== null}
                                     >
                                         <Unlink aria-hidden="true" />
-                                        {action === "unlinking" ? "Disconnecting…" : "Disconnect osu!"}
+                                        {unlinkingOsu ? "Disconnecting…" : "Disconnect osu!"}
                                     </button>
                                 </div>
                             )}
@@ -154,17 +142,17 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                     className={cn(primaryActionClass, compactActionClass)}
                                     type="button"
                                     onClick={() => onLink("osu")}
-                                    disabled={action === "linking"}
+                                    disabled={action !== null}
                                 >
                                     <OsuLogo aria-hidden="true" />
-                                    {action === "linking" ? "Opening osu!…" : "Connect osu!"}
+                                    {linkingOsu ? "Opening osu!…" : "Connect osu!"}
                                 </button>
                             </div>
                         </>
                     )}
                 </article>
             </div>
-        </section>
+        </AccountPanel>
     );
 }
 
@@ -181,16 +169,13 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
     const current = settings ?? defaultSettings;
 
     return (
-        <section className="mt-12" aria-labelledby="settings-title">
-            <div className={sectionHeadingClass}>
-                <h2 id="settings-title">Hanami Bot preferences</h2>
-                <p>These values are stored against your Discord ID in the bot database.</p>
-            </div>
+        <AccountPanel aria-labelledby="settings-title">
+            <AccountPanelHeader id="settings-title" title="Hanami Bot" description="Command and score defaults for your Discord account." />
 
             {loading ? (
                 <LoadingInline label="Loading preferences" />
             ) : (
-                <form className="pt-6" onSubmit={onSubmit}>
+                <form className="p-[clamp(1.35rem,3vw,2rem)]" onSubmit={onSubmit}>
                     <div className="grid grid-cols-1 gap-x-10 gap-y-5 min-[601px]:grid-cols-2 min-[601px]:gap-y-6">
                         <SelectField
                             label="Default game mode"
@@ -243,9 +228,9 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
                             <option value="1">Lazer</option>
                         </SelectField>
                     </div>
-                    <div className="mt-8 flex items-center gap-6 border-t border-border pt-5 max-[600px]:flex-col max-[600px]:items-start">
-                        <button className={cn(primaryActionClass, compactActionClass)} type="submit" disabled={action === "saving"}>
-                            {action === "saving" ? "Saving…" : "Save preferences"}
+                    <div className="mt-8 flex items-center gap-6 max-[600px]:flex-col max-[600px]:items-start">
+                        <button className={cn(primaryActionClass, compactActionClass)} type="submit" disabled={action !== null}>
+                            {action?.type === "saving" ? "Saving…" : "Save preferences"}
                         </button>
                         {saved && (
                             <span className={cn(formMessageClass, "text-success")} role="status">
@@ -256,16 +241,23 @@ export function BotPreferencesSection({ settings, loading, action, saved, onSett
                     </div>
                 </form>
             )}
-        </section>
+        </AccountPanel>
     );
 }
 
-export function AccountPrivacyAside() {
+export function AccountPrivacyAside({ compact = false }: { compact?: boolean }) {
     return (
-        <aside className="mt-10 grid max-w-220 grid-cols-1 items-end gap-5 border-t border-border pt-6 min-[701px]:grid-cols-[minmax(0,1fr)_auto] [&_h2]:text-[1.05rem] [&_p]:mt-2 [&_p]:max-w-145 [&_p]:text-[0.82rem] [&_p]:leading-[1.6] [&_p]:text-muted">
+        <aside
+            className={cn(
+                accountPanelClass,
+                "grid grid-cols-1 items-end gap-5 p-[clamp(1.35rem,3vw,2rem)] min-[701px]:grid-cols-[minmax(0,1fr)_auto] [&_h2]:text-[1.05rem] [&_p]:mt-2 [&_p]:max-w-145 [&_p]:text-[0.82rem] [&_p]:leading-[1.6] [&_p]:text-muted",
+                compact && "min-[701px]:grid-cols-1 min-[1000px]:sticky min-[1000px]:top-24",
+            )}
+        >
             <div>
-                <h2>Privacy and account</h2>
-                <p>Review the signed-in identity, get privacy help, or permanently delete website and Bot account data.</p>
+                <Shield className="mb-5 size-5 text-accent-soft" aria-hidden="true" />
+                <h2>Account controls</h2>
+                <p>Review your privacy options or permanently delete your Hanami data.</p>
             </div>
             <PrefetchLink className={cn(primaryActionClass, secondaryActionClass, compactActionClass)} to={routes.profilePrivacy}>
                 Open privacy settings

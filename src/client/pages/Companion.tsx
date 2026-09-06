@@ -1,6 +1,6 @@
 import { Github, HardDrive, MonitorDot, Radio } from "lucide-react";
 
-import { ActionLink, Eyebrow, SectionIntro, StatusLine } from "@/components/marketing";
+import { ActionLink, Eyebrow, SectionIntro } from "@/components/marketing";
 import {
     ProductFootnote,
     ProductHero,
@@ -19,9 +19,9 @@ import {
 import { getProduct } from "@/data/site-config";
 
 const currentCapabilities = [
-    ["tosu lifecycle", "Connect to an existing tosu instance or launch and stop one owned by Companion."],
+    ["tosu connection", "Connect to an existing tosu instance or launch and stop one owned by Companion."],
     ["Play detection", "Track selected beatmaps and detect passed, failed, retried, and quit attempts."],
-    ["Normalized state", "Render normalized local state in React for the current desktop session."],
+    ["Game activity", "View your current osu! activity in the desktop app."],
 ] as const;
 
 export default function Companion() {
@@ -32,13 +32,11 @@ export default function Companion() {
             <ProductHero className="bg-[linear-gradient(130deg,rgba(128,215,232,0.08),transparent_42%),#0b0c0f]">
                 <div className={productHeroCopyClass}>
                     <Eyebrow>Desktop prototype</Eyebrow>
-                    <StatusLine status={product.status} detail="Public source · no packaged release" tone={product.tone} />
                     <h1 className={productTitleClass}>{product.name}</h1>
-                    <h2 className={productSubtitleClass}>A local bridge for ideas that do not belong in a browser.</h2>
+                    <h2 className={productSubtitleClass}>Track osu! activity on your desktop.</h2>
                     <p className={productBodyClass}>
-                        The public Tauri project is an unfinished local prototype. Rust handles process lifecycle and local play detection
-                        while React renders normalized state. It can connect to tosu and track local osu! activity, but no packaged release
-                        is offered.
+                        Companion is an unfinished local prototype for tracking osu! activity through tosu. It supports local play
+                        detection, but you need to build it from source to try it.
                     </p>
                     <ActionLink className="mt-8" href={product.links.primary} external>
                         <Github aria-hidden="true" /> View the source
@@ -54,21 +52,21 @@ export default function Companion() {
                         height="512"
                     />
                     <figcaption className="mx-auto mt-4 max-w-[45ch] text-[0.72rem] leading-[1.55] text-quiet max-[600px]:text-left">
-                        Current project icon. No packaged release is published yet.
+                        No installer is available yet.
                     </figcaption>
                 </figure>
             </ProductHero>
 
             <ProductSection>
                 <SectionIntro
-                    eyebrow="Prototype scope"
-                    title="Unfinished local software."
-                    body="The public repository documents a local prototype for tosu lifecycle control, play detection, and normalized desktop state. It remains in development and is not a packaged product."
+                    eyebrow="Features"
+                    title="Current features"
+                    body="The prototype can connect to tosu, detect plays, and display your current game activity."
                 />
-                <div className="grid grid-cols-1 border-t border-border-strong min-[821px]:grid-cols-3">
+                <div className="grid grid-cols-1 min-[821px]:grid-cols-3">
                     {currentCapabilities.map(([title, description]) => (
                         <article
-                            className="flex min-h-37.5 flex-col border-b border-border p-[1.6rem] min-[821px]:min-h-52.5 min-[821px]:border-r last:min-[821px]:border-r-0"
+                            className="flex min-h-37.5 flex-col p-[1.6rem] min-[821px]:min-h-52.5 min-[821px]:border-r last:min-[821px]:border-r-0"
                             key={title}
                         >
                             <h3 className="mt-auto text-base tracking-[-0.02em] text-[#c4f1f7]">{title}</h3>
@@ -80,32 +78,31 @@ export default function Companion() {
 
             <ProductSplit>
                 <div>
-                    <Eyebrow>Data boundary</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Local state only.</h2>
+                    <Eyebrow>Local data</Eyebrow>
+                    <h2 className={sectionHeadingClass}>Play data stays on your computer.</h2>
                     <p className={sectionBodyClass}>
-                        Recent attempts stay in memory for the current desktop session. The prototype is unfinished and its local state is
-                        not a hosted Hanami account feature.
+                        Recent attempts are kept in memory while Companion is running. They are not saved to your Hanami account.
                     </p>
                 </div>
                 <ProductSteps className="[&_svg]:text-cyan">
                     <ProductStep icon={<HardDrive aria-hidden="true" />}>
                         <strong>Local osu! session</strong>
-                        <p>tosu reads local game state and exposes it over loopback.</p>
+                        <p>tosu reads osu! activity on your computer.</p>
                     </ProductStep>
                     <ProductStep icon={<Radio aria-hidden="true" />}>
-                        <strong>Companion listener</strong>
-                        <p>The app normalizes state and detects meaningful play attempts.</p>
+                        <strong>Play detection</strong>
+                        <p>Companion detects when you start, finish, retry, or quit a play.</p>
                     </ProductStep>
                     <ProductStep icon={<MonitorDot aria-hidden="true" />}>
-                        <strong>Normalized local state</strong>
-                        <p>React renders the local session state for the current desktop process.</p>
+                        <strong>Desktop display</strong>
+                        <p>View the activity from your current session.</p>
                     </ProductStep>
                 </ProductSteps>
             </ProductSplit>
 
             <ProductFootnote className="[&>svg]:text-cyan">
                 <MonitorDot aria-hidden="true" />
-                <p>The public repository contains an unfinished local prototype. No packaged release is currently offered.</p>
+                <p>You can try Companion by building it from source. It is still under development.</p>
             </ProductFootnote>
         </ProductPage>
     );

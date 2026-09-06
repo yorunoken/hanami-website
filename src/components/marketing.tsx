@@ -10,13 +10,6 @@ const actionVariants = {
     secondary: secondaryActionClass,
 } as const;
 
-const statusToneClasses = {
-    rose: "bg-accent",
-    violet: "bg-violet",
-    cyan: "bg-cyan",
-    lime: "bg-lime",
-} as const;
-
 interface ActionLinkProps {
     children: ReactNode;
     className?: string;
@@ -71,25 +64,6 @@ export function Eyebrow({ children, className }: { children: ReactNode; classNam
     );
 }
 
-export function StatusLine({
-    status,
-    detail,
-    tone = "rose",
-}: {
-    status: string;
-    detail: string;
-    tone?: "rose" | "violet" | "cyan" | "lime";
-}) {
-    return (
-        <p className="mb-[1.2rem] flex items-center gap-[0.55rem] text-[0.76rem] text-muted">
-            <span className={cn("size-1.75 rounded-full", statusToneClasses[tone])} aria-hidden="true" />
-            <strong className="font-bold text-white">{status}</strong>
-            <span className="h-4 w-px bg-border-strong" aria-hidden="true" />
-            {detail}
-        </p>
-    );
-}
-
 export function SectionIntro({ eyebrow, title, body }: { eyebrow: string; title: string; body?: string }) {
     return (
         <header className="mb-[clamp(2.5rem,5vw,4.5rem)] max-w-180">
@@ -113,6 +87,10 @@ export function TextLink({
     external?: boolean;
     prefetch?: PrefetchMode;
 }) {
+    const classes = cn(
+        "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-160 hover:border-current hover:text-accent-soft [&_svg]:size-4",
+        className,
+    );
     const content = (
         <>
             <span>{children}</span>
@@ -122,29 +100,14 @@ export function TextLink({
 
     if (external) {
         return (
-            <a
-                className={cn(
-                    "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-160 hover:border-current hover:text-accent-soft [&_svg]:size-4",
-                    className,
-                )}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-            >
+            <a className={classes} href={href} target="_blank" rel="noreferrer">
                 {content}
             </a>
         );
     }
 
     return (
-        <PrefetchLink
-            className={cn(
-                "inline-flex w-fit items-center gap-[0.55rem] border-b border-border-strong pb-[0.3rem] text-[0.86rem] font-bold text-white no-underline transition-colors duration-160 hover:border-current hover:text-accent-soft [&_svg]:size-4",
-                className,
-            )}
-            to={href}
-            prefetch={prefetch}
-        >
+        <PrefetchLink className={classes} to={href} prefetch={prefetch}>
             {content}
         </PrefetchLink>
     );

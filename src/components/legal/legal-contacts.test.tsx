@@ -30,6 +30,31 @@ describe("legal contacts and request links", () => {
         expect(html).toContain("legal@yorunoken.com");
     });
 
+    it("organizes the legal center around user tasks and all Hanami services", () => {
+        const html = render(LegalIndex);
+
+        expect(html).toContain("Understand how data is used");
+        expect(html).toContain("Read the service rules");
+        expect(html).toContain("Manage cookies and browser storage");
+        expect(html).toContain("Delete data or make a privacy request");
+        expect(html).toContain("Hanami Web");
+        expect(html).toContain("Hanami Bot");
+        expect(html).toContain("osu!guessr");
+        expect(html).toContain("Hanami Companion");
+        expect(html).toContain("Map Analyzer");
+    });
+
+    it("gives each legal document an at-a-glance summary and related actions", () => {
+        for (const Component of [PrivacyPolicy, TermsOfService, CookiePolicy, DataDeletion]) {
+            const html = render(Component);
+            expect(html).toContain("At a glance");
+            expect(html).toContain("Related documents");
+            expect(html).toContain("Account controls");
+            expect(html).toContain("<details");
+            expect(html).toContain('href="/legal"');
+        }
+    });
+
     it("publishes effective documents without unresolved owner markers", () => {
         expect(legalMetadata.effectiveDate).toBe("July 18, 2026");
 
@@ -54,7 +79,7 @@ describe("legal contacts and request links", () => {
         expect(cookies).toContain("hanami.account-deletion.challenge");
         expect(cookies).toContain("loads after the production page starts");
         expect(privacy).toContain("Cloudflare’s privacy policy");
-        expect(privacy).toContain("No repository-backed retention period was found");
+        expect(privacy).toContain("The code does not specify a retention period");
         expect(privacy).toContain("does not replace the application methods required by law");
         expect(privacy).not.toContain("normal backup rotation");
         expect(deletion).not.toContain("backup copies may");
@@ -82,6 +107,17 @@ describe("legal contacts and request links", () => {
             expect(html).not.toContain("Companion token");
             expect(html).not.toContain("play upload");
         }
+    });
+
+    it("describes the current provider-neutral Hanami account model", () => {
+        const privacy = render(PrivacyPolicy);
+        const deletion = render(DataDeletion);
+
+        expect(privacy).toContain("Discord or osu! identity");
+        expect(privacy).toContain("all connected provider records");
+        expect(deletion).toContain("Disconnect a sign-in method");
+        expect(privacy).not.toContain("Disconnecting osu! only clears");
+        expect(privacy).not.toContain("stored against the Discord ID in the bot database");
     });
 });
 

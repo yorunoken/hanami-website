@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
 
 export const productHeroCopyClass = "relative z-20 max-w-180 motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both]";
 export const productTitleClass =
-    "text-[clamp(3.3rem,17vw,4.8rem)] leading-[0.92] tracking-[-0.075em] text-white min-[601px]:text-[clamp(3.7rem,7.4vw,6.7rem)]";
-export const productSubtitleClass = "mt-6 max-w-170 text-[clamp(1.35rem,2.3vw,2rem)] leading-[1.3] tracking-[-0.035em] text-[#e8e4e8]";
-export const productBodyClass = "mt-[1.35rem] max-w-[62ch] text-[1.02rem] leading-7 text-muted";
-export const sectionHeadingClass = "text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white";
-export const sectionBodyClass = "mt-5 max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted";
+    "text-[clamp(3rem,13vw,4.6rem)] leading-[0.94] tracking-[-0.075em] text-white min-[601px]:text-[clamp(3.5rem,6.4vw,5.8rem)]";
+export const productSubtitleClass = "mt-5 max-w-170 text-[clamp(1.25rem,2vw,1.75rem)] leading-[1.3] tracking-[-0.035em] text-[#e8e4e8]";
+export const productBodyClass = "mt-[1.2rem] max-w-[62ch] text-[1rem] leading-7 text-muted";
+export const sectionHeadingClass = "text-[clamp(1.9rem,3.6vw,3.25rem)] leading-[1.06] tracking-[-0.055em] text-white";
+export const sectionBodyClass = "mt-4 max-w-[62ch] text-[clamp(1rem,1.3vw,1.08rem)] leading-7 text-muted";
 
 export function ProductPage({ children }: { children: ReactNode }) {
     return (
@@ -25,11 +25,11 @@ export function ProductPage({ children }: { children: ReactNode }) {
 
 export function ProductHero({ children, className }: { children: ReactNode; className?: string }) {
     return (
-        <section className={cn("relative min-h-172.5 overflow-hidden border-b border-border max-[820px]:min-h-0", className)}>
+        <section className={cn("relative min-h-150 overflow-hidden border-b border-border max-[820px]:min-h-0", className)}>
             <div
                 className={cn(
                     siteContainerClass,
-                    "grid min-h-172.5 grid-cols-[minmax(0,0.88fr)_minmax(340px,0.72fr)] items-center gap-[clamp(3rem,8vw,8rem)] py-18 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-0 max-[820px]:grid-cols-1 max-[820px]:py-16",
+                    "grid min-h-150 grid-cols-[minmax(0,0.88fr)_minmax(340px,0.72fr)] items-center gap-[clamp(3rem,8vw,8rem)] py-16 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-0 max-[820px]:grid-cols-1 max-[820px]:py-14",
                 )}
             >
                 {children}
@@ -81,17 +81,12 @@ export function ProductFootnote({ children, className }: { children: ReactNode; 
 }
 
 export function ProductSteps({ children, className }: { children: ReactNode; className?: string }) {
-    return <ol className={cn("border-t border-border-strong", className)}>{children}</ol>;
+    return <ol className={cn("grid gap-5", className)}>{children}</ol>;
 }
 
-export function ProductStep({ children, icon, muted = false }: { children: ReactNode; icon: ReactNode; muted?: boolean }) {
+export function ProductStep({ children, icon }: { children: ReactNode; icon: ReactNode }) {
     return (
-        <li
-            className={cn(
-                "grid grid-cols-[2rem_1fr] gap-4 border-b border-border py-[1.35rem] [&_p]:mt-1.5 [&_p]:text-[0.86rem] [&_p]:leading-[1.6] [&_strong]:text-[0.95rem] [&_svg]:size-5 [&_svg]:text-accent-soft",
-                muted && "text-quiet [&_svg]:text-quiet",
-            )}
-        >
+        <li className="grid grid-cols-[2rem_1fr] gap-4 py-2 [&_p]:mt-1.5 [&_p]:text-[0.86rem] [&_p]:leading-[1.6] [&_strong]:text-[0.95rem] [&_svg]:size-5 [&_svg]:text-accent-soft">
             {icon}
             <div>{children}</div>
         </li>

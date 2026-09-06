@@ -1,21 +1,10 @@
 import { Elysia } from "elysia";
 
+import { isRecord } from "@/lib/record";
+import { defaultSettings, type BotSettings } from "@/lib/bot-settings";
+
 import { botPrisma } from "../database/bot";
 import { serverIdentity } from "../identity";
-
-interface BotSettings {
-    mode: "osu" | "mania" | "taiko" | "fruits";
-    score_embeds: 0 | 1;
-    embed_type: "hanami" | "bathbot" | "owobot";
-    score_data: 0 | 1;
-}
-
-const defaultSettings: BotSettings = {
-    mode: "osu",
-    score_embeds: 1,
-    embed_type: "hanami",
-    score_data: 0,
-};
 
 export const osuLinkRoute = new Elysia()
     .get("/osu-link/status", async ({ request, set }) => {
@@ -219,10 +208,6 @@ export function parseBinary(value: number | null, fallback: 0 | 1): 0 | 1 {
 
 function isOneOf<const T extends readonly string[]>(value: unknown, choices: T): value is T[number] {
     return typeof value === "string" && choices.includes(value);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
 }
 
 function hasDatabaseConfiguration(): boolean {

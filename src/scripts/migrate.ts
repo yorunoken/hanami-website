@@ -77,7 +77,7 @@ async function runPrismaMigrationCommand(command: "deploy" | "resolve", ...args:
     if (exitCode !== 0) throw new PrismaMigrationCommandError(exitCode, `${stdout}\n${stderr}`);
 }
 
-export async function runWebPrismaMigrations(): Promise<void> {
+async function runWebPrismaMigrations(): Promise<void> {
     const state = classifyWebDatabaseTables(await readWebDatabaseMetadata());
     if (state === "unexpected") {
         throw new Error("Refusing Web migration because the database has a partial or unexpected table set");

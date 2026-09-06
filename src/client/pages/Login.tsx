@@ -77,17 +77,17 @@ function LoginScene({ children }: { children: ReactNode }) {
                 <div
                     className={cn(
                         siteContainerClass,
-                        "relative grid min-h-[calc(100svh-72px)] grid-cols-[minmax(0,0.9fr)_minmax(320px,0.58fr)] items-center gap-[clamp(3rem,8vw,8rem)] py-[clamp(4.5rem,9vw,7.5rem)] max-[900px]:min-h-[min(780px,calc(100svh-72px))] max-[900px]:grid-cols-1 max-[900px]:items-start max-[900px]:gap-0 max-[900px]:pt-[clamp(5rem,12vh,7rem)] max-[900px]:pb-[clamp(5rem,10vh,7rem)] max-[600px]:pt-[clamp(4.5rem,11vh,5.75rem)] max-[600px]:pb-14",
+                        "relative grid min-h-[calc(100svh-72px)] grid-cols-[minmax(0,1fr)_minmax(280px,0.62fr)] items-center gap-[clamp(3rem,8vw,8rem)] py-[clamp(4.5rem,9vw,7.5rem)] max-[900px]:min-h-[min(780px,calc(100svh-72px))] max-[900px]:grid-cols-1 max-[900px]:items-start max-[900px]:gap-0 max-[900px]:pt-[clamp(5rem,12vh,7rem)] max-[900px]:pb-[clamp(5rem,10vh,7rem)] max-[600px]:pt-[clamp(4.5rem,11vh,5.75rem)] max-[600px]:pb-14",
                     )}
                 >
                     {children}
                     <div
-                        className="pointer-events-none relative h-full min-h-125 self-end overflow-hidden max-[900px]:absolute max-[900px]:-right-24 max-[900px]:bottom-0 max-[900px]:h-96 max-[900px]:min-h-0 max-[900px]:w-90 max-[900px]:border-0 max-[900px]:opacity-14 max-[600px]:-right-32 max-[600px]:h-80 max-[600px]:w-80"
+                        className="pointer-events-none relative h-full min-h-125 self-end overflow-hidden border-l border-border max-[900px]:absolute max-[900px]:-right-24 max-[900px]:bottom-0 max-[900px]:h-96 max-[900px]:min-h-0 max-[900px]:w-90 max-[900px]:border-0 max-[900px]:opacity-12 max-[600px]:-right-32 max-[600px]:h-80 max-[600px]:w-80"
                         aria-hidden="true"
                     >
                         <div className="relative size-full motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both]">
                             <img
-                                className="absolute right-[-8%] bottom-[-5%] h-auto w-[min(35vw,500px)] max-w-none opacity-68 max-[900px]:right-0 max-[900px]:bottom-[-8%] max-[900px]:w-full max-[900px]:opacity-100"
+                                className="absolute right-[-8%] bottom-[-5%] h-auto w-[min(35vw,500px)] max-w-none opacity-58 max-[900px]:right-0 max-[900px]:bottom-[-8%] max-[900px]:w-full max-[900px]:opacity-100"
                                 src="/hanami-transparent.png"
                                 alt=""
                                 width="565"
@@ -114,19 +114,18 @@ export function LoginPanel({
 }) {
     return (
         <section
-            className="relative z-10 max-w-155 motion-safe:animate-[reveal-up_420ms_60ms_cubic-bezier(0.2,0.7,0.2,1)_both]"
+            className="relative z-10 max-w-165 motion-safe:animate-[reveal-up_420ms_60ms_cubic-bezier(0.2,0.7,0.2,1)_both]"
             aria-labelledby="sign-in-title"
         >
             <Eyebrow>Hanami account</Eyebrow>
             <h1
-                className="text-[clamp(3rem,7vw,5.4rem)] leading-[0.96] tracking-[-0.065em] text-white max-[600px]:text-[clamp(2.7rem,13vw,4rem)]"
+                className="text-[clamp(3rem,6vw,4.75rem)] leading-[0.98] tracking-[-0.06em] text-white max-[600px]:text-[clamp(2.7rem,13vw,4rem)]"
                 id="sign-in-title"
             >
                 Sign in to Hanami
             </h1>
             <p className="mt-6 max-w-[54ch] text-[clamp(1rem,1.5vw,1.12rem)] leading-[1.7] text-muted">
-                Choose Discord or osu! to sign in. Hanami keeps both provider identities attached to one canonical account when you
-                explicitly link them.
+                Sign in with Discord or osu!. If you’ve linked both accounts, you can use either one.
             </p>
 
             {status && (
@@ -172,7 +171,11 @@ export function LoginPanel({
                 </button>
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4 border-t border-border pt-5">
+            <p className="mt-5 max-w-[60ch] border-l border-border-strong pl-4 text-[0.76rem] leading-[1.6] text-quiet">
+                Connecting a Discord or osu! account that is already linked elsewhere will move it to your current Hanami account.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
                 <PrefetchLink className={textButtonClass} to={routes.home} prefetch="none">
                     <ArrowLeft aria-hidden="true" /> Back to the public site
                 </PrefetchLink>

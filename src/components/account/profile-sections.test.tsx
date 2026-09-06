@@ -68,4 +68,23 @@ describe("profile identity controls", () => {
         expect(markup).toContain("Connect Discord");
         expect(markup).not.toContain("Connect a Discord account to use Hanami Bot");
     });
+
+    it("shows progress only on the provider being changed", () => {
+        const markup = renderToStaticMarkup(
+            <IdentitySection
+                currentUser={{ name: "Yoru", image: null }}
+                loginMethods={[
+                    { provider: "discord", providerUserId: "123456789012345678" },
+                    { provider: "osu", providerUserId: "24680", displayName: "Yoru" },
+                ]}
+                loading={false}
+                action={{ type: "unlinking", provider: "discord" }}
+                onLink={() => {}}
+                onUnlink={() => {}}
+            />,
+        );
+
+        expect(markup.match(/Disconnecting…/g)).toHaveLength(1);
+        expect(markup).toContain("Disconnect osu!");
+    });
 });

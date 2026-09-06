@@ -2,19 +2,18 @@ import { AlertCircle } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { fetchJson } from "@/client/lib/fetch-json";
-import { AccountLayout, AccountPage, profileHeadingClass, profileLayoutClass } from "@/components/account/account-shell";
+import { AccountLayout, AccountPage, AccountPageIntro, profileLayoutClass } from "@/components/account/account-shell";
 import { useAuthenticatedSession } from "@/components/account/authenticated-route";
 import {
     AccountPrivacyAside,
     BotPreferencesSection,
     IdentitySection,
-    type BotSettings,
     type LoginMethod,
     type ProfileAction,
 } from "@/components/account/profile-sections";
-import { Eyebrow } from "@/components/marketing";
 import { formMessageClass } from "@/components/ui/action-styles";
 import { cn } from "@/lib/utils";
+import type { BotSettings } from "@/lib/bot-settings";
 
 export default function Profile() {
     const session = useAuthenticatedSession();
@@ -83,7 +82,7 @@ export default function Profile() {
     }, [linkLoading, loginMethods]);
 
     async function handleLinkProvider(provider: "discord" | "osu") {
-        setAction("linking");
+        setAction({ type: "linking", provider });
         setError(null);
         try {
             const data = await fetchJson<{ url?: string }>(`/api/account/providers/${provider}/link`, undefined, { method: "POST" });
@@ -103,7 +102,7 @@ export default function Profile() {
         )
             return;
 
-        setAction("unlinking");
+        setAction({ type: "unlinking", provider });
         setError(null);
         try {
             await fetchJson<{ unlinked: boolean }>(`/api/account/providers/${provider}`, undefined, {
@@ -121,7 +120,7 @@ export default function Profile() {
         event.preventDefault();
         if (!settings) return;
 
-        setAction("saving");
+        setAction({ type: "saving" });
         setError(null);
         setSaved(false);
         try {
@@ -142,12 +141,12 @@ export default function Profile() {
 
     return (
         <AccountPage>
-            <AccountLayout className={profileLayoutClass}>
-                <header className={profileHeadingClass}>
-                    <Eyebrow>Account</Eyebrow>
-                    <h1>Linked accounts and bot preferences</h1>
-                    <p>Manage the Discord and osu! identities connected to your Hanami account.</p>
-                </header>
+            <AccountLayout className={cn(profileLayoutClass, "max-w-280")}>
+                <AccountPageIntro
+                    eyebrow="Hanami account"
+                    title={displayName}
+                    description="Manage your linked accounts and bot preferences."
+                />
 
                 {error && (
                     <p className={cn(formMessageClass, "text-danger")} role="alert">
@@ -165,18 +164,20 @@ export default function Profile() {
                     onUnlink={handleUnlinkProvider}
                 />
 
-                {discordLinked && (
-                    <BotPreferencesSection
-                        settings={settings}
-                        loading={settingsLoading}
-                        action={action}
-                        saved={saved}
-                        onSettingsChange={setSettings}
-                        onSubmit={handleSaveSettings}
-                    />
-                )}
+                <div className={cn("mt-8 grid items-start gap-6", discordLinked && "min-[1000px]:grid-cols-[minmax(0,1fr)_17rem]")}>
+                    {discordLinked && (
+                        <BotPreferencesSection
+                            settings={settings}
+                            loading={settingsLoading}
+                            action={action}
+                            saved={saved}
+                            onSettingsChange={setSettings}
+                            onSubmit={handleSaveSettings}
+                        />
+                    )}
 
-                <AccountPrivacyAside />
+                    <AccountPrivacyAside compact={discordLinked} />
+                </div>
             </AccountLayout>
         </AccountPage>
     );

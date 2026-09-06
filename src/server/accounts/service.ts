@@ -1,4 +1,6 @@
-export const loginProviders = ["discord", "osu"] as const;
+import { isRecord } from "@/lib/record";
+
+const loginProviders = ["discord", "osu"] as const;
 export type LoginProvider = (typeof loginProviders)[number];
 
 export interface CanonicalUserRecord {
@@ -384,8 +386,4 @@ function createDatabaseAdapter(prisma: PrismaAccountSurface): CanonicalAccountDa
                 options,
             ) as Promise<T>,
     };
-}
-
-function isRecord(value: unknown): value is Record<string, CallableFunction | unknown> {
-    return typeof value === "object" && value !== null;
 }

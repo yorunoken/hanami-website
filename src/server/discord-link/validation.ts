@@ -1,4 +1,4 @@
-import { isRecord } from "../security/http";
+import { isRecord } from "@/lib/record";
 
 const DISCORD_SNOWFLAKE_PATTERN = /^\d{17,20}$/;
 const DISCORD_AVATAR_HOSTS = new Set(["cdn.discordapp.com", "media.discordapp.net"]);

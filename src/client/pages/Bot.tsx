@@ -1,6 +1,6 @@
 import { Bot as BotIcon, Github, Link2, SlidersHorizontal } from "lucide-react";
 
-import { ActionLink, Eyebrow, SectionIntro, StatusLine, TextLink } from "@/components/marketing";
+import { ActionLink, Eyebrow, SectionIntro, TextLink } from "@/components/marketing";
 import {
     HeroActions,
     ProductFootnote,
@@ -36,9 +36,8 @@ export default function Bot() {
             <ProductHero className="bg-[linear-gradient(125deg,#121015_0%,#171019_68%,#22111a_100%)]">
                 <div className={productHeroCopyClass}>
                     <Eyebrow>Discord bot</Eyebrow>
-                    <StatusLine status={product.status} detail="Slash and prefix commands" tone={product.tone} />
                     <h1 className={productTitleClass}>{product.name}</h1>
-                    <h2 className={productSubtitleClass}>osu! information where the conversation is already happening.</h2>
+                    <h2 className={productSubtitleClass}>Look up osu! players and scores in Discord.</h2>
                     <p className={productBodyClass}>
                         Look up players, scores, and beatmaps inside Discord. Link an osu! account once to use your own profile as the
                         default in supported commands.
@@ -66,13 +65,13 @@ export default function Bot() {
             <ProductSection aria-labelledby="bot-commands-title">
                 <SectionIntro
                     eyebrow="Commands"
-                    title="The common lookups, kept close."
-                    body="These commands are present in the bot repository today. Options vary by command."
+                    title="Player, score, and beatmap commands"
+                    body="Use these commands in your Discord server."
                 />
-                <div className="border-t border-border-strong" id="bot-commands-title">
+                <div className="grid gap-7" id="bot-commands-title">
                     {commands.map(([command, title, description]) => (
                         <article
-                            className="grid grid-cols-[9rem_1fr] items-start gap-6 border-b border-border py-[1.65rem] max-[600px]:grid-cols-1 max-[600px]:gap-y-[0.6rem]"
+                            className="grid grid-cols-[9rem_1fr] items-start gap-6 py-2 max-[600px]:grid-cols-1 max-[600px]:gap-y-[0.6rem]"
                             key={command}
                         >
                             <code className="font-mono text-[0.86rem] text-accent-soft">{command}</code>
@@ -88,10 +87,10 @@ export default function Bot() {
             <ProductSplit>
                 <div>
                     <Eyebrow>Optional account link</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Use your own profile without typing it every time.</h2>
+                    <h2 className={sectionHeadingClass}>Link your osu! account</h2>
                     <p className={sectionBodyClass}>
-                        Sign in to Hanami with Discord, authorize osu! identity access, then choose bot display preferences from the account
-                        page.
+                        Sign in with Discord and connect your osu! account. You can also change the bot’s display settings from your
+                        profile.
                     </p>
                     <TextLink className="mt-[1.8rem]" href="/profile">
                         Open account settings
@@ -100,7 +99,7 @@ export default function Bot() {
                 <ProductSteps>
                     <ProductStep icon={<Link2 aria-hidden="true" />}>
                         <strong>Connect</strong>
-                        <p>Hanami stores the Discord-to-osu! ID link in the bot database.</p>
+                        <p>Connect your osu! account to your Discord account.</p>
                     </ProductStep>
                     <ProductStep icon={<SlidersHorizontal aria-hidden="true" />}>
                         <strong>Choose defaults</strong>
@@ -108,7 +107,7 @@ export default function Bot() {
                     </ProductStep>
                     <ProductStep icon={<BotIcon aria-hidden="true" />}>
                         <strong>Use commands</strong>
-                        <p>The bot resolves supported commands against the linked account.</p>
+                        <p>Player commands use your linked osu! account by default.</p>
                     </ProductStep>
                 </ProductSteps>
             </ProductSplit>
@@ -118,7 +117,7 @@ export default function Bot() {
                     <strong>Privacy note:</strong> unlinking osu! removes the ID link; it does not delete the web account, bot settings, or
                     other service data.
                 </p>
-                <TextLink href="/legal/data-deletion">Understand data controls</TextLink>
+                <TextLink href="/legal/data-deletion">Account deletion details</TextLink>
             </ProductFootnote>
         </ProductPage>
     );

@@ -10,14 +10,22 @@ describe("public page rendering", () => {
 
         expect(html).toContain("<main>");
         expect(html).toContain("Hanami Bot");
-        expect(html).toContain("osu! information where the conversation is already happening.");
+        expect(html).toContain("Look up osu! players and scores in Discord.");
         expect(html).toContain('href="/legal/data-deletion"');
+    });
+
+    it("renders the homepage support section and its GitHub Sponsors destination", () => {
+        const html = injectRenderedPage(template, "/");
+
+        expect(html).toContain("Support Hanami");
+        expect(html).toContain("Sponsor on GitHub");
+        expect(html).toContain('href="https://github.com/sponsors/yorunoken"');
     });
 
     it("renders useful not-found content for a real HTTP 404 response", () => {
         const html = injectRenderedPage(template, "/not-a-real-page");
 
-        expect(html).toContain("This route does not exist.");
+        expect(html).toContain("This page does not exist.");
         expect(html).toContain('href="/"');
     });
 });

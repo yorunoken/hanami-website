@@ -5,8 +5,6 @@ export const secondaryActionClass = "border-border-strong bg-[rgba(10,9,12,0.28)
 
 export const compactActionClass = "min-h-10.5 w-fit text-[0.8rem] max-[600px]:w-full";
 
-export const dangerActionClass = "bg-danger text-[#1a0b0d] hover:bg-[#ffc3c6]";
-
 export const dangerOutlineActionClass =
     "border-danger/45 bg-transparent text-danger hover:border-danger hover:bg-danger/10 hover:text-[#ffc3c6]";
 

@@ -6,10 +6,9 @@ import { readOAuthError } from "@/client/lib/auth-navigation";
 import { clearPendingDeletionChallenge, prepareDeletionReauthentication, readPendingDeletionChallenge } from "@/client/lib/deletion-reauth";
 import { fetchJson } from "@/client/lib/fetch-json";
 import { routes } from "@/client/routes/paths";
-import { AccountLayout, AccountPage, profileHeadingClass, sectionHeadingClass } from "@/components/account/account-shell";
+import { AccountLayout, AccountPage, AccountPageIntro, AccountPanel, AccountPanelHeader } from "@/components/account/account-shell";
 import { useAuthenticatedSession } from "@/components/account/authenticated-route";
 import { ConfirmationPage, ErrorMessage } from "@/components/account/privacy-views";
-import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import { dangerOutlineActionClass, primaryActionClass } from "@/components/ui/action-styles";
 import { legalContacts } from "@/data/legal";
@@ -153,11 +152,12 @@ export default function AccountPrivacy() {
 
     return (
         <AccountPage>
-            <AccountLayout className="max-w-260 py-[clamp(3rem,6vw,5rem)]">
-                <header className={profileHeadingClass}>
-                    <Eyebrow>Account</Eyebrow>
-                    <h1>Privacy and account</h1>
-                    <p>Review the identity attached to this account or permanently delete the data this website can remove directly.</p>
+            <AccountLayout className="max-w-280 py-[clamp(3rem,6vw,5rem)]">
+                <AccountPageIntro
+                    eyebrow="Hanami account"
+                    title="Account privacy"
+                    description="View your account data, request help, or delete your Hanami account."
+                >
                     <nav
                         className="mt-6 flex flex-wrap gap-x-6 gap-y-[0.65rem] text-[0.82rem] [&_a]:text-muted [&_a]:underline [&_a]:decoration-white/40 [&_a]:underline-offset-[0.25em]"
                         aria-label="Account sections"
@@ -167,79 +167,85 @@ export default function AccountPrivacy() {
                             Privacy and deletion
                         </span>
                     </nav>
-                </header>
+                </AccountPageIntro>
 
                 {error && <ErrorMessage>{error}</ErrorMessage>}
 
-                <section className="mt-12" aria-labelledby="identity-title">
-                    <div className={sectionHeadingClass}>
-                        <h2 id="identity-title">Signed-in identity</h2>
-                        <p>This is the account affected by deletion.</p>
-                    </div>
-                    <dl className="grid grid-cols-1 min-[601px]:grid-cols-2 [&_dd]:mt-2 [&_dd]:text-base [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_small]:mt-1 [&_small]:block [&_small]:text-[0.78rem] [&_small]:leading-[1.55] [&_small]:text-muted [&>div]:border-b [&>div]:border-border [&>div]:py-6 min-[601px]:[&>div:first-child]:border-r min-[601px]:[&>div:first-child]:pr-8 min-[601px]:[&>div:last-child]:pl-8">
-                        <div>
-                            <dt>Discord sign-in</dt>
-                            <dd>{session.user.name || "Discord user"}</dd>
-                            <small>Hanami website identity and sessions</small>
-                        </div>
-                        <div>
-                            <dt>Hanami Bot osu! link</dt>
-                            <dd>
-                                {loading
-                                    ? "Checking…"
-                                    : osuLinkUnavailable
-                                      ? "Status unavailable"
-                                      : osuLink?.linked
-                                        ? osuLink.username || `osu! ID ${osuLink.banchoId}`
-                                        : "Not linked"}
-                            </dd>
-                            <small>{osuLink?.linked ? `osu! ID ${osuLink.banchoId}` : "Stored against the Discord account"}</small>
-                        </div>
-                    </dl>
-                </section>
-
-                <section
-                    className="mt-12 grid grid-cols-1 items-end gap-x-12 gap-y-6 border-b border-border-strong pb-10 min-[821px]:grid-cols-[minmax(0,1fr)_auto]"
-                    aria-labelledby="delete-title"
-                >
-                    <div>
-                        <Eyebrow>Permanent action</Eyebrow>
-                        <h2 className="text-2xl tracking-[-0.035em]" id="delete-title">
-                            Delete account
-                        </h2>
-                        <p className="mt-3 max-w-[68ch] text-[0.88rem] leading-[1.7] text-muted">
-                            Immediately deletes your Hanami website identity, provider link, and sessions, plus the Hanami Bot osu! link and
-                            preferences stored for this Discord account. This cannot be undone.
-                        </p>
-                    </div>
-                    <button
-                        className={cn(primaryActionClass, dangerOutlineActionClass, "min-[821px]:w-fit")}
-                        type="button"
-                        onClick={startAccountDeletion}
-                        disabled={loading || action === "starting"}
+                <div className="mt-8 grid gap-6 min-[960px]:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] min-[960px]:grid-rows-[auto_1fr]">
+                    <AccountPanel
+                        className="min-[960px]:row-span-2 min-[960px]:grid min-[960px]:grid-rows-subgrid min-[960px]:gap-0"
+                        aria-labelledby="identity-title"
                     >
-                        {action === "starting" ? "Preparing verification…" : "Delete account"}
-                    </button>
-                    <p className="max-w-[80ch] text-[0.78rem] leading-[1.6] text-muted min-[821px]:col-span-2">
-                        This does not delete your Discord or osu! provider accounts, a separate osu!guessr profile, or records that must
-                        remain temporarily in operational logs where justified. The repositories do not document a production backup
-                        schedule. A Discord sign-in from the last 15 minutes and typed confirmation are required.
-                    </p>
-                </section>
+                        <AccountPanelHeader
+                            id="identity-title"
+                            title="Account data"
+                            description="The Hanami account and connected osu! data affected by deletion."
+                        />
+                        <dl className="grid gap-8 px-[clamp(1.35rem,3vw,2rem)] py-5 [&_dd]:mt-2 [&_dd]:text-base [&_dd]:font-bold [&_dd]:text-white [&_dt]:font-mono [&_dt]:text-[0.68rem] [&_dt]:tracking-[0.08em] [&_dt]:text-quiet [&_dt]:uppercase [&_small]:mt-1 [&_small]:block [&_small]:text-[0.78rem] [&_small]:leading-[1.55] [&_small]:text-muted">
+                            <div>
+                                <dt>Current Hanami account</dt>
+                                <dd>{session.user.name || "Hanami user"}</dd>
+                                <small>Your Hanami profile, linked accounts, and sign-in sessions</small>
+                            </div>
+                            <div>
+                                <dt>Connected osu! data</dt>
+                                <dd>
+                                    {loading
+                                        ? "Checking…"
+                                        : osuLinkUnavailable
+                                          ? "Status unavailable"
+                                          : osuLink?.linked
+                                            ? osuLink.username || `osu! ID ${osuLink.banchoId}`
+                                            : "Not connected"}
+                                </dd>
+                                <small>{osuLink?.linked ? `osu! ID ${osuLink.banchoId}` : "No linked osu! identity was found"}</small>
+                            </div>
+                        </dl>
+                    </AccountPanel>
 
-                <section className="mt-12 grid grid-cols-1 gap-4 pb-8 min-[821px]:grid-cols-2 min-[821px]:gap-10">
-                    <div>
-                        <h2 className="text-lg tracking-[-0.025em]">Other privacy requests</h2>
-                        <p className="mt-2 text-[0.82rem] leading-[1.6] text-muted">
-                            Access, correction, restriction, objection, or lost access.
-                        </p>
-                    </div>
-                    <p className="text-[0.82rem] leading-[1.65] text-muted [&_a]:text-white [&_a]:underline [&_a]:decoration-white/45 [&_a]:underline-offset-[0.22em]">
-                        Email <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> if you cannot sign in or need help
-                        with data outside the immediate deletion scope. Never send passwords, tokens, cookies, API keys, or backup codes.
-                        See the <PrefetchLink to={routes.legalDataDeletion}>data deletion details</PrefetchLink>.
+                    <AccountPanel
+                        className="border-danger/35 min-[960px]:row-span-2 min-[960px]:grid min-[960px]:grid-rows-subgrid min-[960px]:gap-0"
+                        aria-labelledby="delete-title"
+                    >
+                        <AccountPanelHeader
+                            id="delete-title"
+                            title="Delete account"
+                            description="Permanently remove this Hanami account and the linked data listed here."
+                        />
+                        <div className="p-[clamp(1.35rem,3vw,2rem)]">
+                            <p className="text-[0.84rem] leading-[1.7] text-muted">
+                                This deletes your Hanami profile, linked sign-in methods, sessions, and Hanami Bot preferences. It cannot be
+                                undone.
+                            </p>
+                            <button
+                                className={cn(primaryActionClass, dangerOutlineActionClass, "mt-6 w-full justify-center")}
+                                type="button"
+                                onClick={startAccountDeletion}
+                                disabled={loading || action === "starting"}
+                            >
+                                {action === "starting" ? "Preparing verification…" : "Delete account"}
+                            </button>
+                            <p className="mt-5 text-[0.74rem] leading-[1.6] text-quiet">
+                                Your Discord and osu! accounts are not deleted. A recent Discord sign-in and typed confirmation may be
+                                required.
+                            </p>
+                        </div>
+                    </AccountPanel>
+                </div>
+
+                <AccountPanel className="mt-6" aria-labelledby="requests-title">
+                    <AccountPanelHeader
+                        id="requests-title"
+                        title="Other privacy requests"
+                        description="For access, correction, restriction, objection, or an account you can no longer reach."
+                    />
+                    <p className="p-[clamp(1.35rem,3vw,2rem)] text-[0.84rem] leading-[1.7] text-muted [&_a]:text-white [&_a]:underline [&_a]:decoration-white/45 [&_a]:underline-offset-[0.22em]">
+                        Email <a href={`mailto:${legalContacts.privacy}`}>{legalContacts.privacy}</a> for help with data outside immediate
+                        account deletion. Never send passwords, tokens, cookies, API keys, or backup codes. Read the{" "}
+                        <PrefetchLink to={routes.legalDataDeletion}>data deletion details</PrefetchLink> for what is deleted from each
+                        service.
                     </p>
-                </section>
+                </AccountPanel>
             </AccountLayout>
         </AccountPage>
     );

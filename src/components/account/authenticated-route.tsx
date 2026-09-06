@@ -5,7 +5,7 @@ import { createProtectedLoginPath } from "@/client/lib/auth-navigation";
 import { AccountLayout, AccountPage, profileLayoutClass } from "@/components/account/account-shell";
 import { Eyebrow } from "@/components/marketing";
 
-export type AuthenticatedSession = NonNullable<ReturnType<typeof useSession>["data"]>;
+type AuthenticatedSession = NonNullable<ReturnType<typeof useSession>["data"]>;
 
 export default function AuthenticatedRoute() {
     const { data: session, isPending } = useSession();
@@ -31,10 +31,10 @@ export default function AuthenticatedRoute() {
                             aria-hidden="true"
                         />
                     </section>
-                    <div className="mt-10 border-t border-border-strong" aria-hidden="true">
+                    <div className="mt-10" aria-hidden="true">
                         <div className="grid grid-cols-1 min-[821px]:grid-cols-2">
-                            <div className="min-h-64 animate-pulse border-b border-border bg-white/[0.018] motion-reduce:animate-none min-[821px]:border-r" />
-                            <div className="min-h-64 animate-pulse border-b border-border bg-white/[0.012] motion-reduce:animate-none" />
+                            <div className="min-h-64 animate-pulse bg-white/[0.018] motion-reduce:animate-none min-[821px]:border-r" />
+                            <div className="min-h-64 animate-pulse bg-white/[0.012] motion-reduce:animate-none" />
                         </div>
                     </div>
                 </AccountLayout>

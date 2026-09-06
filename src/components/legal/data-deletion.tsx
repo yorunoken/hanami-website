@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-
+import { routes } from "@/client/routes/paths";
+import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import { legalContacts } from "@/data/legal";
 import { LegalDocument, LegalSection, LegalTable, type TocItem } from "./legal-document";
 
@@ -13,9 +13,15 @@ const toc: readonly TocItem[] = [
 export default function DataDeletion() {
     return (
         <LegalDocument
-            title="Data deletion and account controls"
-            summary="What Hanami deletes immediately from the signed-in account, what remains separate, and how to request help with other data."
+            title="Account and data deletion"
+            summary="How to delete your Hanami account, what is deleted with it, and how to request deletion of other data."
             toc={toc}
+            atAGlance={[
+                "Signing out ends a session; disconnecting removes one sign-in method; neither deletes the Hanami account.",
+                "Deleting your account removes your Hanami profile, linked sign-in methods, and the Bot data listed below.",
+                "Provider accounts, separate osu!guessr profiles, and some operational records remain separate.",
+                "Email privacy@yorunoken.com if you need help deleting other data.",
+            ]}
         >
             <LegalSection id="differences" title="1. Account controls">
                 <LegalTable>
@@ -33,23 +39,26 @@ export default function DataDeletion() {
                             <td>Does not remove account or product data.</td>
                         </tr>
                         <tr>
-                            <td>Disconnect osu!</td>
-                            <td>Clears the Discord-to-osu! ID link used by Hanami Bot.</td>
-                            <td>Does not delete other account data or either provider account.</td>
+                            <td>Disconnect a sign-in method</td>
+                            <td>Removes that Discord or osu! identity from the current Hanami account.</td>
+                            <td>The final sign-in method cannot be removed. Provider accounts are never deleted.</td>
                         </tr>
                         <tr>
                             <td>Delete Hanami account</td>
-                            <td>Immediately removes the website identity and Discord-keyed Bot account data described below.</td>
+                            <td>
+                                Immediately removes the Hanami account, its connected identities, and Discord-keyed Bot data described
+                                below.
+                            </td>
                             <td>Does not delete provider accounts, a separate osu!guessr profile, or operational logs.</td>
                         </tr>
                     </tbody>
                 </LegalTable>
             </LegalSection>
 
-            <LegalSection id="immediate" title="2. Immediate signed-in deletion">
+            <LegalSection id="immediate" title="2. Delete your account">
                 <ol>
                     <li>
-                        Open <Link to="/profile/privacy">account privacy</Link> and review the signed-in identity.
+                        Open <PrefetchLink to={routes.profilePrivacy}>account privacy</PrefetchLink> and review the signed-in account.
                     </li>
                     <li>Choose delete account. Hanami requires a Discord sign-in from approximately the last 15 minutes.</li>
                     <li>
@@ -59,7 +68,7 @@ export default function DataDeletion() {
                 </ol>
                 <p>The immediate action deletes:</p>
                 <ul>
-                    <li>the Better Auth website user, Discord provider link, and all website sessions;</li>
+                    <li>the Hanami Web user, all connected provider records and osu! profile data, and all website sessions;</li>
                     <li>the Hanami Bot user row keyed to that Discord account, including its linked osu! ID and saved preferences; and</li>
                     <li>short-lived deletion reauthentication records and any legacy deletion-request record tied to the website user.</li>
                 </ul>

@@ -1,3 +1,4 @@
+import { isRecord } from "@/lib/record";
 import type { PrismaClient } from "../../generated/prisma/web/client";
 
 import type { DiscordLinkRequest } from "./validation";
@@ -127,8 +128,4 @@ function hasMariaDbTransactionConflict(value: Record<string, unknown>): boolean 
     if (value.kind === "TransactionWriteConflict") return true;
     if (value.originalCode === "1020" || value.originalCode === "1213" || value.code === 1020 || value.code === 1213) return true;
     return isRecord(value.cause) && hasMariaDbTransactionConflict(value.cause);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
 }

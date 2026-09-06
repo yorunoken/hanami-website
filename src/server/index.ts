@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 
+import { legacyRedirects } from "@/client/routes/paths";
 import { getPageSeo, isKnownClientRoute } from "@/lib/seo";
 
 import { apiRoutes } from "./api";
@@ -8,12 +9,7 @@ import { injectRenderedPage } from "./page-renderer";
 import { injectSeoHead } from "./seo";
 
 const PORT = process.env.PORT ?? 3000;
-const legacyLegalRoutes = new Map([
-    ["/privacy", "/legal/privacy"],
-    ["/privacy-policy", "/legal/privacy"],
-    ["/terms", "/legal/terms"],
-    ["/terms-of-service", "/legal/terms"],
-]);
+const legacyLegalRoutes = new Map<string, string>(Object.entries(legacyRedirects));
 
 const app = new Elysia().use(apiRoutes);
 

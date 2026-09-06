@@ -4,7 +4,7 @@ export const INDEX_ROBOTS_DIRECTIVE = "index, follow, max-image-preview:large, m
 export const NOINDEX_ROBOTS_DIRECTIVE = "noindex, nofollow";
 
 export const notFoundMetadata: RouteMetadata = {
-    title: "Page not found — Hanami",
+    title: "Page not found | Hanami",
     description: siteConfig.description,
     indexable: false,
 };
@@ -117,5 +117,5 @@ function createBreadcrumbData(pathname: string, canonicalUrl: string): Record<st
 }
 
 function getBreadcrumbLabel(title: string): string {
-    return title.split(" — ")[0] ?? title;
+    return title.split(" | ")[0] ?? title;
 }

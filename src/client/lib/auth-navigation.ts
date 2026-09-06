@@ -57,7 +57,7 @@ export function createLoginPath(returnTo: string = routes.profile): string {
     return `${routes.login}?returnTo=${encodeURIComponent(safeReturnTo)}`;
 }
 
-export function currentInternalLocation(location: Pick<Location, "pathname" | "search" | "hash">): string {
+function currentInternalLocation(location: Pick<Location, "pathname" | "search" | "hash">): string {
     return validateReturnTo(`${location.pathname}${location.search}${location.hash}`);
 }
 

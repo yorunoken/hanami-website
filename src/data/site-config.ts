@@ -7,7 +7,7 @@ export const siteConfig = {
     links: {
         organization: "https://github.com/hanami-osu",
         community: "https://discord.gg/RcGjBZkDP6",
-        support: "https://yorunoken.com#support",
+        support: "https://github.com/sponsors/yorunoken",
         discordPrivacy: "https://discord.com/privacy",
         osuPrivacy: "https://osu.ppy.sh/legal/en/Privacy",
         cloudflarePrivacy: "https://www.cloudflare.com/privacypolicy/",
@@ -22,11 +22,8 @@ export type ProductKey = "bot" | "osuguessr" | "companion" | "map-analyzer";
 export interface ProductSummary {
     key: ProductKey;
     name: string;
-    shortName: string;
     route: InternalRoutePath;
-    status: string;
     category: string;
-    headline: string;
     description: string;
     action: string;
     tone: "rose" | "violet" | "cyan" | "lime";
@@ -41,13 +38,10 @@ export const products: readonly ProductSummary[] = [
     {
         key: "bot",
         name: "Hanami Bot",
-        shortName: "Bot",
         route: routes.bot,
-        status: "Available",
         category: "Discord bot",
-        headline: "Bring osu! into the conversation.",
         description: "Profiles, recent plays, top scores, beatmaps, and performance tools inside Discord.",
-        action: "Meet Hanami Bot",
+        action: "View Hanami Bot",
         tone: "rose",
         links: {
             primary:
@@ -58,13 +52,10 @@ export const products: readonly ProductSummary[] = [
     {
         key: "osuguessr",
         name: "osu!guessr",
-        shortName: "osu!guessr",
         route: routes.osuguessr,
-        status: "Live",
         category: "Browser game",
-        headline: "How well do you know your maps?",
         description: "Identify beatmaps from their backgrounds, audio clips, or skin screenshots.",
-        action: "Explore the game",
+        action: "View osu!guessr",
         tone: "violet",
         links: {
             primary: "https://osuguessr.com",
@@ -74,12 +65,9 @@ export const products: readonly ProductSummary[] = [
     {
         key: "companion",
         name: "Hanami Companion",
-        shortName: "Companion",
         route: routes.companion,
-        status: "Development",
         category: "Desktop app",
-        headline: "A local bridge, still taking shape.",
-        description: "An unfinished public Tauri prototype for local osu! tracking and tosu lifecycle control.",
+        description: "An osu! desktop app for tracking plays through tosu. Still in development.",
         action: "See the prototype",
         tone: "cyan",
         links: {
@@ -90,11 +78,8 @@ export const products: readonly ProductSummary[] = [
     {
         key: "map-analyzer",
         name: "Map Analyzer",
-        shortName: "Analyzer",
         route: routes.mapAnalyzer,
-        status: "Published",
         category: "Rust library",
-        headline: "Inspect the map behind the play.",
         description: "Inspect stream and jump patterns from local .osu files in Rust.",
         action: "Open Map Analyzer",
         tone: "lime",
@@ -126,101 +111,100 @@ export interface RouteMetadata {
 
 export const routeMetadata = {
     "/": {
-        title: "Hanami — osu! tools, games, and community projects",
-        description:
-            "Explore Hanami Bot, osu!guessr, Hanami Companion, and Map Analyzer—four osu!-related tools and experiences in one independent ecosystem.",
+        title: "Hanami | osu! tools and games",
+        description: "Hanami Bot, osu!guessr, Hanami Companion, and Map Analyzer: osu! tools and games.",
         indexable: true,
     },
     "/bot": {
-        title: "Hanami Bot — osu! in Discord",
+        title: "Hanami Bot | osu! Discord bot",
         description:
             "Bring osu! profiles, recent plays, top scores, beatmap details, and performance tools into your Discord server with Hanami Bot.",
         indexable: true,
     },
     "/osuguessr": {
-        title: "osu!guessr — the osu! guessing game",
+        title: "osu!guessr | Hanami",
         description: "Identify osu! beatmaps from backgrounds, audio clips, and skin screenshots in classic or death mode.",
         indexable: true,
         socialImage: "/products/osuguessr-hero.webp",
     },
     "/companion": {
-        title: "Hanami Companion — desktop prototype",
-        description: "Follow the unfinished Hanami Companion prototype for local osu! tracking and tosu control.",
+        title: "Hanami Companion | osu! desktop app",
+        description: "Track osu! plays with Hanami Companion. The app is still in development.",
         indexable: true,
         socialImage: "/products/companion-icon.png",
     },
     "/map-analyzer": {
-        title: "Map Analyzer — osu! beatmap analysis for Rust",
+        title: "Map Analyzer | osu! beatmap analysis",
         description: "Analyze stream and jump patterns in .osu files with the published osu-map-analyzer Rust library.",
         indexable: true,
     },
     "/legal": {
-        title: "Legal center — Hanami",
-        description: "Privacy, terms, cookies, and data-request information for the Hanami ecosystem.",
+        title: "Legal center | Hanami",
+        description: "Privacy, terms, cookies, and account deletion for Hanami services.",
         indexable: true,
     },
     "/legal/privacy": {
-        title: "Privacy policy — Hanami",
-        description: "How the Hanami ecosystem processes account, service, and technical data.",
+        title: "Privacy policy | Hanami",
+        description: "How Hanami services collect and use your data.",
         indexable: true,
     },
     "/legal/terms": {
-        title: "Terms of service — Hanami",
-        description: "Terms for using the hosted Hanami ecosystem.",
+        title: "Terms of service | Hanami",
+        description: "Rules for using Hanami services.",
         indexable: true,
     },
     "/legal/cookies": {
-        title: "Cookie policy — Hanami",
-        description: "Cookies and browser storage used across the Hanami ecosystem.",
+        title: "Cookie policy | Hanami",
+        description: "Cookies and browser storage used by Hanami services.",
         indexable: true,
     },
     "/legal/data-deletion": {
-        title: "Data deletion — Hanami",
+        title: "Data deletion | Hanami",
         description: "How sign-out, unlinking, immediate account deletion, and other privacy requests differ in Hanami.",
         indexable: true,
     },
     "/privacy": {
-        title: "Privacy policy — Hanami",
+        title: "Privacy policy | Hanami",
         description: "Redirecting to the current Hanami privacy policy.",
         indexable: false,
     },
     "/privacy-policy": {
-        title: "Privacy policy — Hanami",
+        title: "Privacy policy | Hanami",
         description: "Redirecting to the current Hanami privacy policy.",
         indexable: false,
     },
     "/terms": {
-        title: "Terms of service — Hanami",
+        title: "Terms of service | Hanami",
         description: "Redirecting to the current Hanami terms of service.",
         indexable: false,
     },
     "/terms-of-service": {
-        title: "Terms of service — Hanami",
+        title: "Terms of service | Hanami",
         description: "Redirecting to the current Hanami terms of service.",
         indexable: false,
     },
     "/profile": {
-        title: "Account — Hanami",
-        description: "Manage your linked Hanami and osu! account settings.",
+        title: "Account | Hanami",
+        description: "Manage your linked Discord and osu! accounts and bot preferences.",
         indexable: false,
     },
     "/profile/privacy": {
-        title: "Account privacy and deletion — Hanami",
-        description: "Review the signed-in identity or permanently delete website and Hanami Bot account data.",
+        title: "Account privacy | Hanami",
+        description: "View your account data and delete your Hanami account.",
         indexable: false,
     },
     "/profile/privacy/confirm": {
-        title: "Confirm account deletion — Hanami",
+        title: "Confirm account deletion | Hanami",
         description: "Permanently delete website and Hanami Bot account data after fresh Discord authentication.",
         indexable: false,
     },
     "/login": {
-        title: "Sign in — Hanami",
-        description: "Continue to Discord to access your Hanami account.",
+        title: "Sign in | Hanami",
+        description: "Sign in to Hanami with Discord or osu!.",
         indexable: false,
     },
     "/link-error": {
-        title: "Link unavailable — Hanami",
+        title: "Link unavailable | Hanami",
         description: "The Discord account link expired or was already used.",
         indexable: false,
     },

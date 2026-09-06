@@ -15,7 +15,7 @@ export default function Footer() {
             <div
                 className={cn(
                     siteContainerClass,
-                    "grid gap-16 py-[clamp(3.5rem,6vw,5.5rem)] min-[1081px]:grid-cols-[minmax(240px,0.8fr)_minmax(430px,1fr)]",
+                    "grid gap-12 py-[clamp(3rem,5vw,4.5rem)] min-[1081px]:grid-cols-[minmax(260px,0.8fr)_minmax(430px,1fr)]",
                 )}
             >
                 <div>
@@ -28,12 +28,12 @@ export default function Footer() {
                         <img className="size-12 object-contain" src="/hanami-transparent.png" alt="" width="54" height="54" />
                         <span>Hanami</span>
                     </PrefetchLink>
-                    <p className="mt-4 max-w-[35ch] text-[0.82rem] leading-[1.65] text-muted">
-                        Open-source osu! tools, a browser game, and work in progress.
+                    <p className="mt-4 max-w-[35ch] text-[0.84rem] leading-[1.65] text-muted">
+                        osu! tools, games, and your Hanami account.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 min-[601px]:grid-cols-3 [&>div]:flex [&>div]:flex-col [&>div]:items-start [&>div]:gap-3">
+                <div className="grid grid-cols-2 gap-8 [&>div]:flex [&>div]:flex-col [&>div]:items-start [&>div]:gap-3">
                     <div>
                         <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">Projects</h2>
                         {products.map((product) => (
@@ -51,28 +51,7 @@ export default function Footer() {
                             Community <ArrowUpRight aria-hidden="true" />
                         </a>
                         <a className={footerLinkClass} href={siteConfig.links.support} target="_blank" rel="noreferrer">
-                            Support <ArrowUpRight aria-hidden="true" />
-                        </a>
-                    </div>
-                    <div>
-                        <h2 className="mb-[0.3rem] font-mono text-[0.65rem] tracking-[0.08em] text-quiet uppercase">Legal</h2>
-                        <PrefetchLink className={footerLinkClass} to={routes.legal} prefetch="intent">
-                            Legal center
-                        </PrefetchLink>
-                        <PrefetchLink className={footerLinkClass} to={routes.legalPrivacy} prefetch="intent">
-                            Privacy
-                        </PrefetchLink>
-                        <PrefetchLink className={footerLinkClass} to={routes.legalTerms} prefetch="intent">
-                            Terms
-                        </PrefetchLink>
-                        <PrefetchLink className={footerLinkClass} to={routes.legalCookies} prefetch="intent">
-                            Cookies
-                        </PrefetchLink>
-                        <PrefetchLink className={footerLinkClass} to={routes.legalDataDeletion} prefetch="intent">
-                            Data deletion
-                        </PrefetchLink>
-                        <a className={footerLinkClass} href="https://github.com/hanami-osu/web" target="_blank" rel="noreferrer">
-                            Source code <ArrowUpRight aria-hidden="true" />
+                            Support us <ArrowUpRight aria-hidden="true" />
                         </a>
                     </div>
                 </div>
@@ -81,14 +60,17 @@ export default function Footer() {
             <div
                 className={cn(
                     siteContainerClass,
-                    "grid grid-cols-1 items-center gap-y-[0.6rem] border-t border-border py-[1.35rem] text-[0.68rem] leading-normal text-quiet min-[821px]:grid-cols-[auto_1fr_auto] min-[821px]:gap-x-8",
+                    "grid grid-cols-1 items-center gap-y-[0.6rem] py-[1.35rem] text-[0.68rem] leading-normal text-quiet min-[821px]:grid-cols-[auto_1fr_auto] min-[821px]:gap-x-8",
                 )}
             >
                 <span>© {new Date().getFullYear()} Hanami</span>
                 <span className="min-[821px]:text-center">
                     An independent community project. Not affiliated with or endorsed by osu! or ppy Pty Ltd.
                 </span>
-                <div className="flex gap-4 [&_a]:text-muted [&_a]:underline-offset-[0.2em]">
+                <div className="flex flex-wrap gap-x-4 gap-y-2 [&_a]:text-muted [&_a]:underline-offset-[0.2em]">
+                    <PrefetchLink to={routes.legal} prefetch="intent">
+                        Legal center
+                    </PrefetchLink>
                     <PrefetchLink to={routes.legalPrivacy} prefetch="intent">
                         Privacy
                     </PrefetchLink>

@@ -52,10 +52,6 @@ export async function signInWithOsu(returnTo?: string, execute: OsuSignInOperati
     return result;
 }
 
-export async function signInWithProvider(provider: IdentityProvider, returnTo?: string) {
-    return provider === "discord" ? signInWithDiscord(returnTo) : signInWithOsu(returnTo);
-}
-
 export async function reauthenticateWithDiscord(callbackURL: string, errorCallbackURL: string) {
     const result = await signIn.social({
         provider: "discord",

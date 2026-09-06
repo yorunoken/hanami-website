@@ -1,4 +1,4 @@
-import { Github } from "lucide-react";
+import { Github, Heart } from "lucide-react";
 
 import Footer from "@/components/footer";
 import Header from "@/components/header";
@@ -20,7 +20,7 @@ export default function Home() {
             <Header />
 
             <main>
-                <section className="relative min-h-[min(820px,calc(100svh-72px))] overflow-hidden border-b border-border max-[820px]:min-h-180 max-[600px]:min-h-165">
+                <section className="relative min-h-[min(700px,calc(100svh-72px))] overflow-hidden border-b border-border max-[820px]:min-h-155 max-[600px]:min-h-145">
                     <div className="absolute inset-0" aria-hidden="true">
                         <img
                             className="size-full object-cover object-[50%_38%] opacity-55"
@@ -39,7 +39,7 @@ export default function Home() {
                     <div
                         className={cn(
                             siteContainerClass,
-                            "relative z-10 grid min-h-[min(820px,calc(100svh-72px))] grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)] items-center gap-[clamp(2rem,7vw,7rem)] py-16 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-180 max-[820px]:grid-cols-1 max-[820px]:content-center max-[820px]:py-12 max-[600px]:min-h-165",
+                            "relative z-10 grid min-h-[min(700px,calc(100svh-72px))] grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)] items-center gap-[clamp(2rem,7vw,7rem)] py-16 max-[1080px]:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] max-[1080px]:gap-8 max-[820px]:min-h-155 max-[820px]:grid-cols-1 max-[820px]:content-center max-[820px]:py-12 max-[600px]:min-h-145",
                         )}
                     >
                         <div className="relative z-20 max-w-180 pr-0 motion-safe:animate-[reveal-up_500ms_80ms_cubic-bezier(0.2,0.7,0.2,1)_both] min-[601px]:max-[820px]:pr-[10%]">
@@ -47,8 +47,7 @@ export default function Home() {
                                 Hanami
                             </h1>
                             <p className="mt-[1.8rem] max-w-165 text-[1.08rem] leading-[1.45] tracking-tight text-[#e9e4e9] min-[601px]:text-[clamp(1.2rem,2.2vw,1.65rem)]">
-                                A small family of osu! projects: a Discord bot, a guessing game, a desktop prototype, and a Rust analysis
-                                toolkit.
+                                An ecosystem for osu! players to enjoy, in and out of the game.
                             </p>
                             <div className="mt-8 flex flex-wrap gap-3 max-[600px]:flex-col max-[600px]:items-stretch">
                                 <ActionLink href="#projects">Browse the projects</ActionLink>
@@ -75,26 +74,22 @@ export default function Home() {
                 </section>
 
                 <section className={cn(siteContainerClass, sectionSpacingClass)} id="projects" aria-labelledby="projects-title">
-                    <header className="mb-10 grid grid-cols-1 items-end gap-x-20 gap-y-6 min-[601px]:mb-18 min-[821px]:grid-cols-[minmax(0,0.85fr)_minmax(280px,0.55fr)]">
-                        <Eyebrow className="mb-0 min-[821px]:col-span-2 min-[821px]:-mb-2">Projects</Eyebrow>
+                    <header className="mb-10 min-[601px]:mb-12">
+                        <Eyebrow>Projects</Eyebrow>
                         <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white" id="projects-title">
-                            Choose the thing you need.
+                            Our projects
                         </h2>
-                        <p className="max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">
-                            Each project has its own purpose and release state. The product pages cover the details without pretending the
-                            prototypes are finished.
-                        </p>
                     </header>
 
-                    <div className="border-t border-border-strong">
+                    <div className="grid gap-4 max-[600px]:gap-10">
                         {products.map((product) => (
                             <article
-                                className="grid min-h-37.5 grid-cols-[minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 border-b border-border max-[1080px]:grid-cols-[minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-1 max-[600px]:items-start max-[600px]:gap-y-3 max-[600px]:py-6"
+                                className="grid min-h-24 grid-cols-[minmax(180px,0.65fr)_minmax(260px,1fr)_auto] items-center gap-x-10 gap-y-6 max-[1080px]:grid-cols-[minmax(170px,0.55fr)_1fr] max-[600px]:min-h-0 max-[600px]:grid-cols-1 max-[600px]:items-start max-[600px]:gap-y-3"
                                 key={product.key}
                             >
                                 <div>
                                     <p className="mb-[0.45rem] font-mono text-[0.68rem] tracking-[0.06em] text-quiet uppercase">
-                                        {product.category} · {product.status}
+                                        {product.category}
                                     </p>
                                     <h3
                                         className={cn(
@@ -133,16 +128,48 @@ export default function Home() {
                             height="1080"
                         />
                         <div>
-                            <Eyebrow>Open development</Eyebrow>
+                            <Eyebrow>Open source</Eyebrow>
                             <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white">
-                                Useful on its own. Connected only when it helps.
+                                Find us on GitHub
                             </h2>
                             <p className="mt-5 max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">
-                                Published Hanami code, issues, and project history are public. Live products, released packages, and
-                                in-development prototypes are labeled separately so their current state is clear.
+                                You can read the code, report bugs, and contribute to Hanami on GitHub.
                             </p>
                             <TextLink className="mt-[1.8rem]" href={siteConfig.links.organization} external>
                                 Browse the repositories
+                            </TextLink>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    className={cn(
+                        siteContainerClass,
+                        "grid grid-cols-1 gap-8 py-[clamp(4rem,7vw,6.5rem)] min-[821px]:grid-cols-[minmax(280px,0.7fr)_minmax(360px,1fr)] min-[821px]:items-start min-[821px]:gap-[clamp(3rem,9vw,9rem)]",
+                    )}
+                    id="support"
+                    aria-labelledby="support-title"
+                >
+                    <div>
+                        <Eyebrow>Support us</Eyebrow>
+                        <h2 className="text-[clamp(2rem,4.2vw,3.8rem)] leading-[1.04] tracking-[-0.055em] text-white" id="support-title">
+                            Support Hanami.
+                        </h2>
+                    </div>
+                    <div>
+                        <p className="max-w-[62ch] text-[clamp(1rem,1.4vw,1.1rem)] leading-7 text-muted">
+                            If you enjoy using Hanami, you can support development on GitHub Sponsors. Contributions help pay for hosting
+                            and maintenance.
+                        </p>
+                        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4 max-[600px]:flex-col max-[600px]:items-stretch">
+                            <ActionLink href={siteConfig.links.support} external>
+                                <Heart aria-hidden="true" /> Sponsor on GitHub
+                            </ActionLink>
+                            <TextLink href={siteConfig.links.organization} external>
+                                View the projects
+                            </TextLink>
+                            <TextLink href={siteConfig.links.community} external>
+                                Join the community
                             </TextLink>
                         </div>
                     </div>

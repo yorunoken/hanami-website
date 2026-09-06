@@ -16,7 +16,7 @@ describe("server-rendered SEO head", () => {
     it("writes route-specific metadata into the initial HTML", () => {
         const html = injectSeoHead(template, "/bot");
 
-        expect(html).toContain("<title>Hanami Bot — osu! in Discord</title>");
+        expect(html).toContain("<title>Hanami Bot | osu! Discord bot</title>");
         expect(html).toContain('href="https://hanami.yorunoken.com/bot"');
         expect(html).toContain('content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"');
         expect(html).toContain('id="hanami-structured-data"');

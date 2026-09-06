@@ -15,15 +15,21 @@ const toc: readonly TocItem[] = [
 export default function CookiePolicy() {
     return (
         <LegalDocument
-            title="Cookie and browser-storage policy"
-            summary="A code-based inventory of authentication cookies, local storage, session storage, and third-party scripts across the Hanami website and osu!guessr."
+            title="Cookies and browser storage"
+            summary="Cookies, browser storage, and third-party scripts used by Hanami Web and osu!guessr."
             toc={toc}
+            atAGlance={[
+                "Hanami Web uses necessary authentication cookies for signed-in sessions.",
+                "osu!guessr uses its own authentication cookies and browser storage.",
+                "No advertising or consent cookie is added by the application code we reviewed.",
+                "You can clear browser storage or block non-essential analytics requests.",
+            ]}
         >
             <LegalSection id="meaning" title="1. What this notice covers">
                 <p>
                     Cookies are small values a site asks a browser to retain. This notice also covers local storage and session storage.
-                    Names below reflect the audited library defaults; local development omits secure prefixes, and large values can be split
-                    into numbered cookie chunks.
+                    Names below reflect the library defaults we reviewed; local development omits secure prefixes, and large values can be
+                    split into numbered cookie chunks.
                 </p>
             </LegalSection>
 
@@ -58,8 +64,8 @@ export default function CookiePolicy() {
                 </LegalTable>
                 <p>
                     The current configuration does not enable Better Auth’s optional session-data cookie cache or account-data cookie.
-                    Hanami’s osu! linking state and bot-issued account links are stored server-side rather than in an OAuth-state cookie.
-                    Better Auth may use its server-side verification records during Discord sign-in.
+                    Hanami’s provider-linking state and bot-issued account links are stored server-side rather than in an OAuth-state
+                    cookie. Better Auth may use its server-side verification records during Discord or osu! sign-in.
                 </p>
                 <p>
                     Account deletion may require a new Discord OAuth round trip. It uses Better Auth’s existing necessary OAuth/session
@@ -134,7 +140,7 @@ export default function CookiePolicy() {
                             <td>First-party language preference written by osu!guessr.</td>
                             <td>About 1 year.</td>
                             <td>
-                                Functional. SameSite=Lax, Path=/; JavaScript-readable. Secure is not set explicitly in the audited code.
+                                Functional. SameSite=Lax, Path=/; JavaScript-readable. Secure is not set explicitly in the code we reviewed.
                             </td>
                         </tr>
                     </tbody>
@@ -203,7 +209,7 @@ export default function CookiePolicy() {
                     </tbody>
                 </LegalTable>
                 <p>
-                    No application use of IndexedDB was found in the audited Hanami web or osu!guessr source. Apart from the deletion
+                    No application use of IndexedDB was found in the Hanami Web or osu!guessr code we reviewed. Apart from the deletion
                     challenge above, no local or session storage use was found in the main Hanami website source.
                 </p>
             </LegalSection>
@@ -229,7 +235,7 @@ export default function CookiePolicy() {
                     analytics cookies. Request and device information such as IP address and user agent may be processed to derive aggregate
                     session and location metrics, while raw IP addresses are not intended to be stored.
                 </p>
-                <p>No advertising script, tracking pixel, or third-party iframe is loaded by the audited application source.</p>
+                <p>No advertising script, tracking pixel, or third-party iframe is loaded by the application code we reviewed.</p>
             </LegalSection>
 
             <LegalSection id="choices" title="6. Choices and consent">

@@ -1,6 +1,6 @@
 import { Github, Headphones, Image as ImageIcon, Paintbrush } from "lucide-react";
 
-import { ActionLink, Eyebrow, SectionIntro, StatusLine, TextLink } from "@/components/marketing";
+import { ActionLink, Eyebrow, SectionIntro, TextLink } from "@/components/marketing";
 import {
     HeroActions,
     ProductFootnote,
@@ -63,12 +63,11 @@ export default function OsuGuessr() {
                 <div className={cn(siteContainerClass, "relative z-20 flex min-h-180 items-center py-20 max-[820px]:min-h-170")}>
                     <div className={cn(productHeroCopyClass, "max-w-175")}>
                         <Eyebrow>Browser game</Eyebrow>
-                        <StatusLine status={product.status} detail="Background, audio, and skin modes" tone={product.tone} />
                         <h1 className={productTitleClass}>{product.name}</h1>
-                        <h2 className={productSubtitleClass}>Recognize the map before the answer appears.</h2>
+                        <h2 className={productSubtitleClass}>Guess osu! beatmaps from images and audio.</h2>
                         <p className={productBodyClass}>
-                            Sign in with osu!, choose a mode, and guess from artwork, audio, or a skin screenshot. Scores and streaks feed
-                            the public leaderboards.
+                            Sign in with osu!, choose a mode, and guess from artwork, audio, or a skin screenshot. Compare your scores and
+                            streaks on the leaderboards.
                         </p>
                         <HeroActions>
                             <ActionLink href={product.links.primary} external>
@@ -88,13 +87,13 @@ export default function OsuGuessr() {
             <ProductSection>
                 <SectionIntro
                     eyebrow="Three ways to play"
-                    title="Different clues, the same memory test."
-                    body="Each mode draws from catalog assets used by the live game."
+                    title="Backgrounds, audio, and skins"
+                    body="Choose which kind of clue you want to play with."
                 />
                 <div className="grid grid-cols-1 border-y border-border-strong min-[821px]:grid-cols-3">
                     {modes.map(({ icon: Icon, title, description, image, alt }) => (
                         <article
-                            className="group relative min-h-75 overflow-hidden border-b border-border-strong last:border-b-0 min-[821px]:min-h-85 min-[821px]:border-r min-[821px]:border-b-0 last:min-[821px]:border-r-0"
+                            className="group relative min-h-75 overflow-hidden min-[821px]:min-h-85 min-[821px]:border-r last:min-[821px]:border-r-0"
                             key={title}
                         >
                             <img
@@ -122,13 +121,13 @@ export default function OsuGuessr() {
             <ProductSplit>
                 <div>
                     <Eyebrow>Game variants</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Ten rounds, or one mistake.</h2>
+                    <h2 className={sectionHeadingClass}>Classic and Death mode</h2>
                     <p className={sectionBodyClass}>
-                        Classic mode ends after ten rounds. Death mode continues while the guesses are correct. The service stores completed
-                        game results for history, profiles, achievements, and rankings.
+                        Classic mode ends after ten rounds. Death mode continues while the guesses are correct. Completed games appear in
+                        your history and count toward achievements and rankings.
                     </p>
                 </div>
-                <dl className="border-t border-border-strong [&_dd]:text-[0.88rem] [&_dd]:leading-[1.55] [&_dd]:text-muted [&_dt]:font-mono [&_dt]:text-[0.74rem] [&_dt]:text-[#d8ccff] [&>div]:grid [&>div]:grid-cols-[5.5rem_1fr] [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-5 min-[601px]:[&>div]:grid-cols-[7rem_1fr]">
+                <dl className="grid gap-7 [&_dd]:text-[0.88rem] [&_dd]:leading-[1.55] [&_dd]:text-muted [&_dt]:font-mono [&_dt]:text-[0.74rem] [&_dt]:text-[#d8ccff] [&>div]:grid [&>div]:grid-cols-[5.5rem_1fr] [&>div]:gap-4 min-[601px]:[&>div]:grid-cols-[7rem_1fr]">
                     <div>
                         <dt>Classic</dt>
                         <dd>10 rounds with a cumulative score</dd>
@@ -150,7 +149,7 @@ export default function OsuGuessr() {
 
             <ProductFootnote>
                 <p>osu!guessr is a separate hosted service with its own authentication, browser storage, and analytics behavior.</p>
-                <TextLink href="/legal/privacy">Read the ecosystem privacy policy</TextLink>
+                <TextLink href="/legal/privacy">Read the privacy policy</TextLink>
             </ProductFootnote>
         </ProductPage>
     );

@@ -1,7 +1,7 @@
 import { reconcileOsuGuessrClient } from "../server/oauth-provider/config";
 import { webPrisma } from "../server/database/web";
 
-export async function reconcileConfiguredOsuGuessrClient(): Promise<void> {
+async function reconcileConfiguredOsuGuessrClient(): Promise<void> {
     await reconcileOsuGuessrClient(webPrisma);
 }
 

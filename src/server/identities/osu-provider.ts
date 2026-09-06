@@ -2,6 +2,7 @@ import type { OAuth2Tokens } from "@better-auth/core/oauth2";
 import type { GenericOAuthConfig, GenericOAuthUserInfo } from "better-auth/plugins";
 
 import { createOsuPlaceholderEmail } from "@/lib/osu-identity";
+import { isRecord } from "@/lib/record";
 
 export interface OsuProfile {
     id: string;
@@ -103,10 +104,6 @@ export function parseOsuProfile(value: unknown): OsuProfile | null {
     }
 
     return { id, username, avatarUrl };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
 }
 
 function hasControlCharacters(value: string): boolean {
