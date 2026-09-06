@@ -24,6 +24,11 @@ model User {
   companionDevices                CompanionDevice[]                @relation("CompanionDeviceUser")
   companionTokenFamilies          CompanionTokenFamily[]           @relation("CompanionTokenFamilyUser")
   companionAccessTokens           CompanionAccessToken[]           @relation("CompanionAccessTokenUser")
+  osuProfile                      OsuProfile?
+  oauthClients                    OauthClient[]                    @relation("OauthClientUser")
+  oauthRefreshTokens              OauthRefreshToken[]              @relation("OauthRefreshTokenUser")
+  oauthAccessTokens               OauthAccessToken[]               @relation("OauthAccessTokenUser")
+  oauthConsents                   OauthConsent[]                   @relation("OauthConsentUser")
 
   @@map("user")
 }
@@ -40,6 +45,8 @@ model Session {
   user                           User                            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_user_fk")
   osuOAuthStates                 OsuOAuthState[]                 @relation("OsuOAuthStateSession")
   companionAuthorizationRequests CompanionAuthorizationRequest[] @relation("CompanionAuthorizationRequestSession")
+  oauthRefreshTokens             OauthRefreshToken[]             @relation("OauthRefreshTokenSession")
+  oauthAccessTokens              OauthAccessToken[]              @relation("OauthAccessTokenSession")
 
   @@index([userId], map: "session_userId_idx")
   @@map("session")
@@ -247,4 +254,197 @@ model CompanionRefreshToken {
   @@index([expiresAt, usedAt], map: "companionRefreshToken_expiry_idx")
   @@index([parentTokenId], map: "companionRefreshToken_parent_idx")
   @@map("companionRefreshToken")
+}
+
+model OsuProfile {
+  id        String   @id @default(cuid()) @db.VarChar(36)
+  userId    String   @unique @db.VarChar(36)
+  osuId     String   @unique @db.VarChar(20)
+  username  String   @db.VarChar(255)
+  avatarUrl String?  @db.Text
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+  updatedAt DateTime @default(now()) @db.Timestamp(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "osuProfile_user_fk")
+
+  @@map("osuProfile")
+}
+
+model Jwks {
+  id         String    @id @default(cuid()) @db.VarChar(36)
+  publicKey  String    @db.Text
+  privateKey String    @db.Text
+  createdAt  DateTime  @default(now()) @db.Timestamp(3)
+  expiresAt  DateTime? @db.Timestamp(3)
+  alg        String?   @db.VarChar(32)
+  crv        String?   @db.VarChar(32)
+
+  @@map("jwks")
+}
+
+model OauthClient {
+  id                               String                @id @default(cuid()) @db.VarChar(36)
+  clientId                         String                @unique @db.VarChar(255)
+  clientSecret                     String?               @db.Text
+  clientDiscoveryId                String?               @db.VarChar(255)
+  disabled                         Boolean               @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?               @db.VarChar(16)
+  scopes                           Json?
+  clientCredentialsScopes          Json?
+  userId                           String?               @db.VarChar(36)
+  createdAt                        DateTime?             @default(now()) @db.Timestamp(3)
+  updatedAt                        DateTime?             @default(now()) @db.Timestamp(3)
+  name                             String?               @db.VarChar(255)
+  uri                              String?               @db.VarChar(255)
+  icon                             String?               @db.Text
+  contacts                         Json?
+  tos                              String?               @db.VarChar(255)
+  policy                           String?               @db.VarChar(255)
+  softwareId                       String?               @db.VarChar(255)
+  softwareVersion                  String?               @db.VarChar(255)
+  softwareStatement                String?               @db.Text
+  redirectUris                     Json
+  postLogoutRedirectUris           Json?
+  backchannelLogoutUri             String?               @db.VarChar(255)
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?               @db.VarChar(64)
+  applicationType                  String?               @db.VarChar(16)
+  jwks                             String?               @db.Text
+  jwksUri                          String?               @db.VarChar(255)
+  grantTypes                       Json?
+  responseTypes                    Json?
+  requirePKCE                      Boolean?
+  dpopBoundAccessTokens            Boolean               @default(false)
+  referenceId                      String?               @db.VarChar(255)
+  metadata                         Json?
+  user                             User?                 @relation("OauthClientUser", fields: [userId], references: [id], onDelete: SetNull, map: "oauthClient_user_fk")
+  resources                        OauthClientResource[]
+  refreshTokens                    OauthRefreshToken[]
+  accessTokens                     OauthAccessToken[]
+  consents                         OauthConsent[]
+
+  @@index([userId], map: "oauthClient_userId_idx")
+  @@map("oauthClient")
+}
+
+model OauthResource {
+  id                            String                @id @default(cuid()) @db.VarChar(36)
+  identifier                    String                @unique @db.VarChar(255)
+  name                          String                @db.VarChar(255)
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?               @db.VarChar(32)
+  signingKeyId                  String?               @db.VarChar(255)
+  allowedScopes                 Json?
+  customClaims                  Json?
+  dpopBoundAccessTokensRequired Boolean               @default(false)
+  disabled                      Boolean               @default(false)
+  createdAt                     DateTime?             @default(now()) @db.Timestamp(3)
+  updatedAt                     DateTime?             @default(now()) @db.Timestamp(3)
+  policyVersion                 Int                   @default(1)
+  metadata                      Json?
+  clientLinks                   OauthClientResource[]
+
+  @@map("oauthResource")
+}
+
+model OauthClientResource {
+  id         String        @id @default(cuid()) @db.VarChar(36)
+  clientId   String        @db.VarChar(255)
+  resourceId String        @db.VarChar(255)
+  metadata   Json?
+  createdAt  DateTime?     @default(now()) @db.Timestamp(3)
+  client     OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resource   OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+
+  @@unique([clientId, resourceId], map: "oauthClientResource_client_resource_unique")
+  @@index([clientId], map: "oauthClientResource_clientId_idx")
+  @@index([resourceId], map: "oauthClientResource_resourceId_idx")
+  @@map("oauthClientResource")
+}
+
+model OauthRefreshToken {
+  id                      String             @id @default(cuid()) @db.VarChar(36)
+  token                   String             @unique @db.VarChar(255)
+  clientId                String             @db.VarChar(255)
+  sessionId               String?            @db.VarChar(36)
+  userId                  String             @db.VarChar(36)
+  referenceId             String?            @db.VarChar(255)
+  authorizationCodeId     String?            @db.VarChar(36)
+  resources               Json?
+  requestedUserInfoClaims Json?
+  expiresAt               DateTime           @db.Timestamp(3)
+  createdAt               DateTime           @default(now()) @db.Timestamp(3)
+  revoked                 DateTime?          @db.Timestamp(3)
+  rotatedAt               DateTime?          @db.Timestamp(3)
+  rotationReplayResponse  String?            @db.Text
+  rotationReplayExpiresAt DateTime?          @db.Timestamp(3)
+  authTime                DateTime?          @db.Timestamp(3)
+  confirmation            Json?
+  scopes                  Json
+  client                  OauthClient        @relation(fields: [clientId], references: [clientId])
+  session                 Session?           @relation("OauthRefreshTokenSession", fields: [sessionId], references: [id], onDelete: SetNull)
+  user                    User               @relation("OauthRefreshTokenUser", fields: [userId], references: [id])
+  oauthAccessTokens       OauthAccessToken[]
+
+  @@index([clientId], map: "oauthRefreshToken_clientId_idx")
+  @@index([sessionId], map: "oauthRefreshToken_sessionId_idx")
+  @@index([userId], map: "oauthRefreshToken_userId_idx")
+  @@index([authorizationCodeId], map: "oauthRefreshToken_authorizationCodeId_idx")
+  @@map("oauthRefreshToken")
+}
+
+model OauthAccessToken {
+  id                      String             @id @default(cuid()) @db.VarChar(36)
+  token                   String             @unique @db.VarChar(255)
+  clientId                String             @db.VarChar(255)
+  sessionId               String?            @db.VarChar(36)
+  userId                  String?            @db.VarChar(36)
+  referenceId             String?            @db.VarChar(255)
+  authorizationCodeId     String?            @db.VarChar(36)
+  resources               Json?
+  requestedUserInfoClaims Json?
+  refreshId               String?            @db.VarChar(36)
+  expiresAt               DateTime           @db.Timestamp(3)
+  createdAt               DateTime           @default(now()) @db.Timestamp(3)
+  revoked                 DateTime?          @db.Timestamp(3)
+  confirmation            Json?
+  scopes                  Json
+  client                  OauthClient        @relation(fields: [clientId], references: [clientId])
+  session                 Session?           @relation("OauthAccessTokenSession", fields: [sessionId], references: [id], onDelete: SetNull)
+  user                    User?              @relation("OauthAccessTokenUser", fields: [userId], references: [id])
+  refresh                 OauthRefreshToken? @relation(fields: [refreshId], references: [id])
+
+  @@index([clientId], map: "oauthAccessToken_clientId_idx")
+  @@index([sessionId], map: "oauthAccessToken_sessionId_idx")
+  @@index([userId], map: "oauthAccessToken_userId_idx")
+  @@index([authorizationCodeId], map: "oauthAccessToken_authorizationCodeId_idx")
+  @@index([refreshId], map: "oauthAccessToken_refreshId_idx")
+  @@map("oauthAccessToken")
+}
+
+model OauthConsent {
+  id                      String      @id @default(cuid()) @db.VarChar(36)
+  clientId                String      @db.VarChar(255)
+  userId                  String?     @db.VarChar(36)
+  referenceId             String?     @db.VarChar(255)
+  resources               Json?
+  requestedUserInfoClaims Json?
+  scopes                  Json
+  createdAt               DateTime    @default(now()) @db.Timestamp(3)
+  updatedAt               DateTime    @default(now()) @db.Timestamp(3)
+  client                  OauthClient @relation(fields: [clientId], references: [clientId])
+  user                    User?       @relation("OauthConsentUser", fields: [userId], references: [id])
+
+  @@index([clientId], map: "oauthConsent_clientId_idx")
+  @@index([userId], map: "oauthConsent_userId_idx")
+  @@map("oauthConsent")
+}
+
+model OauthClientAssertion {
+  id        String   @id @default(cuid()) @db.VarChar(36)
+  expiresAt DateTime @db.Timestamp(3)
+
+  @@map("oauthClientAssertion")
 }
