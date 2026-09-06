@@ -34,9 +34,9 @@ export default function TermsOfService() {
 
             <LegalSection id="scope" title="2. Service scope">
                 <p>
-                    The hosted services include this website and account area, Hanami Bot on Discord, and osu!guessr. Hanami Companion is a
-                    public-source but unreleased local prototype, and Map Analyzer is a separately distributed Rust library. Repository code,
-                    locally run copies, and third-party platforms are subject to their own licenses and terms.
+                    The hosted services include this website and account area, Hanami Bot on Discord, and osu!guessr. Map Analyzer is a
+                    separately distributed Rust library. Repository code, locally run copies, and third-party platforms are subject to their
+                    own licenses and terms.
                 </p>
                 <p>
                     Hanami provides osu!-related lookups, Discord commands, a beatmap guessing game, account-linking and preference tools,
@@ -102,8 +102,7 @@ export default function TermsOfService() {
                 </p>
                 <p>
                     Features marked prototype, beta, experimental, planned, or unfinished may be incomplete, lose data, change format, or
-                    never be released. Companion implements local tracking and Hanami authentication, but play upload is not currently
-                    operational. The operator may modify or retire products and integrations, with reasonable notice where practical.
+                    never be released. The operator may modify or retire products and integrations, with reasonable notice where practical.
                 </p>
                 <p>
                     Signed-in account deletion immediately removes the website identity and Discord-keyed Hanami Bot account data described

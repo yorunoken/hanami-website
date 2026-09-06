@@ -74,14 +74,6 @@ export default function Footer() {
                         <a className={footerLinkClass} href="https://github.com/hanami-osu/web" target="_blank" rel="noreferrer">
                             Source code <ArrowUpRight aria-hidden="true" />
                         </a>
-                        <a
-                            className={footerLinkClass}
-                            href="https://github.com/hanami-osu/web/blob/main/LICENSE"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            AGPL-3.0 license <ArrowUpRight aria-hidden="true" />
-                        </a>
                     </div>
                 </div>
             </div>

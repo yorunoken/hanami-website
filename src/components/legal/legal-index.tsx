@@ -37,8 +37,7 @@ export default function LegalIndex() {
                     Policies grounded in the current implementation.
                 </h1>
                 <p className="mt-[1.35rem] max-w-[68ch] text-base leading-[1.7] text-muted">
-                    These documents cover the Hanami website, Hanami Bot, osu!guessr, and the current boundaries of Companion and Map
-                    Analyzer.
+                    These documents cover the Hanami website, Hanami Bot, osu!guessr, and the current boundaries of Map Analyzer.
                 </p>
             </header>
             <section className="mt-12 max-w-260" aria-labelledby="legal-contact-title">

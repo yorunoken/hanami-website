@@ -79,7 +79,7 @@ export const products: readonly ProductSummary[] = [
         status: "Development",
         category: "Desktop app",
         headline: "A local bridge, still taking shape.",
-        description: "A public Tauri prototype for local osu! tracking, tosu lifecycle control, and Hanami authentication.",
+        description: "An unfinished public Tauri prototype for local osu! tracking and tosu lifecycle control.",
         action: "See the prototype",
         tone: "cyan",
         links: {
@@ -145,7 +145,7 @@ export const routeMetadata = {
     },
     "/companion": {
         title: "Hanami Companion — desktop prototype",
-        description: "Follow the public Hanami Companion prototype for local osu! tracking, tosu control, and native Hanami authentication.",
+        description: "Follow the unfinished Hanami Companion prototype for local osu! tracking and tosu control.",
         indexable: true,
         socialImage: "/products/companion-icon.png",
     },

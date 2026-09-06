@@ -1,4 +1,4 @@
-import { Github, HardDrive, KeyRound, MonitorDot, Radio, UploadCloud } from "lucide-react";
+import { Github, HardDrive, MonitorDot, Radio } from "lucide-react";
 
 import { ActionLink, Eyebrow, SectionIntro, StatusLine } from "@/components/marketing";
 import {
@@ -21,7 +21,7 @@ import { getProduct } from "@/data/site-config";
 const currentCapabilities = [
     ["tosu lifecycle", "Connect to an existing tosu instance or launch and stop one owned by Companion."],
     ["Play detection", "Track selected beatmaps and detect passed, failed, retried, and quit attempts."],
-    ["Native Hanami sign-in", "Authenticate through the system browser with Authorization Code and PKCE."],
+    ["Normalized state", "Render normalized local state in React for the current desktop session."],
 ] as const;
 
 export default function Companion() {
@@ -36,9 +36,9 @@ export default function Companion() {
                     <h1 className={productTitleClass}>{product.name}</h1>
                     <h2 className={productSubtitleClass}>A local bridge for ideas that do not belong in a browser.</h2>
                     <p className={productBodyClass}>
-                        The public Tauri prototype uses Rust for process lifecycle, local play detection, and native authentication while React
-                        renders normalized state. It can connect to tosu, track local osu! activity, and sign in to Hanami Web; play upload
-                        remains unavailable.
+                        The public Tauri project is an unfinished local prototype. Rust handles process lifecycle and local play detection
+                        while React renders normalized state. It can connect to tosu and track local osu! activity, but no packaged release
+                        is offered.
                     </p>
                     <ActionLink className="mt-8" href={product.links.primary} external>
                         <Github aria-hidden="true" /> View the source
@@ -61,9 +61,9 @@ export default function Companion() {
 
             <ProductSection>
                 <SectionIntro
-                    eyebrow="Implemented now"
-                    title="A functional local prototype."
-                    body="These capabilities are implemented in the public repository. The project remains in development and does not yet offer a packaged release."
+                    eyebrow="Prototype scope"
+                    title="Unfinished local software."
+                    body="The public repository documents a local prototype for tosu lifecycle control, play detection, and normalized desktop state. It remains in development and is not a packaged product."
                 />
                 <div className="grid grid-cols-1 border-t border-border-strong min-[821px]:grid-cols-3">
                     {currentCapabilities.map(([title, description]) => (
@@ -81,11 +81,10 @@ export default function Companion() {
             <ProductSplit>
                 <div>
                     <Eyebrow>Data boundary</Eyebrow>
-                    <h2 className={sectionHeadingClass}>Local tracking first. Upload is deliberately unavailable.</h2>
+                    <h2 className={sectionHeadingClass}>Local state only.</h2>
                     <p className={sectionBodyClass}>
-                        Recent attempts stay in memory for the current desktop session. Hanami sign-in uses the system browser and PKCE; the
-                        access token stays in Rust memory and the refresh token is stored in the operating system credential store. Hanami Web
-                        does not yet expose a production play-ingestion endpoint.
+                        Recent attempts stay in memory for the current desktop session. The prototype is unfinished and its local state is
+                        not a hosted Hanami account feature.
                     </p>
                 </div>
                 <ProductSteps className="[&_svg]:text-cyan">
@@ -97,20 +96,16 @@ export default function Companion() {
                         <strong>Companion listener</strong>
                         <p>The app normalizes state and detects meaningful play attempts.</p>
                     </ProductStep>
-                    <ProductStep icon={<KeyRound aria-hidden="true" />}>
-                        <strong>Hanami authentication</strong>
-                        <p>Authorization Code with PKCE is implemented through the system browser.</p>
-                    </ProductStep>
-                    <ProductStep icon={<UploadCloud aria-hidden="true" />} muted>
-                        <strong>Play upload — planned</strong>
-                        <p>No production ingestion endpoint is active, and attempts are never reported as uploaded.</p>
+                    <ProductStep icon={<MonitorDot aria-hidden="true" />}>
+                        <strong>Normalized local state</strong>
+                        <p>React renders the local session state for the current desktop process.</p>
                     </ProductStep>
                 </ProductSteps>
             </ProductSplit>
 
             <ProductFootnote className="[&>svg]:text-cyan">
                 <MonitorDot aria-hidden="true" />
-                <p>The source is public, but no packaged release is currently offered. Play upload remains unavailable.</p>
+                <p>The public repository contains an unfinished local prototype. No packaged release is currently offered.</p>
             </ProductFootnote>
         </ProductPage>
     );

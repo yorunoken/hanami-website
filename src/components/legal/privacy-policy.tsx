@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
     return (
         <LegalDocument
             title="Privacy policy"
-            summary="How the Hanami website, Hanami Bot, osu!guessr, Companion prototype, and Map Analyzer process information."
+            summary="How the Hanami website, Hanami Bot, osu!guessr, and Map Analyzer process information."
             toc={toc}
         >
             <LegalSection id="controller" title="1. Who operates Hanami">
@@ -42,13 +42,12 @@ export default function PrivacyPolicy() {
             <LegalSection id="scope" title="2. Services covered">
                 <p>
                     This policy is intended to cover the Hanami ecosystem operated by the controller: this website and account area, Hanami
-                    Bot on Discord, the separately hosted osu!guessr service, and networked features in the public Hanami Companion prototype.
+                    Bot on Discord, and the separately hosted osu!guessr service.
                 </p>
                 <p>
                     Map Analyzer 0.2.9 is a separately distributed Rust library. The published crate parses local files and has no network
                     client dependency or command-line binary. Broader CLI and dataset work exists only in an unpublished development
-                    worktree. Companion is public source but remains unreleased: local tracking and Hanami authentication are implemented,
-                    while play upload is unavailable because Hanami Web does not expose a production ingestion endpoint.
+                    worktree.
                 </p>
             </LegalSection>
 
@@ -166,22 +165,6 @@ export default function PrivacyPolicy() {
                     </li>
                 </ul>
 
-                <h3>Hanami Companion prototype</h3>
-                <ul>
-                    <li>
-                        Selected beatmap, live gameplay, and attempt-state information received from a local tosu instance. Recent attempts
-                        are retained in memory for the current application session and are not written to a Companion database.
-                    </li>
-                    <li>
-                        Hanami sign-in opens the system browser and uses Authorization Code with PKCE through a temporary loopback listener.
-                        The access token remains in Rust memory and the refresh token is stored in the operating system credential store.
-                    </li>
-                    <li>
-                        Authorization codes, PKCE verifiers, and tokens are not exposed to the React interface or written to Companion
-                        application files. Play upload is currently unavailable and no attempt is reported as successfully submitted.
-                    </li>
-                </ul>
-
                 <h3>Technical requests and external media</h3>
                 <p>
                     Account pages may load avatar images from Discord or osu! hosts. Those providers receive ordinary web-request data such
@@ -275,10 +258,6 @@ export default function PrivacyPolicy() {
                         osu!guessr’s Auth.js session default is approximately 30 days. Its locale cookie is configured for about one year.
                         Local-storage values remain until the user clears them or application code changes them; session storage normally
                         lasts for the browser-tab session.
-                    </li>
-                    <li>
-                        Companion recent-attempt data remains in memory until the application exits. Its stored refresh token remains in the
-                        operating system credential store until sign-out, token rejection, or removal through the operating system.
                     </li>
                     <li>
                         Account, provider-link, preference, guild, completed-game, report, and API-key metadata remain while the related

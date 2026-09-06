@@ -18,12 +18,15 @@ describe("published product claims", () => {
         expect(html).not.toContain("rosu-pp");
     });
 
-    it("labels Companion capabilities as unpublished development work", () => {
+    it("describes Companion as an unfinished local-only prototype", () => {
         const html = render(Companion);
 
-        expect(html).toContain("public repository currently contains only its license");
-        expect(html).toContain("not yet available as public source or a release");
-        expect(html).not.toContain("Inspect the prototype");
+        expect(html).toContain("unfinished local prototype");
+        expect(html).toContain("local play detection");
+        expect(html).not.toContain("authentication");
+        expect(html).not.toContain("Authorization Code");
+        expect(html).not.toContain("PKCE");
+        expect(html).not.toContain("upload");
     });
 });
 
