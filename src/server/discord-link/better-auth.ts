@@ -5,7 +5,7 @@ import { createDiscordPlaceholderEmail } from "@/lib/discord-identity";
 import type { DiscordLinkTicket } from "./tickets";
 
 export async function resolveDiscordIdentity(adapter: InternalAdapter<BetterAuthOptions>, ticket: DiscordLinkTicket): Promise<User> {
-    const account = await adapter.findAccountByProviderId(ticket.discordUserId, "discord");
+    const account = await adapter.findAccountByKey({ providerId: "discord", accountId: ticket.discordUserId });
     if (account) {
         const user = await adapter.findUserById(account.userId);
         if (!user) throw new Error("Discord account references a missing user");
@@ -41,7 +41,7 @@ export async function resolveDiscordIdentity(adapter: InternalAdapter<BetterAuth
     } catch (error) {
         // A concurrent Discord OAuth callback can win the unique provider/account
         // insert. Re-read through Better Auth rather than creating another identity.
-        const concurrentAccount = await adapter.findAccountByProviderId(ticket.discordUserId, "discord");
+        const concurrentAccount = await adapter.findAccountByKey({ providerId: "discord", accountId: ticket.discordUserId });
         if (!concurrentAccount) throw error;
         const concurrentUser = await adapter.findUserById(concurrentAccount.userId);
         if (!concurrentUser) throw error;

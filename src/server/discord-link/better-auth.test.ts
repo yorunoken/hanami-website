@@ -47,7 +47,7 @@ class MemoryAuthAdapter {
     ) {}
 
     readonly value = {
-        findAccountByProviderId: async (accountId: string, providerId: string) =>
+        findAccountByKey: async ({ accountId, providerId }: { accountId: string; providerId: string }) =>
             this.accounts.find((account) => account.accountId === accountId && account.providerId === providerId) ?? null,
         findUserById: async (userId: string) => this.users.find((user) => user.id === userId) ?? null,
         findUserByEmail: async (email: string) => {

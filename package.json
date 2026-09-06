@@ -5,16 +5,18 @@
     "license": "AGPL-3.0-only",
     "scripts": {
         "dev": "concurrently \"vite\" \"bun --watch src/server/index.ts\"",
-        "build": "vite build",
+        "build": "bun run db:generate && vite build",
         "start": "bun src/server/index.ts",
+        "db:generate": "bunx prisma generate --schema prisma/web/schema.prisma && bunx prisma generate --schema prisma/bot/schema.prisma",
         "db:migrate": "bun src/scripts/migrate.ts",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint .",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "bun run db:generate && tsc --noEmit",
         "test": "bun test"
     },
     "dependencies": {
+        "@better-auth/oauth-provider": "1.7.3",
         "@prisma/adapter-mariadb": "7.10.0",
         "@prisma/client": "7.10.0",
         "better-auth": "1.7.3",

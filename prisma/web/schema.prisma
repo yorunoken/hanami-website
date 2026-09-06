@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client"
-  output   = "../../node_modules/.prisma/hanami-web"
+  output   = "../../src/generated/prisma/web"
 }
 
 datasource db {

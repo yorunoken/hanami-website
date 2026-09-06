@@ -1,5 +1,5 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { PrismaClient } from "../../../node_modules/.prisma/hanami-web/client";
+import { PrismaClient } from "../../generated/prisma/web/client";
 
 import { assertSeparateDatabases, parseMariaDbConnection } from "./config";
 

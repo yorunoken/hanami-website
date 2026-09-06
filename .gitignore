@@ -11,6 +11,9 @@
 # production
 dist
 
+# generated Prisma clients
+/src/generated/prisma
+
 # environment
 .env*
 !.env.example
