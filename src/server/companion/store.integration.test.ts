@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
+import { betterAuth } from "better-auth";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 
+import { assertDisposableTestDatabase } from "../database/config";
+import { runBetterAuthSchemaMigrations } from "../auth-schema";
 import { runWebMigrations } from "../migrations";
 import { createSecureToken, hashToken } from "../security/tokens";
 import { COMPANION_CLIENT_ID } from "./protocol";
@@ -19,6 +22,16 @@ const verifier = "a".repeat(43);
 describeDatabase("MySQL Companion token store", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_DATABASE_URL is required");
+        assertDisposableTestDatabase(testDatabaseUrl, {
+            webUrl: process.env.WEB_DATABASE_URL,
+            botUrl: process.env.BOT_DATABASE_URL,
+        });
+        const testAuth = betterAuth({
+            database: pool,
+            baseURL: "https://hanami-companion-test.invalid",
+            secret: "hanami-companion-test-secret-at-least-thirty-two-characters",
+        });
+        await runBetterAuthSchemaMigrations(testAuth.options);
         await runWebMigrations(pool);
     });
 

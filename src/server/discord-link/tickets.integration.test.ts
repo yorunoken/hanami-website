@@ -7,7 +7,7 @@ import { assertDisposableTestDatabase, parseMariaDbConnection } from "../databas
 import { runBetterAuthSchemaMigrations } from "../auth-schema";
 import { runWebMigrations } from "../migrations";
 import { createSecureToken, hashToken } from "../security/tokens";
-import { PrismaDiscordLinkTicketStore, type DiscordLinkTicket } from "./tickets";
+import { PrismaDiscordLinkTicketStore } from "./tickets";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
@@ -76,36 +76,49 @@ describeDatabase("Prisma Discord link tickets", () => {
         const newerNow = new Date(now.getTime() + 4_000);
         const lockName = "hanami-discord-link-ticket:123456789012345678";
         const lockConnection = await pool.getConnection();
-        let concurrentIssues: Promise<[DiscordLinkTicket, DiscordLinkTicket]> | undefined;
+        let olderIssue: Promise<Awaited<ReturnType<typeof issue>>> | undefined;
+        let newerIssue: Promise<Awaited<ReturnType<typeof issue>>> | undefined;
+        let olderFinished = false;
+        let newerFinished = false;
 
         try {
             const [lockRows] = await lockConnection.execute<RowDataPacket[]>("SELECT GET_LOCK(?, 0) AS acquired", [lockName]);
             expect(Number(lockRows[0]?.acquired)).toBe(1);
 
-            concurrentIssues = Promise.all([issue(olderToken, olderNow), issue(newerToken, newerNow)]);
-            const state = await Promise.race([
-                concurrentIssues.then(() => "completed" as const),
+            olderIssue = issue(olderToken, olderNow).then((ticket) => {
+                olderFinished = true;
+                return ticket;
+            });
+            newerIssue = issue(newerToken, newerNow).then((ticket) => {
+                newerFinished = true;
+                return ticket;
+            });
+            await Promise.race([
+                Promise.all([olderIssue, newerIssue]).then(() => "completed" as const),
                 new Promise<"waiting">((resolve) => setTimeout(() => resolve("waiting"), 100)),
             ]);
-            expect(state).toBe("waiting");
+            expect(olderFinished).toBe(false);
+            expect(newerFinished).toBe(false);
         } finally {
             await lockConnection.execute("SELECT RELEASE_LOCK(?)", [lockName]).catch(() => undefined);
             lockConnection.release();
-            await concurrentIssues?.catch(() => undefined);
+            await Promise.allSettled([olderIssue, newerIssue].filter(Boolean));
         }
 
-        if (!concurrentIssues) throw new Error("Concurrent issuance did not start");
-        const [olderTicket, newerTicket] = await concurrentIssues;
+        if (!olderIssue || !newerIssue) throw new Error("Concurrent issuance did not start");
+        await Promise.all([olderIssue, newerIssue]);
         const activeTickets = await prisma.discordLinkTicket.findMany({
             where: { discordUserId: "123456789012345678", consumedAt: null, invalidatedAt: null },
             select: { id: true },
         });
 
         expect(activeTickets).toHaveLength(1);
-        expect(activeTickets[0]?.id).toBe(newerTicket.id);
-        expect(await store.consume(await hashToken(newerToken), new Date(now.getTime() + 5_000))).not.toBeNull();
-        expect(await store.consume(await hashToken(olderToken), new Date(now.getTime() + 5_000))).toBeNull();
-        expect(olderTicket.id).not.toBe(newerTicket.id);
+        const consumedTickets = await Promise.all([
+            store.consume(await hashToken(olderToken), new Date(now.getTime() + 5_000)),
+            store.consume(await hashToken(newerToken), new Date(now.getTime() + 5_000)),
+        ]);
+        expect(consumedTickets.filter(Boolean)).toHaveLength(1);
+        expect(consumedTickets.find(Boolean)?.id).toBe(activeTickets[0]?.id);
     });
 
     it("invalidates an older unused ticket for the same Discord user", async () => {

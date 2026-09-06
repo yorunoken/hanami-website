@@ -27,6 +27,9 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
             `;
                 if (Number(lockRows[0]?.acquired) !== 1) throw new Error("Could not acquire the Discord link ticket lock");
 
+                let ticket: DiscordLinkTicket | undefined;
+                let operationFailed = false;
+                let operationError: unknown;
                 try {
                     await transaction.discordLinkTicket.updateMany({
                         where: {
@@ -37,7 +40,7 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
                         data: { invalidatedAt: input.now },
                     });
 
-                    const ticket: DiscordLinkTicket = {
+                    ticket = {
                         id: crypto.randomUUID(),
                         discordUserId: input.discordUserId,
                         username: input.username,
@@ -59,12 +62,21 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
                             expiresAt: ticket.expiresAt,
                         },
                     });
-                    return ticket;
-                } finally {
-                    await transaction.$queryRaw`
-                    SELECT RELEASE_LOCK(${lockName})
-                `.catch(() => undefined);
+                } catch (error) {
+                    operationFailed = true;
+                    operationError = error;
                 }
+
+                const releaseRows = await transaction.$queryRaw<{ released: number | string | null }[]>`
+                    SELECT RELEASE_LOCK(${lockName}) AS released
+                `;
+                if (Number(releaseRows[0]?.released) !== 1) {
+                    throw new Error("Could not release the Discord link ticket lock");
+                }
+
+                if (operationFailed) throw operationError;
+                if (!ticket) throw new Error("Discord link ticket was not created");
+                return ticket;
             },
             { maxWait: 5_000, timeout: 35_000 },
         );
