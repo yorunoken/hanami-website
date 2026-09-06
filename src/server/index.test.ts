@@ -37,4 +37,16 @@ describe("Unknown API routes", () => {
         expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
         expect(await response.json()).toEqual({ error: "Not Found" });
     });
+
+    it("does not expose Better Auth's unguarded unlink endpoint", async () => {
+        const response = await app.handle(
+            new Request("http://localhost/api/auth/unlink-account", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ accountId: "account-1" }),
+            }),
+        );
+
+        expect(response.status).toBe(404);
+    });
 });

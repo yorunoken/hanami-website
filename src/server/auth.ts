@@ -38,6 +38,7 @@ export const auth = betterAuth({
     database: prismaAdapter(webPrisma, { provider: "mysql" }),
     baseURL,
     trustedOrigins,
+    disabledPaths: ["/unlink-account"],
     session: {
         freshAge: 15 * 60,
     },
