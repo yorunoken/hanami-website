@@ -32,11 +32,12 @@ describe("header account control", () => {
         expect(markup).not.toContain("Open account menu");
     });
 
-    it("shows a direct Discord sign-in control when signed out", () => {
+    it("links signed-out users to the provider-neutral login page", () => {
         const markup = render({ session: null, isPending: false });
-        expect(markup).toContain('aria-label="Sign in with Discord"');
+        expect(markup).toContain('aria-label="Sign in to Hanami"');
+        expect(markup).toContain('href="/login"');
         expect(markup).toContain("Sign in");
-        expect(markup).toContain("Discord");
+        expect(markup).not.toContain("Discord");
     });
 
     it("shows the compact account control without exposing email when signed in", () => {
@@ -62,7 +63,6 @@ function render({ session: currentSession, isPending }: { session: HeaderSession
                 session={currentSession}
                 isPending={isPending}
                 routeKey="/"
-                onSignIn={async () => {}}
                 onSignOut={async () => {}}
             />
         </MemoryRouter>,
