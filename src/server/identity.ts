@@ -1,6 +1,7 @@
-import type { Pool, RowDataPacket } from "mysql2/promise";
+import type { PrismaClient } from "../generated/prisma/web/client";
 
-import { auth, webDatabase } from "./auth";
+import { auth } from "./auth";
+import { webPrisma } from "./database/web";
 
 export interface HanamiIdentity {
     userId: string;
@@ -12,14 +13,10 @@ export interface IdentityService {
     resolveDiscordId(userId: string): Promise<string | null>;
 }
 
-interface DiscordAccountRow extends RowDataPacket {
-    accountId: string;
-}
-
 export class ServerIdentityService implements IdentityService {
     constructor(
         private readonly getSession: (headers: Headers) => ReturnType<typeof auth.api.getSession>,
-        private readonly pool: Pool,
+        private readonly prisma: PrismaClient,
     ) {}
 
     async getCurrent(headers: Headers): Promise<HanamiIdentity | null> {
@@ -33,12 +30,12 @@ export class ServerIdentityService implements IdentityService {
     }
 
     async resolveDiscordId(userId: string): Promise<string | null> {
-        const [accounts] = await this.pool.execute<DiscordAccountRow[]>(
-            "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord' LIMIT 1",
-            [userId],
-        );
-        return accounts[0]?.accountId ?? null;
+        const account = await this.prisma.account.findFirst({
+            where: { userId, providerId: "discord" },
+            select: { accountId: true },
+        });
+        return account?.accountId ?? null;
     }
 }
 
-export const serverIdentity = new ServerIdentityService((headers) => auth.api.getSession({ headers }), webDatabase);
+export const serverIdentity = new ServerIdentityService((headers) => auth.api.getSession({ headers }), webPrisma);

@@ -1,39 +1,49 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import mysql, { type RowDataPacket } from "mysql2/promise";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "../../generated/prisma/web/client";
+import mysql from "mysql2/promise";
 
+import { assertSeparateDatabases, parseMariaDbConnection } from "../database/config";
+import { runBetterAuthSchemaMigrations } from "../auth-schema";
 import { runWebMigrations } from "../migrations";
 import { createChallengeToken, hashChallengeToken } from "./domain";
-import { MySqlAccountDeletionStore } from "./store";
+import { PrismaDeletionRequestStore } from "./store";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 const pool = testDatabaseUrl ? mysql.createPool({ uri: testDatabaseUrl, timezone: "Z" }) : null;
+const prisma = testDatabaseUrl ? new PrismaClient({ adapter: new PrismaMariaDb(parseMariaDbConnection(testDatabaseUrl, "web")) }) : null;
 const deletedBotAccounts: string[] = [];
 const store = pool
-    ? new MySqlAccountDeletionStore(pool, async (discordAccountId) => {
+    ? new PrismaDeletionRequestStore(prisma!, async (discordAccountId) => {
           deletedBotAccounts.push(discordAccountId);
       })
     : null;
 const now = new Date("2026-07-14T18:00:00.000Z");
 
-describeDatabase("MySQL immediate account deletion store", () => {
+describeDatabase("Prisma immediate account deletion store", () => {
     beforeAll(async () => {
-        if (!pool) throw new Error("TEST_DATABASE_URL is required");
+        if (!pool || !prisma) throw new Error("TEST_DATABASE_URL is required");
+        assertDisposableDatabase();
+        const testAuth = (await import("better-auth")).betterAuth({
+            database: pool,
+            baseURL: "https://hanami-deletion-test.invalid",
+            secret: "hanami-deletion-test-secret-at-least-thirty-two-characters",
+        });
+        await runBetterAuthSchemaMigrations(testAuth.options);
         await runWebMigrations(pool);
     });
 
     beforeEach(async () => {
-        if (!pool) throw new Error("TEST_DATABASE_URL is required");
+        if (!prisma) throw new Error("TEST_DATABASE_URL is required");
         deletedBotAccounts.length = 0;
-        await pool.execute("DELETE FROM accountDeletionReauthChallenge");
-        await pool.execute("DELETE FROM session");
-        await pool.execute("DELETE FROM account");
-        await pool.execute("DELETE FROM user");
+        await prisma.user.deleteMany({ where: { id: "user-1" } });
         await seedUser("user-1", "discord-1", "session-1");
     });
 
     afterAll(async () => {
         await pool?.end();
+        await prisma?.$disconnect();
     });
 
     it("deletes the Bot record and Better Auth user after verified confirmation", async () => {
@@ -43,21 +53,17 @@ describeDatabase("MySQL immediate account deletion store", () => {
         await store.deleteAccount({ userId: "user-1", tokenHash, now: new Date(now.getTime() + 1_000) });
 
         expect(deletedBotAccounts).toEqual(["discord-1"]);
-        const [users] = await pool.execute<RowDataPacket[]>("SELECT id FROM user WHERE id = ?", ["user-1"]);
-        const [accounts] = await pool.execute<RowDataPacket[]>("SELECT id FROM account WHERE userId = ?", ["user-1"]);
-        const [sessions] = await pool.execute<RowDataPacket[]>("SELECT id FROM session WHERE userId = ?", ["user-1"]);
-        const [challenges] = await pool.execute<RowDataPacket[]>("SELECT id FROM accountDeletionReauthChallenge WHERE userId = ?", [
-            "user-1",
-        ]);
-        expect(users).toHaveLength(0);
-        expect(accounts).toHaveLength(0);
-        expect(sessions).toHaveLength(0);
-        expect(challenges).toHaveLength(0);
+        if (!prisma) throw new Error("Database test store is unavailable");
+        expect(await prisma.user.findUnique({ where: { id: "user-1" } })).toBeNull();
+        expect(await prisma.account.count({ where: { userId: "user-1" } })).toBe(0);
+        expect(await prisma.session.count({ where: { userId: "user-1" } })).toBe(0);
+        expect(await prisma.accountDeletionReauthChallenge.count({ where: { userId: "user-1" } })).toBe(0);
     });
 
     it("keeps the web account when linked-service deletion fails", async () => {
         if (!pool) throw new Error("Database test store is unavailable");
-        const failingStore = new MySqlAccountDeletionStore(pool, async () => {
+        if (!prisma) throw new Error("Database test store is unavailable");
+        const failingStore = new PrismaDeletionRequestStore(prisma, async () => {
             throw new Error("Bot database unavailable");
         });
         const tokenHash = await hashChallengeToken(createChallengeToken());
@@ -66,29 +72,44 @@ describeDatabase("MySQL immediate account deletion store", () => {
         await expect(failingStore.deleteAccount({ userId: "user-1", tokenHash, now: new Date(now.getTime() + 1_000) })).rejects.toThrow(
             "Bot database unavailable",
         );
-        const [users] = await pool.execute<RowDataPacket[]>("SELECT id FROM user WHERE id = ?", ["user-1"]);
-        expect(users).toHaveLength(1);
+        expect(await prisma.user.findUnique({ where: { id: "user-1" } })).not.toBeNull();
     });
 });
 
 async function seedUser(userId: string, discordId: string, sessionId: string): Promise<void> {
-    if (!pool) throw new Error("TEST_DATABASE_URL is required");
-    await pool.execute(
-        `INSERT INTO user
-      (id, name, email, emailVerified, image, createdAt, updatedAt)
-     VALUES (?, ?, ?, TRUE, NULL, ?, ?)`,
-        [userId, userId, `${userId}@example.test`, now, now],
-    );
-    await pool.execute(
-        `INSERT INTO account
-      (id, accountId, providerId, userId, createdAt, updatedAt)
-     VALUES (?, ?, 'discord', ?, ?, ?)`,
-        [`account-${userId}`, discordId, userId, now, now],
-    );
-    await pool.execute(
-        `INSERT INTO session
-      (id, userId, token, expiresAt, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-        [sessionId, userId, `token-${userId}`, new Date(now.getTime() + 86_400_000), now, now],
-    );
+    if (!prisma) throw new Error("TEST_DATABASE_URL is required");
+    await prisma.user.create({
+        data: {
+            id: userId,
+            name: userId,
+            email: `${userId}@example.test`,
+            emailVerified: true,
+            createdAt: now,
+            updatedAt: now,
+            accounts: {
+                create: {
+                    id: `account-${userId}`,
+                    accountId: discordId,
+                    providerId: "discord",
+                    createdAt: now,
+                    updatedAt: now,
+                },
+            },
+            sessions: {
+                create: {
+                    id: sessionId,
+                    token: `token-${userId}`,
+                    expiresAt: new Date(now.getTime() + 86_400_000),
+                    createdAt: now,
+                    updatedAt: now,
+                },
+            },
+        },
+    });
+}
+
+function assertDisposableDatabase(): void {
+    if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required");
+    if (process.env.WEB_DATABASE_URL) assertSeparateDatabases(process.env.WEB_DATABASE_URL, testDatabaseUrl);
+    if (process.env.BOT_DATABASE_URL) assertSeparateDatabases(testDatabaseUrl, process.env.BOT_DATABASE_URL);
 }

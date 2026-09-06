@@ -1,9 +1,10 @@
 import { Elysia } from "elysia";
-import mysql from "mysql2/promise";
 
-import { auth, trustedOrigins, webDatabase } from "../auth";
+import { auth, trustedOrigins } from "../auth";
+import { botPrisma } from "../database/bot";
+import { webPrisma } from "../database/web";
 import { createChallengeToken, hashChallengeToken, isFreshAuthentication, isValidConfirmationPhrase } from "./domain";
-import { AccountDeletionStoreError, MySqlAccountDeletionStore, type AccountDeletionStore } from "./store";
+import { AccountDeletionStoreError, PrismaDeletionRequestStore, type AccountDeletionStore } from "./store";
 
 interface AuthenticatedSession {
     session: {
@@ -22,7 +23,7 @@ interface AccountDeletionRouteDependencies {
 
 const productionDependencies: AccountDeletionRouteDependencies = {
     getSession: (headers) => auth.api.getSession({ headers }),
-    store: new MySqlAccountDeletionStore(webDatabase, deleteBotAccountData),
+    store: new PrismaDeletionRequestStore(webPrisma, deleteBotAccountData),
     now: () => new Date(),
 };
 
@@ -104,19 +105,9 @@ export function createAccountDeletionRoutes(dependencies: AccountDeletionRouteDe
 export const accountDeletionRoutes = createAccountDeletionRoutes();
 
 async function deleteBotAccountData(discordAccountId: string): Promise<void> {
-    const databaseURL = process.env.BOT_DATABASE_URL;
-    if (!databaseURL) throw new AccountDeletionStoreError("service_unavailable");
-
-    const connection = await mysql.createConnection(databaseURL).catch(() => {
+    await botPrisma.user.deleteMany({ where: { id: discordAccountId } }).catch(() => {
         throw new AccountDeletionStoreError("service_unavailable");
     });
-    try {
-        await connection.execute("DELETE FROM users WHERE id = ?", [discordAccountId]).catch(() => {
-            throw new AccountDeletionStoreError("service_unavailable");
-        });
-    } finally {
-        await connection.end();
-    }
 }
 
 function hasValidOrigin(request: Request): boolean {

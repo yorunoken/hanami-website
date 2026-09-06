@@ -1,12 +1,13 @@
 import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
 import { createPool } from "mysql2/promise";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
-import { runBetterAuthSchemaMigrations } from "./auth-schema";
+import { webPrisma } from "./database/web";
 import { MySqlOAuthStateStore } from "./oauth-state";
 import { getOsuAuthorizationConfiguration } from "./osu-authorization";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
-import { MySqlDiscordLinkTicketStore } from "./discord-link/tickets";
+import { PrismaDiscordLinkTicketStore } from "./discord-link/tickets";
 
 if (!process.env.WEB_DATABASE_URL) {
     throw new Error("WEB_DATABASE_URL environment variable is not set. Please provide it in your environment.");
@@ -26,11 +27,11 @@ export const webDatabase = createPool({
     timezone: "Z",
 });
 
-export const discordLinkTicketStore = new MySqlDiscordLinkTicketStore(webDatabase);
+export const discordLinkTicketStore = new PrismaDiscordLinkTicketStore(webPrisma);
 export const osuOAuthStateStore = new MySqlOAuthStateStore(webDatabase);
 
 export const auth = betterAuth({
-    database: webDatabase,
+    database: prismaAdapter(webPrisma, { provider: "mysql" }),
     baseURL,
     trustedOrigins,
     session: {
@@ -58,7 +59,3 @@ export const auth = betterAuth({
         errorURL: "/login?returnTo=%2Fprofile",
     },
 });
-
-export function prepareAuthenticationSchema(): Promise<void> {
-    return runBetterAuthSchemaMigrations(auth.options);
-}

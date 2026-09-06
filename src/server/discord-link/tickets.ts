@@ -1,4 +1,4 @@
-import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { PrismaClient } from "../../generated/prisma/web/client";
 
 import type { DiscordLinkRequest } from "./validation";
 
@@ -15,34 +15,19 @@ export interface DiscordLinkTicketStore {
     consume(tokenHash: string, now: Date): Promise<DiscordLinkTicket | null>;
 }
 
-interface TicketRow extends RowDataPacket, DiscordLinkTicket {}
-
-interface LockRow extends RowDataPacket {
-    acquired: number | string | null;
-}
-
-export class MySqlDiscordLinkTicketStore implements DiscordLinkTicketStore {
-    constructor(private readonly pool: Pool) {}
+export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
+    constructor(private readonly prisma: PrismaClient) {}
 
     async issue(input: DiscordLinkRequest & { tokenHash: string; now: Date }): Promise<DiscordLinkTicket> {
-        const connection = await this.pool.getConnection();
-        const lockName = `hanami-discord-link:${input.discordUserId}`;
-        let lockAcquired = false;
-
-        try {
-            const [lockRows] = await connection.execute<LockRow[]>("SELECT GET_LOCK(?, 5) AS acquired", [lockName]);
-            lockAcquired = Number(lockRows[0]?.acquired) === 1;
-            if (!lockAcquired) throw new Error("Could not acquire the Discord link issuance lock");
-
-            await connection.beginTransaction();
-            await connection.execute(
-                `UPDATE discordLinkTicket
-                    SET invalidatedAt = ?
-                  WHERE discordUserId = ?
-                    AND consumedAt IS NULL
-                    AND invalidatedAt IS NULL`,
-                [input.now, input.discordUserId],
-            );
+        return this.prisma.$transaction(async (transaction) => {
+            await transaction.discordLinkTicket.updateMany({
+                where: {
+                    discordUserId: input.discordUserId,
+                    consumedAt: null,
+                    invalidatedAt: null,
+                },
+                data: { invalidatedAt: input.now },
+            });
 
             const ticket: DiscordLinkTicket = {
                 id: crypto.randomUUID(),
@@ -54,68 +39,48 @@ export class MySqlDiscordLinkTicketStore implements DiscordLinkTicketStore {
                 expiresAt: new Date(input.now.getTime() + DISCORD_LINK_TICKET_LIFETIME_MS),
             };
 
-            await connection.execute(
-                `INSERT INTO discordLinkTicket
-                    (id, tokenHash, discordUserId, username, displayName, avatarUrl, createdAt, expiresAt, consumedAt, invalidatedAt)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)`,
-                [
-                    ticket.id,
-                    input.tokenHash,
-                    ticket.discordUserId,
-                    ticket.username,
-                    ticket.displayName,
-                    ticket.avatarUrl,
-                    ticket.createdAt,
-                    ticket.expiresAt,
-                ],
-            );
-            await connection.commit();
+            await transaction.discordLinkTicket.create({
+                data: {
+                    id: ticket.id,
+                    tokenHash: input.tokenHash,
+                    discordUserId: ticket.discordUserId,
+                    username: ticket.username,
+                    displayName: ticket.displayName,
+                    avatarUrl: ticket.avatarUrl,
+                    createdAt: ticket.createdAt,
+                    expiresAt: ticket.expiresAt,
+                },
+            });
             return ticket;
-        } catch (error) {
-            await connection.rollback().catch(() => undefined);
-            throw error;
-        } finally {
-            if (lockAcquired) await connection.execute("SELECT RELEASE_LOCK(?)", [lockName]).catch(() => undefined);
-            connection.release();
-        }
+        });
     }
 
     async consume(tokenHash: string, now: Date): Promise<DiscordLinkTicket | null> {
-        return withTransaction(this.pool, async (connection) => {
-            const [result] = await connection.execute<ResultSetHeader>(
-                `UPDATE discordLinkTicket
-                    SET consumedAt = ?
-                  WHERE tokenHash = ?
-                    AND consumedAt IS NULL
-                    AND invalidatedAt IS NULL
-                    AND expiresAt > ?`,
-                [now, tokenHash, now],
-            );
-            if (result.affectedRows !== 1) return null;
+        return this.prisma.$transaction(async (transaction) => {
+            const result = await transaction.discordLinkTicket.updateMany({
+                where: {
+                    tokenHash,
+                    consumedAt: null,
+                    invalidatedAt: null,
+                    expiresAt: { gt: now },
+                },
+                data: { consumedAt: now },
+            });
+            if (result.count !== 1) return null;
 
-            const [rows] = await connection.execute<TicketRow[]>(
-                `SELECT id, discordUserId, username, displayName, avatarUrl, createdAt, expiresAt
-                   FROM discordLinkTicket
-                  WHERE tokenHash = ?
-                  LIMIT 1`,
-                [tokenHash],
-            );
-            return rows[0] ?? null;
+            const ticket = await transaction.discordLinkTicket.findUnique({
+                where: { tokenHash },
+                select: {
+                    id: true,
+                    discordUserId: true,
+                    username: true,
+                    displayName: true,
+                    avatarUrl: true,
+                    createdAt: true,
+                    expiresAt: true,
+                },
+            });
+            return ticket;
         });
-    }
-}
-
-async function withTransaction<T>(pool: Pool, callback: (connection: PoolConnection) => Promise<T>): Promise<T> {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-        const result = await callback(connection);
-        await connection.commit();
-        return result;
-    } catch (error) {
-        await connection.rollback();
-        throw error;
-    } finally {
-        connection.release();
     }
 }

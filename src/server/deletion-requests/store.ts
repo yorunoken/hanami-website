@@ -1,5 +1,6 @@
-import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { Prisma, PrismaClient } from "../../generated/prisma/web/client";
 
+import { safelyEqualHashes } from "../security/tokens";
 import { REAUTHENTICATION_WINDOW_MS } from "./domain";
 
 export type AccountDeletionFailureCode = "account_not_found" | "challenge_invalid" | "challenge_stale" | "service_unavailable";
@@ -17,24 +18,11 @@ export interface AccountDeletionStore {
     deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<void>;
 }
 
-interface ChallengeRow extends RowDataPacket {
-    id: string;
-    userId: string;
-    createdAt: Date;
-    expiresAt: Date;
-    reauthenticatedAt: Date | null;
-    consumedAt: Date | null;
-}
-
-interface AccountRow extends RowDataPacket {
-    accountId: string;
-}
-
 type DeleteBotAccountData = (discordAccountId: string) => Promise<void>;
 
-export class MySqlAccountDeletionStore implements AccountDeletionStore {
+export class PrismaDeletionRequestStore implements AccountDeletionStore {
     constructor(
-        private readonly pool: Pool,
+        private readonly prisma: PrismaClient,
         private readonly deleteBotAccountData: DeleteBotAccountData,
     ) {}
 
@@ -42,24 +30,29 @@ export class MySqlAccountDeletionStore implements AccountDeletionStore {
         const expiresAt = new Date(input.now.getTime() + REAUTHENTICATION_WINDOW_MS);
         const reauthenticatedAt = input.alreadyFresh ? input.now : null;
 
-        await this.pool.execute(
-            `INSERT INTO accountDeletionReauthChallenge
-         (id, userId, tokenHash, createdAt, expiresAt, reauthenticatedAt, consumedAt)
-       VALUES (?, ?, ?, ?, ?, ?, NULL)
-       ON DUPLICATE KEY UPDATE
-         id = VALUES(id),
-         tokenHash = VALUES(tokenHash),
-         createdAt = VALUES(createdAt),
-         expiresAt = VALUES(expiresAt),
-         reauthenticatedAt = VALUES(reauthenticatedAt),
-         consumedAt = NULL`,
-            [crypto.randomUUID(), input.userId, input.tokenHash, input.now, expiresAt, reauthenticatedAt],
-        );
+        await this.prisma.accountDeletionReauthChallenge.upsert({
+            where: { userId: input.userId },
+            create: {
+                id: crypto.randomUUID(),
+                userId: input.userId,
+                tokenHash: input.tokenHash,
+                createdAt: input.now,
+                expiresAt,
+                reauthenticatedAt,
+            },
+            update: {
+                tokenHash: input.tokenHash,
+                createdAt: input.now,
+                expiresAt,
+                reauthenticatedAt,
+                consumedAt: null,
+            },
+        });
     }
 
     async completeReauthentication(input: { userId: string; tokenHash: string; sessionCreatedAt: Date; now: Date }): Promise<Date> {
-        return withTransaction(this.pool, async (connection) => {
-            const challenge = await getChallengeForUpdate(connection, input.userId, input.tokenHash);
+        return this.prisma.$transaction(async (transaction) => {
+            const challenge = await getChallenge(transaction, input.userId, input.tokenHash);
             assertChallengeUsable(challenge, input.now);
 
             if (challenge.reauthenticatedAt) return challenge.reauthenticatedAt;
@@ -67,82 +60,46 @@ export class MySqlAccountDeletionStore implements AccountDeletionStore {
                 throw new AccountDeletionStoreError("challenge_stale");
             }
 
-            const [result] = await connection.execute<ResultSetHeader>(
-                `UPDATE accountDeletionReauthChallenge
-            SET reauthenticatedAt = ?
-          WHERE id = ? AND reauthenticatedAt IS NULL AND consumedAt IS NULL`,
-                [input.now, challenge.id],
-            );
-            if (result.affectedRows !== 1) throw new AccountDeletionStoreError("challenge_invalid");
+            const result = await transaction.accountDeletionReauthChallenge.updateMany({
+                where: { id: challenge.id, reauthenticatedAt: null, consumedAt: null },
+                data: { reauthenticatedAt: input.now },
+            });
+            if (result.count !== 1) throw new AccountDeletionStoreError("challenge_invalid");
             return input.now;
         });
     }
 
     async deleteAccount(input: { userId: string; tokenHash: string; now: Date }): Promise<void> {
-        await withTransaction(this.pool, async (connection) => {
-            const challenge = await getChallengeForUpdate(connection, input.userId, input.tokenHash);
+        await this.prisma.$transaction(async (transaction) => {
+            const challenge = await getChallenge(transaction, input.userId, input.tokenHash);
             assertChallengeUsable(challenge, input.now);
             if (!challenge.reauthenticatedAt || input.now.getTime() - challenge.reauthenticatedAt.getTime() >= REAUTHENTICATION_WINDOW_MS) {
                 throw new AccountDeletionStoreError("challenge_stale");
             }
 
-            const [accountRows] = await connection.execute<AccountRow[]>(
-                "SELECT accountId FROM account WHERE userId = ? AND providerId = 'discord' LIMIT 1 FOR UPDATE",
-                [input.userId],
-            );
-            const discordAccountId = accountRows[0]?.accountId;
+            const account = await transaction.account.findFirst({
+                where: { userId: input.userId, providerId: "discord" },
+                select: { accountId: true },
+            });
+            const discordAccountId = account?.accountId;
             if (!discordAccountId) throw new AccountDeletionStoreError("account_not_found");
 
             await this.deleteBotAccountData(discordAccountId);
-            await deleteLegacyRequestRecords(connection, input.userId);
-
-            const [result] = await connection.execute<ResultSetHeader>("DELETE FROM user WHERE id = ?", [input.userId]);
-            if (result.affectedRows !== 1) throw new AccountDeletionStoreError("account_not_found");
+            await transaction.user.deleteMany({ where: { id: input.userId } });
         });
     }
 }
 
-async function getChallengeForUpdate(connection: PoolConnection, userId: string, tokenHash: string): Promise<ChallengeRow> {
-    const [rows] = await connection.execute<ChallengeRow[]>(
-        `SELECT id, userId, createdAt, expiresAt, reauthenticatedAt, consumedAt
-       FROM accountDeletionReauthChallenge
-      WHERE userId = ? AND tokenHash = ?
-      LIMIT 1
-      FOR UPDATE`,
-        [userId, tokenHash],
-    );
-    if (!rows[0]) throw new AccountDeletionStoreError("challenge_invalid");
-    return rows[0];
+async function getChallenge(prisma: Prisma.TransactionClient, userId: string, tokenHash: string) {
+    const challenge = await prisma.accountDeletionReauthChallenge.findUnique({
+        where: { userId },
+        select: { id: true, createdAt: true, expiresAt: true, reauthenticatedAt: true, consumedAt: true, tokenHash: true },
+    });
+    if (!challenge || !safelyEqualHashes(challenge.tokenHash, tokenHash)) throw new AccountDeletionStoreError("challenge_invalid");
+    return challenge;
 }
 
-function assertChallengeUsable(challenge: ChallengeRow, now: Date): void {
+function assertChallengeUsable(challenge: { consumedAt: Date | null; expiresAt: Date }, now: Date): void {
     if (challenge.consumedAt) throw new AccountDeletionStoreError("challenge_invalid");
     if (challenge.expiresAt.getTime() <= now.getTime()) throw new AccountDeletionStoreError("challenge_stale");
-}
-
-async function deleteLegacyRequestRecords(connection: PoolConnection, userId: string): Promise<void> {
-    try {
-        await connection.execute("DELETE FROM accountDeletionRequest WHERE userId = ?", [userId]);
-    } catch (error) {
-        if (!isMissingTableError(error)) throw error;
-    }
-}
-
-async function withTransaction<T>(pool: Pool, callback: (connection: PoolConnection) => Promise<T>): Promise<T> {
-    const connection = await pool.getConnection();
-    try {
-        await connection.beginTransaction();
-        const result = await callback(connection);
-        await connection.commit();
-        return result;
-    } catch (error) {
-        await connection.rollback();
-        throw error;
-    } finally {
-        connection.release();
-    }
-}
-
-function isMissingTableError(error: unknown): boolean {
-    return typeof error === "object" && error !== null && "errno" in error && error.errno === 1146;
 }
