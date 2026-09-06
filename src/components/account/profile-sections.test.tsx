@@ -49,10 +49,10 @@ describe("profile identity controls", () => {
         expect(markup).toContain("Connect osu!");
         expect(markup.match(/data-provider-logo="discord"/g)).toHaveLength(2);
         expect(markup.match(/data-provider-logo="osu"/g)).toHaveLength(2);
-        expect(markup).toContain("Linking is optional.");
+        expect(markup.match(/mt-auto pt-8/g)).toHaveLength(2);
     });
 
-    it("places disconnected Discord guidance before its connect action", () => {
+    it("keeps a disconnected provider card concise", () => {
         const markup = renderToStaticMarkup(
             <IdentitySection
                 currentUser={{ name: "Yoru", image: null }}
@@ -64,7 +64,8 @@ describe("profile identity controls", () => {
             />,
         );
 
-        expect(markup.indexOf("Connect a Discord account to use Hanami Bot")).toBeLessThan(markup.indexOf("Connect Discord"));
-        expect(markup).toContain('class="my-8 text-[0.88rem]');
+        expect(markup).toContain("Not connected");
+        expect(markup).toContain("Connect Discord");
+        expect(markup).not.toContain("Connect a Discord account to use Hanami Bot");
     });
 });

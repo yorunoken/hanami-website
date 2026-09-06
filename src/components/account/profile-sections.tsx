@@ -17,11 +17,10 @@ import { cn } from "@/lib/utils";
 import { sectionHeadingClass } from "./account-shell";
 
 const identityBlockClass =
-    "flex flex-col border-b border-border p-[clamp(1.35rem,3vw,2rem)] min-[821px]:border-r last:min-[821px]:border-r-0";
+    "flex min-h-44 flex-col border-b border-border p-[clamp(1.35rem,3vw,2rem)] min-[821px]:border-r last:min-[821px]:border-r-0";
 const identityPersonClass =
     "flex items-center gap-[1.1rem] [&_h3]:text-xl [&_h3_a]:inline-flex [&_h3_a]:items-center [&_h3_a]:gap-[0.45rem] [&_h3_a]:no-underline [&_h3_svg]:size-3.75 [&_p]:mb-[0.3rem] [&_p]:font-mono [&_p]:text-[0.68rem] [&_p]:text-quiet [&_p]:uppercase [&_span:not(.account-avatar):not(.osu-mark)]:mt-1 [&_span:not(.account-avatar):not(.osu-mark)]:block [&_span:not(.account-avatar):not(.osu-mark)]:text-[0.78rem] [&_span:not(.account-avatar):not(.osu-mark)]:text-muted";
-const identityDetailsClass =
-    "mt-7 mb-5 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-2.5 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
+const identityActionClass = "mt-auto pt-8";
 
 export interface LoginMethod {
     provider: "discord" | "osu";
@@ -77,35 +76,24 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                         <div>
                             <p>Discord identity</p>
                             <h3>{linked.has("discord") ? currentUser.name : "Not connected"}</h3>
-                            <span>
-                                {linked.has("discord") ? "Available for sign-in and Bot access." : "Link a Discord account explicitly."}
-                            </span>
                         </div>
                     </div>
                     {linked.has("discord") ? (
-                        <>
-                            <dl className={identityDetailsClass}>
-                                <div>
-                                    <dt>Provider account</dt>
-                                    <dd>{loginMethods.find((method) => method.provider === "discord")?.providerUserId}</dd>
-                                </div>
-                                <div>
-                                    <dt>Session</dt>
-                                    <dd>Active</dd>
-                                </div>
-                            </dl>
-                            {loginMethods.length > 1 && (
-                                <button className={cn(textButtonClass, "text-danger")} type="button" onClick={() => onUnlink("discord")}>
+                        loginMethods.length > 1 && (
+                            <div className={identityActionClass}>
+                                <button
+                                    className={cn(textButtonClass, "text-danger")}
+                                    type="button"
+                                    onClick={() => onUnlink("discord")}
+                                    disabled={action === "unlinking"}
+                                >
                                     <Unlink aria-hidden="true" />
                                     {action === "unlinking" ? "Disconnecting…" : "Disconnect Discord"}
                                 </button>
-                            )}
-                        </>
+                            </div>
+                        )
                     ) : (
-                        <>
-                            <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
-                                Connect a Discord account to use Hanami Bot and Discord sign-in.
-                            </p>
+                        <div className={identityActionClass}>
                             <button
                                 className={cn(primaryActionClass, compactActionClass)}
                                 type="button"
@@ -115,7 +103,7 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                 <DiscordLogo aria-hidden="true" />
                                 {action === "linking" ? "Opening Discord…" : "Connect Discord"}
                             </button>
-                        </>
+                        </div>
                     )}
                 </article>
 
@@ -129,33 +117,26 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                 <div>
                                     <p>osu! identity</p>
                                     <h3>
-                                        <a
-                                            href={`https://osu.ppy.sh/users/${osuMethod?.providerUserId}`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                        >
+                                        <a href={`https://osu.ppy.sh/users/${osuMethod?.providerUserId}`} target="_blank" rel="noreferrer">
                                             {osuMethod?.displayName || "Linked player"}
                                             <ExternalLink aria-hidden="true" />
                                         </a>
                                     </h3>
-                                    <span>Available for sign-in and future Hanami services.</span>
                                 </div>
                             </div>
-                            <dl className={identityDetailsClass}>
-                                <div>
-                                    <dt>Provider account</dt>
-                                    <dd>{osuMethod?.providerUserId}</dd>
+                            {loginMethods.length > 1 && (
+                                <div className={identityActionClass}>
+                                    <button
+                                        className={cn(textButtonClass, "text-danger")}
+                                        type="button"
+                                        onClick={() => onUnlink("osu")}
+                                        disabled={action === "unlinking"}
+                                    >
+                                        <Unlink aria-hidden="true" />
+                                        {action === "unlinking" ? "Disconnecting…" : "Disconnect osu!"}
+                                    </button>
                                 </div>
-                            </dl>
-                            <button
-                                className={cn(textButtonClass, "text-danger")}
-                                type="button"
-                                onClick={() => onUnlink("osu")}
-                                disabled={action === "unlinking"}
-                            >
-                                <Unlink aria-hidden="true" />
-                                {action === "unlinking" ? "Disconnecting…" : "Disconnect osu!"}
-                            </button>
+                            )}
                         </>
                     ) : (
                         <>
@@ -166,21 +147,19 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                 <div>
                                     <p>osu! identity</p>
                                     <h3>Not connected</h3>
-                                    <span>Linking is optional.</span>
                                 </div>
                             </div>
-                            <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
-                                Connect an osu! account to let supported bot commands use your profile by default.
-                            </p>
-                            <button
-                                className={cn(primaryActionClass, compactActionClass)}
-                                type="button"
-                                onClick={() => onLink("osu")}
-                                disabled={action === "linking"}
-                            >
-                                <OsuLogo aria-hidden="true" />
-                                {action === "linking" ? "Opening osu!…" : "Connect osu!"}
-                            </button>
+                            <div className={identityActionClass}>
+                                <button
+                                    className={cn(primaryActionClass, compactActionClass)}
+                                    type="button"
+                                    onClick={() => onLink("osu")}
+                                    disabled={action === "linking"}
+                                >
+                                    <OsuLogo aria-hidden="true" />
+                                    {action === "linking" ? "Opening osu!…" : "Connect osu!"}
+                                </button>
+                            </div>
                         </>
                     )}
                 </article>
