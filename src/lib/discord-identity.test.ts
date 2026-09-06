@@ -38,10 +38,21 @@ describe("Discord profile mapping", () => {
 
         await expect(
             mapVerifiedDiscordProfileToUser(
-                { id: "123456789012345678", email: "player@example.com", verified: true },
+                {
+                    id: "123456789012345678",
+                    email: "player@example.com",
+                    verified: true,
+                    global_name: "Discord player",
+                    username: "discord-player",
+                    image_url: "https://cdn.discordapp.com/avatars/123456789012345678/avatar.png",
+                },
                 onVerifiedIdentity,
             ),
         ).resolves.toEqual({ email: "player@example.com", emailVerified: true });
-        expect(onVerifiedIdentity).toHaveBeenCalledWith({ discordId: "123456789012345678" });
+        expect(onVerifiedIdentity).toHaveBeenCalledWith({
+            discordId: "123456789012345678",
+            displayName: "Discord player",
+            avatarUrl: "https://cdn.discordapp.com/avatars/123456789012345678/avatar.png",
+        });
     });
 });

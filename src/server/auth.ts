@@ -125,13 +125,13 @@ export const auth = betterAuth({
             clientId: process.env.DISCORD_CLIENT_ID as string,
             clientSecret: process.env.DISCORD_CLIENT_SECRET as string,
             mapProfileToUser: (profile) =>
-                mapVerifiedDiscordProfileToUser(profile, async ({ discordId }) => {
+                mapVerifiedDiscordProfileToUser(profile, async (identity) => {
                     const state = await getOAuthState();
                     const targetUserId = state?.link?.userId;
                     if (!targetUserId) return;
-                    const sourceUserId = await transferVerifiedDiscordIdentity(targetUserId, discordId);
+                    const sourceUserId = await transferVerifiedDiscordIdentity(targetUserId, identity);
                     if (!sourceUserId) return;
-                    await synchronizeTransferredIdentity(targetUserId, sourceUserId, "discord", discordId);
+                    await synchronizeTransferredIdentity(targetUserId, sourceUserId, "discord", identity.discordId);
                 }),
             // Discord's provider account ID remains the identity anchor. Refreshing
             // profile fields keeps names/avatars current and replaces a synthetic

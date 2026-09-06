@@ -5,6 +5,15 @@ export interface DiscordIdentityProfile {
     id: string;
     email?: string | null;
     verified: boolean;
+    global_name?: string | null;
+    username?: string | null;
+    image_url?: string | null;
+}
+
+export interface VerifiedDiscordIdentity {
+    discordId: string;
+    displayName: string;
+    avatarUrl: string;
 }
 
 export function createDiscordPlaceholderEmail(providerAccountId: string): string {
@@ -24,10 +33,13 @@ export function mapDiscordProfileToUser(profile: DiscordIdentityProfile): { emai
 
 export async function mapVerifiedDiscordProfileToUser(
     profile: DiscordIdentityProfile,
-    onVerifiedIdentity: (identity: { discordId: string }) => Promise<void>,
+    onVerifiedIdentity: (identity: VerifiedDiscordIdentity) => Promise<void>,
 ): Promise<{ email: string; emailVerified: boolean }> {
     const user = mapDiscordProfileToUser(profile);
-    await onVerifiedIdentity({ discordId: profile.id });
+    const displayName = profile.global_name?.trim() || profile.username?.trim();
+    const avatarUrl = profile.image_url?.trim();
+    if (!displayName || !avatarUrl) throw new Error("Discord returned an incomplete identity profile.");
+    await onVerifiedIdentity({ discordId: profile.id, displayName, avatarUrl });
     return user;
 }
 

@@ -36,16 +36,28 @@ export async function transferVerifiedOsuIdentity(targetUserId: string, osuId: s
     );
 }
 
-export async function transferVerifiedDiscordIdentity(targetUserId: string, discordId: string): Promise<string | null> {
+export async function transferVerifiedDiscordIdentity(
+    targetUserId: string,
+    identity: { discordId: string; displayName: string; avatarUrl: string },
+): Promise<string | null> {
     return webPrisma.$transaction(
         async (database) => {
             const [targetUser, sourceAccount, targetDiscordAccount] = await Promise.all([
                 database.user.findUnique({ where: { id: targetUserId }, select: { id: true } }),
-                database.account.findFirst({ where: { providerId: "discord", accountId: discordId }, select: { id: true, userId: true } }),
+                database.account.findFirst({
+                    where: { providerId: "discord", accountId: identity.discordId },
+                    select: { id: true, userId: true },
+                }),
                 database.account.findFirst({ where: { userId: targetUserId, providerId: "discord" }, select: { accountId: true } }),
             ]);
             if (!targetUser || !sourceAccount) throw new Error("The verified Discord identity could not be resolved.");
-            if (sourceAccount.userId === targetUserId) return null;
+            if (sourceAccount.userId === targetUserId) {
+                await database.user.update({
+                    where: { id: targetUserId },
+                    data: { name: identity.displayName, image: identity.avatarUrl, updatedAt: new Date() },
+                });
+                return null;
+            }
             if (targetDiscordAccount) throw new Error("The current Hanami account already has a different Discord identity.");
 
             const sourceUserId = sourceAccount.userId;
@@ -54,6 +66,10 @@ export async function transferVerifiedDiscordIdentity(targetUserId: string, disc
             await database.oauthConsent.deleteMany({ where: { userId: sourceUserId } });
             await database.session.deleteMany({ where: { userId: sourceUserId } });
             await database.account.update({ where: { id: sourceAccount.id }, data: { userId: targetUserId } });
+            await database.user.update({
+                where: { id: targetUserId },
+                data: { name: identity.displayName, image: identity.avatarUrl, updatedAt: new Date() },
+            });
 
             const remainingOsuAccount = await database.account.findFirst({
                 where: { userId: sourceUserId, providerId: "osu" },
