@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../../node_modules/.prisma/hanami-web"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id                              String                           @id @db.VarChar(36)
+  name                            String                           @db.VarChar(255)
+  email                           String                           @unique @db.VarChar(255)
+  emailVerified                   Boolean
+  image                           String?                          @db.Text
+  createdAt                       DateTime                         @default(now()) @db.Timestamp(3)
+  updatedAt                       DateTime                         @default(now()) @db.Timestamp(3)
+  sessions                        Session[]
+  accounts                        Account[]
+  accountDeletionReauthChallenges AccountDeletionReauthChallenge[]
+  osuOAuthStates                  OsuOAuthState[]
+  companionAuthorizationRequests  CompanionAuthorizationRequest[]  @relation("CompanionAuthorizationRequestUser")
+  companionAuthorizationCodes     CompanionAuthorizationCode[]     @relation("CompanionAuthorizationCodeUser")
+  companionDevices                CompanionDevice[]                @relation("CompanionDeviceUser")
+  companionTokenFamilies          CompanionTokenFamily[]           @relation("CompanionTokenFamilyUser")
+  companionAccessTokens           CompanionAccessToken[]           @relation("CompanionAccessTokenUser")
+
+  @@map("user")
+}
+
+model Session {
+  id                             String                          @id @db.VarChar(36)
+  expiresAt                      DateTime                        @db.Timestamp(3)
+  token                          String                          @unique @db.VarChar(255)
+  createdAt                      DateTime                        @default(now()) @db.Timestamp(3)
+  updatedAt                      DateTime                        @default(now()) @db.Timestamp(3)
+  ipAddress                      String?                         @db.Text
+  userAgent                      String?                         @db.Text
+  userId                         String                          @db.VarChar(36)
+  user                           User                            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "session_user_fk")
+  osuOAuthStates                 OsuOAuthState[]                 @relation("OsuOAuthStateSession")
+  companionAuthorizationRequests CompanionAuthorizationRequest[] @relation("CompanionAuthorizationRequestSession")
+
+  @@index([userId], map: "session_userId_idx")
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @db.VarChar(36)
+  accountId             String    @db.Text
+  providerId            String    @db.Text
+  userId                String    @db.VarChar(36)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime? @db.Timestamp(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamp(3)
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now()) @db.Timestamp(3)
+  updatedAt             DateTime  @default(now()) @db.Timestamp(3)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "account_user_fk")
+
+  @@unique([providerId(length: 64), accountId(length: 191)], map: "account_provider_account_unique")
+  @@index([userId], map: "account_userId_idx")
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @db.VarChar(36)
+  identifier String   @db.VarChar(255)
+  value      String   @db.Text
+  expiresAt  DateTime @db.Timestamp(3)
+  createdAt  DateTime @default(now()) @db.Timestamp(3)
+  updatedAt  DateTime @default(now()) @db.Timestamp(3)
+
+  @@index([identifier], map: "verification_identifier_idx")
+  @@map("verification")
+}
+
+model WebSchemaMigration {
+  id        String   @id @db.VarChar(191)
+  appliedAt DateTime @default(now()) @db.Timestamp(3)
+
+  @@map("webSchemaMigration")
+}
+
+model AccountDeletionReauthChallenge {
+  id                String    @id @db.VarChar(36)
+  userId            String    @db.VarChar(36)
+  tokenHash         String    @db.Char(64)
+  createdAt         DateTime  @db.Timestamp(3)
+  expiresAt         DateTime  @db.Timestamp(3)
+  reauthenticatedAt DateTime? @db.Timestamp(3)
+  consumedAt        DateTime? @db.Timestamp(3)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "accountDeletionReauthChallenge_user_fk")
+
+  @@unique([userId], map: "accountDeletionReauthChallenge_user_unique")
+  @@index([userId, tokenHash], map: "accountDeletionReauthChallenge_lookup_idx")
+  @@index([expiresAt], map: "accountDeletionReauthChallenge_expiry_idx")
+  @@map("accountDeletionReauthChallenge")
+}
+
+model DiscordLinkTicket {
+  id            String    @id @db.VarChar(36)
+  tokenHash     String    @unique @db.Char(64)
+  discordUserId String    @db.VarChar(20)
+  username      String    @db.VarChar(32)
+  displayName   String    @db.VarChar(100)
+  avatarUrl     String    @db.Text
+  createdAt     DateTime  @db.Timestamp(3)
+  expiresAt     DateTime  @db.Timestamp(3)
+  consumedAt    DateTime? @db.Timestamp(3)
+  invalidatedAt DateTime? @db.Timestamp(3)
+
+  @@index([discordUserId, consumedAt, invalidatedAt], map: "discordLinkTicket_discord_active_idx")
+  @@index([expiresAt], map: "discordLinkTicket_expiresAt_idx")
+  @@map("discordLinkTicket")
+}
+
+model OsuOAuthState {
+  id         String    @id @db.VarChar(36)
+  stateHash  String    @unique @db.Char(64)
+  userId     String    @db.VarChar(36)
+  sessionId  String    @db.VarChar(36)
+  createdAt  DateTime  @db.Timestamp(3)
+  expiresAt  DateTime  @db.Timestamp(3)
+  consumedAt DateTime? @db.Timestamp(3)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "osuOAuthState_user_fk")
+  session    Session   @relation("OsuOAuthStateSession", fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "osuOAuthState_session_fk")
+
+  @@index([userId, sessionId, consumedAt], map: "osuOAuthState_binding_idx")
+  @@index([expiresAt], map: "osuOAuthState_expiresAt_idx")
+  @@map("osuOAuthState")
+}
+
+model CompanionAuthorizationRequest {
+  id                  String    @id @db.VarChar(36)
+  userId              String    @db.VarChar(36)
+  sessionId           String    @db.VarChar(36)
+  clientId            String    @db.VarChar(64)
+  redirectUri         String    @db.VarChar(255)
+  state               String    @db.VarChar(512)
+  codeChallenge       String    @db.Char(43)
+  codeChallengeMethod String    @db.VarChar(8)
+  deviceName          String    @db.VarChar(100)
+  platform            String    @db.VarChar(20)
+  csrfTokenHash       String    @unique @db.Char(64)
+  createdAt           DateTime  @db.Timestamp(3)
+  expiresAt           DateTime  @db.Timestamp(3)
+  consumedAt          DateTime? @db.Timestamp(3)
+  user                User      @relation("CompanionAuthorizationRequestUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionAuthorizationRequest_user_fk")
+  session             Session   @relation("CompanionAuthorizationRequestSession", fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionAuthorizationRequest_session_fk")
+
+  @@index([userId, sessionId, consumedAt], map: "companionAuthorizationRequest_binding_idx")
+  @@index([expiresAt], map: "companionAuthorizationRequest_expiry_idx")
+  @@map("companionAuthorizationRequest")
+}
+
+model CompanionAuthorizationCode {
+  id                  String    @id @db.VarChar(36)
+  codeHash            String    @unique @db.Char(64)
+  userId              String    @db.VarChar(36)
+  clientId            String    @db.VarChar(64)
+  redirectUri         String    @db.VarChar(255)
+  codeChallenge       String    @db.Char(43)
+  codeChallengeMethod String    @db.VarChar(8)
+  deviceName          String    @db.VarChar(100)
+  platform            String    @db.VarChar(20)
+  createdAt           DateTime  @db.Timestamp(3)
+  expiresAt           DateTime  @db.Timestamp(3)
+  usedAt              DateTime? @db.Timestamp(3)
+  user                User      @relation("CompanionAuthorizationCodeUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionAuthorizationCode_user_fk")
+
+  @@index([userId, createdAt], map: "companionAuthorizationCode_user_idx")
+  @@index([expiresAt, usedAt], map: "companionAuthorizationCode_expiry_idx")
+  @@map("companionAuthorizationCode")
+}
+
+model CompanionDevice {
+  id            String                 @id @db.VarChar(36)
+  userId        String                 @db.VarChar(36)
+  displayName   String                 @db.VarChar(100)
+  platform      String                 @db.VarChar(20)
+  createdAt     DateTime               @db.Timestamp(3)
+  lastUsedAt    DateTime               @db.Timestamp(3)
+  revokedAt     DateTime?              @db.Timestamp(3)
+  user          User                   @relation("CompanionDeviceUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionDevice_user_fk")
+  tokenFamilies CompanionTokenFamily[]
+  accessTokens  CompanionAccessToken[] @relation("CompanionAccessTokenDevice")
+
+  @@index([userId, createdAt], map: "companionDevice_user_idx")
+  @@index([userId, revokedAt], map: "companionDevice_user_active_idx")
+  @@map("companionDevice")
+}
+
+model CompanionTokenFamily {
+  id            String                  @id @db.VarChar(36)
+  deviceId      String                  @unique @db.VarChar(36)
+  userId        String                  @db.VarChar(36)
+  clientId      String                  @db.VarChar(64)
+  createdAt     DateTime                @db.Timestamp(3)
+  lastUsedAt    DateTime                @db.Timestamp(3)
+  revokedAt     DateTime?               @db.Timestamp(3)
+  device        CompanionDevice         @relation(fields: [deviceId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionTokenFamily_device_fk")
+  user          User                    @relation("CompanionTokenFamilyUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionTokenFamily_user_fk")
+  accessTokens  CompanionAccessToken[]
+  refreshTokens CompanionRefreshToken[]
+
+  @@index([userId, revokedAt], map: "companionTokenFamily_user_idx")
+  @@map("companionTokenFamily")
+}
+
+model CompanionAccessToken {
+  id         String               @id @db.VarChar(36)
+  tokenHash  String               @unique @db.Char(64)
+  familyId   String               @db.VarChar(36)
+  deviceId   String               @db.VarChar(36)
+  userId     String               @db.VarChar(36)
+  createdAt  DateTime             @db.Timestamp(3)
+  expiresAt  DateTime             @db.Timestamp(3)
+  lastUsedAt DateTime?            @db.Timestamp(3)
+  revokedAt  DateTime?            @db.Timestamp(3)
+  family     CompanionTokenFamily @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionAccessToken_family_fk")
+  device     CompanionDevice      @relation("CompanionAccessTokenDevice", fields: [deviceId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionAccessToken_device_fk")
+  user       User                 @relation("CompanionAccessTokenUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionAccessToken_user_fk")
+
+  @@index([familyId, revokedAt], map: "companionAccessToken_family_idx")
+  @@index([expiresAt], map: "companionAccessToken_expiry_idx")
+  @@index([userId, deviceId], map: "companionAccessToken_user_idx")
+  @@map("companionAccessToken")
+}
+
+model CompanionRefreshToken {
+  id                String               @id @db.VarChar(36)
+  tokenHash         String               @unique @db.Char(64)
+  familyId          String               @db.VarChar(36)
+  parentTokenId     String?              @db.VarChar(36)
+  replacedByTokenId String?              @db.VarChar(36)
+  createdAt         DateTime             @db.Timestamp(3)
+  expiresAt         DateTime             @db.Timestamp(3)
+  usedAt            DateTime?            @db.Timestamp(3)
+  revokedAt         DateTime?            @db.Timestamp(3)
+  family            CompanionTokenFamily @relation(fields: [familyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "companionRefreshToken_family_fk")
+
+  @@index([familyId, revokedAt], map: "companionRefreshToken_family_idx")
+  @@index([expiresAt, usedAt], map: "companionRefreshToken_expiry_idx")
+  @@index([parentTokenId], map: "companionRefreshToken_parent_idx")
+  @@map("companionRefreshToken")
+}
