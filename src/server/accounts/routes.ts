@@ -4,7 +4,7 @@ import { auth, botAccountCompatibility, trustedOrigins } from "../auth";
 import { webPrisma } from "../database/web";
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import { serverIdentity, type HanamiIdentity } from "../identity";
-import { deleteOsuProfile } from "../identities/osu-profile";
+import { Prisma } from "../../generated/prisma/web/client";
 import { logSafeFailure } from "../security/http";
 import { CanonicalAccountService, createCanonicalAccountDatabase, isLoginProvider, type LoginMethod, type LoginProvider } from "./service";
 
@@ -19,7 +19,6 @@ export interface AccountRouteDependencies {
         errorCallbackURL: string;
     }): Promise<{ url: string; headers: Headers }>;
     clearBotLink(input: { userId: string; provider: LoginProvider; providerAccountId: string }): Promise<void>;
-    clearOsuProfile(input: { userId: string; providerAccountId: string }): Promise<void>;
     unlink(input: { userId: string; provider: LoginProvider; providerAccountId: string; headers: Headers }): Promise<void>;
     isFreshSession(sessionCreatedAt: Date): boolean;
 }
@@ -92,12 +91,6 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
                     provider: params.provider,
                     providerAccountId: target.providerUserId,
                 });
-                if (params.provider === "osu") {
-                    await dependencies.clearOsuProfile({
-                        userId: identity.userId,
-                        providerAccountId: target.providerUserId,
-                    });
-                }
                 await dependencies.unlink({
                     userId: identity.userId,
                     provider: params.provider,
@@ -136,14 +129,24 @@ export const accountRoutes = createAccountRoutes({
     },
     clearBotLink: ({ userId, provider, providerAccountId }) =>
         botAccountCompatibility.synchronizeUser(userId, { provider, providerUserId: providerAccountId }),
-    clearOsuProfile: ({ userId, providerAccountId }) => deleteOsuProfile(userId, providerAccountId, webPrisma),
-    unlink: async ({ headers, userId, provider, providerAccountId }) => {
-        const account = await webPrisma.account.findFirst({
-            where: { userId, providerId: provider, accountId: providerAccountId },
-            select: { id: true },
-        });
-        if (!account) throw new Error("The provider account was not found.");
-        await auth.api.unlinkAccount({ headers, body: { accountId: account.id } });
+    unlink: async ({ userId, provider, providerAccountId }) => {
+        await webPrisma.$transaction(
+            async (database) => {
+                const accounts = await database.account.findMany({
+                    where: { userId },
+                    select: { id: true, providerId: true, accountId: true },
+                });
+                const loginAccounts = accounts.filter((account) => isLoginProvider(account.providerId));
+                const account = loginAccounts.find(
+                    (candidate) => candidate.providerId === provider && candidate.accountId === providerAccountId,
+                );
+                if (!account) throw new Error("The provider account was not found.");
+                if (loginAccounts.length <= 1) throw new Error("The final sign-in method cannot be removed.");
+                if (provider === "osu") await database.osuProfile.deleteMany({ where: { userId, osuId: providerAccountId } });
+                await database.account.delete({ where: { id: account.id } });
+            },
+            { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
     },
     isFreshSession: (sessionCreatedAt) => isFreshAuthentication(sessionCreatedAt),
 });

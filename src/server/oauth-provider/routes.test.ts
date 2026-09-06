@@ -36,6 +36,7 @@ describe("Hanami OAuth provider routes", () => {
             code_challenge_methods_supported: ["S256"],
         });
         expect(metadata.claims_supported).toEqual(expect.arrayContaining([...osuClaimNames]));
+        expect(metadata.claims_supported).toEqual(expect.arrayContaining(["sub", "iss", "aud", "exp", "iat", "sid", "scope", "azp"]));
     });
 
     it("rejects dynamic client registration", async () => {

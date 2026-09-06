@@ -2,6 +2,8 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 
 import { buildOsuClaims, osuClaimNames, type OsuClaimsDatabase } from "./claims";
 
+const coreClaimNames = ["sub", "iss", "aud", "exp", "iat", "sid", "scope", "azp"] as const;
+
 export function createHanamiOAuthProviderPlugin(database: OsuClaimsDatabase) {
     const customClaims = async ({ user, scopes }: { user?: { id: string } | null; scopes: readonly string[] }) => {
         if (!user) return {};
@@ -19,7 +21,7 @@ export function createHanamiOAuthProviderPlugin(database: OsuClaimsDatabase) {
         allowUnauthenticatedClientRegistration: false,
         refreshTokenReuseInterval: 0,
         advertisedMetadata: {
-            claims_supported: [...osuClaimNames],
+            claims_supported: [...coreClaimNames, ...osuClaimNames],
         },
         customAccessTokenClaims: customClaims,
         customIdTokenClaims: customClaims,
