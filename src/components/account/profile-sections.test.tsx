@@ -49,4 +49,20 @@ describe("profile identity controls", () => {
         expect(markup).toContain("Connect osu!");
         expect(markup).toContain("Linking is optional.");
     });
+
+    it("places disconnected Discord guidance before its connect action", () => {
+        const markup = renderToStaticMarkup(
+            <IdentitySection
+                currentUser={{ name: "Yoru", image: null }}
+                loginMethods={[{ provider: "osu", providerUserId: "24680", displayName: "Yoru" }]}
+                loading={false}
+                action={null}
+                onLink={() => {}}
+                onUnlink={() => {}}
+            />,
+        );
+
+        expect(markup.indexOf("Connect a Discord account to use Hanami Bot")).toBeLessThan(markup.indexOf("Connect Discord"));
+        expect(markup).toContain('class="my-8 text-[0.88rem]');
+    });
 });

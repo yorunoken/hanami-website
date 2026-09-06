@@ -30,7 +30,6 @@ export default function Profile() {
     useEffect(() => {
         const controller = new AbortController();
         setLinkLoading(true);
-        setSettingsLoading(true);
         setError(null);
 
         void fetchJson<{ loginMethods: LoginMethod[] }>("/api/account/providers", controller.signal)
@@ -45,6 +44,21 @@ export default function Profile() {
                 if (!controller.signal.aborted) setLinkLoading(false);
             });
 
+        return () => controller.abort();
+    }, [session.user.id]);
+
+    const discordLinked = loginMethods.some((method) => method.provider === "discord");
+
+    useEffect(() => {
+        if (linkLoading) return;
+        if (!discordLinked) {
+            setSettings(null);
+            setSettingsLoading(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        setSettingsLoading(true);
         void fetchJson<BotSettings>("/api/osu-link/settings", controller.signal)
             .then((botSettings) => {
                 setSettings(botSettings);
@@ -58,7 +72,7 @@ export default function Profile() {
             });
 
         return () => controller.abort();
-    }, [session.user.id]);
+    }, [discordLinked, linkLoading, session.user.id]);
 
     useEffect(() => {
         if (linkLoading || botLinkAttempted.current || new URLSearchParams(window.location.search).get("link") !== "osu") return;
@@ -151,14 +165,16 @@ export default function Profile() {
                     onUnlink={handleUnlinkProvider}
                 />
 
-                <BotPreferencesSection
-                    settings={settings}
-                    loading={settingsLoading}
-                    action={action}
-                    saved={saved}
-                    onSettingsChange={setSettings}
-                    onSubmit={handleSaveSettings}
-                />
+                {discordLinked && (
+                    <BotPreferencesSection
+                        settings={settings}
+                        loading={settingsLoading}
+                        action={action}
+                        saved={saved}
+                        onSettingsChange={setSettings}
+                        onSubmit={handleSaveSettings}
+                    />
+                )}
 
                 <AccountPrivacyAside />
             </AccountLayout>

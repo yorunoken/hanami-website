@@ -98,10 +98,20 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                             )}
                         </>
                     ) : (
-                        <button className={cn(primaryActionClass, compactActionClass)} type="button" onClick={() => onLink("discord")}>
-                            <Link2 aria-hidden="true" />
-                            Connect Discord
-                        </button>
+                        <>
+                            <p className="my-8 text-[0.88rem] leading-[1.65] text-muted">
+                                Connect a Discord account to use Hanami Bot and Discord sign-in.
+                            </p>
+                            <button
+                                className={cn(primaryActionClass, compactActionClass)}
+                                type="button"
+                                onClick={() => onLink("discord")}
+                                disabled={action === "linking"}
+                            >
+                                <Link2 aria-hidden="true" />
+                                {action === "linking" ? "Opening Discord…" : "Connect Discord"}
+                            </button>
+                        </>
                     )}
                 </article>
 
