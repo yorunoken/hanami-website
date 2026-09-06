@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../../generated/prisma/web/client";
-import mysql, { type RowDataPacket } from "mysql2/promise";
+import mysql from "mysql2/promise";
 
 import { assertDisposableTestDatabase, parseMariaDbConnection } from "../database/config";
 import { runBetterAuthSchemaMigrations } from "../auth-schema";
@@ -76,20 +76,13 @@ describeDatabase("Prisma Discord link tickets", () => {
         if (!pool || !prisma || !store) throw new Error("Ticket store is unavailable");
         const olderNow = new Date(now.getTime() + 3_000);
         const newerNow = new Date(now.getTime() + 4_000);
-        const lockName = "hanami-discord-link-ticket:123456789012345678";
 
         for (const order of ["older-first", "newer-first"] as const) {
             const olderToken = createSecureToken();
             const newerToken = createSecureToken();
-            const lockConnection = await pool.getConnection();
-            const [lockRows] = await lockConnection.execute<RowDataPacket[]>("SELECT GET_LOCK(?, 0) AS acquired", [lockName]);
-            expect(Number(lockRows[0]?.acquired)).toBe(1);
 
             const firstIssue = order === "older-first" ? issue(olderToken, olderNow) : issue(newerToken, newerNow);
             const secondIssue = order === "older-first" ? issue(newerToken, newerNow) : issue(olderToken, olderNow);
-            await Promise.resolve();
-            await lockConnection.execute("SELECT RELEASE_LOCK(?)", [lockName]);
-            lockConnection.release();
             await Promise.all([firstIssue, secondIssue]);
 
             const activeTickets = await prisma.discordLinkTicket.findMany({

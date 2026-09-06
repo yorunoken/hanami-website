@@ -3,6 +3,7 @@ import type { PrismaClient } from "../../generated/prisma/web/client";
 import type { DiscordLinkRequest } from "./validation";
 
 export const DISCORD_LINK_TICKET_LIFETIME_MS = 5 * 60 * 1_000;
+const TICKET_ISSUE_TRANSACTION_ATTEMPTS = 5;
 
 export interface DiscordLinkTicket extends DiscordLinkRequest {
     id: string;
@@ -19,92 +20,70 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
     constructor(private readonly prisma: PrismaClient) {}
 
     async issue(input: DiscordLinkRequest & { tokenHash: string; now: Date }): Promise<DiscordLinkTicket> {
-        return this.prisma.$transaction(
-            async (transaction) => {
-                const lockName = `hanami-discord-link-ticket:${input.discordUserId}`;
-                const lockRows = await transaction.$queryRaw<{ acquired: number | string | null }[]>`
-                SELECT GET_LOCK(${lockName}, 30) AS acquired
-            `;
-                if (Number(lockRows[0]?.acquired) !== 1) throw new Error("Could not acquire the Discord link ticket lock");
+        for (let attempt = 1; attempt <= TICKET_ISSUE_TRANSACTION_ATTEMPTS; attempt += 1) {
+            try {
+                return await this.prisma.$transaction(
+                    async (transaction) => {
+                        const activeTickets = await transaction.$queryRaw<Array<{ createdAt: Date; tokenHash: string }>>`
+                    SELECT createdAt, tokenHash
+                      FROM discordLinkTicket FORCE INDEX (discordLinkTicket_discord_active_idx)
+                     WHERE discordUserId = ${input.discordUserId}
+                       AND consumedAt IS NULL
+                       AND invalidatedAt IS NULL
+                       AND expiresAt > ${input.now}
+                     ORDER BY createdAt DESC, tokenHash DESC
+                     FOR UPDATE
+                `;
+                        const activeTicket = activeTickets[0];
+                        const candidateWins =
+                            !activeTicket ||
+                            input.now > activeTicket.createdAt ||
+                            (input.now.getTime() === activeTicket.createdAt.getTime() && input.tokenHash > activeTicket.tokenHash);
 
-                let ticket: DiscordLinkTicket | undefined;
-                let operationError: unknown;
-                try {
-                    const activeTicket = await transaction.discordLinkTicket.findFirst({
-                        where: {
+                        if (candidateWins) {
+                            await transaction.discordLinkTicket.updateMany({
+                                where: {
+                                    discordUserId: input.discordUserId,
+                                    consumedAt: null,
+                                    invalidatedAt: null,
+                                },
+                                data: { invalidatedAt: input.now },
+                            });
+                        }
+
+                        const ticket: DiscordLinkTicket = {
+                            id: crypto.randomUUID(),
                             discordUserId: input.discordUserId,
-                            consumedAt: null,
-                            invalidatedAt: null,
-                            expiresAt: { gt: input.now },
-                        },
-                        orderBy: [{ createdAt: "desc" }, { tokenHash: "desc" }],
-                        select: { createdAt: true, tokenHash: true },
-                    });
-                    const candidateWins =
-                        !activeTicket ||
-                        input.now > activeTicket.createdAt ||
-                        (input.now.getTime() === activeTicket.createdAt.getTime() && input.tokenHash > activeTicket.tokenHash);
+                            username: input.username,
+                            displayName: input.displayName,
+                            avatarUrl: input.avatarUrl,
+                            createdAt: input.now,
+                            expiresAt: new Date(input.now.getTime() + DISCORD_LINK_TICKET_LIFETIME_MS),
+                        };
 
-                    if (candidateWins) {
-                        await transaction.discordLinkTicket.updateMany({
-                            where: {
-                                discordUserId: input.discordUserId,
-                                consumedAt: null,
-                                invalidatedAt: null,
+                        await transaction.discordLinkTicket.create({
+                            data: {
+                                id: ticket.id,
+                                tokenHash: input.tokenHash,
+                                discordUserId: ticket.discordUserId,
+                                username: ticket.username,
+                                displayName: ticket.displayName,
+                                avatarUrl: ticket.avatarUrl,
+                                createdAt: ticket.createdAt,
+                                expiresAt: ticket.expiresAt,
+                                invalidatedAt: candidateWins ? null : input.now,
                             },
-                            data: { invalidatedAt: input.now },
                         });
-                    }
+                        return ticket;
+                    },
+                    { isolationLevel: "Serializable", maxWait: 5_000, timeout: 35_000 },
+                );
+            } catch (error) {
+                if (attempt === TICKET_ISSUE_TRANSACTION_ATTEMPTS || !isRetryableTransactionConflict(error)) throw error;
+            }
+        }
 
-                    ticket = {
-                        id: crypto.randomUUID(),
-                        discordUserId: input.discordUserId,
-                        username: input.username,
-                        displayName: input.displayName,
-                        avatarUrl: input.avatarUrl,
-                        createdAt: input.now,
-                        expiresAt: new Date(input.now.getTime() + DISCORD_LINK_TICKET_LIFETIME_MS),
-                    };
-
-                    await transaction.discordLinkTicket.create({
-                        data: {
-                            id: ticket.id,
-                            tokenHash: input.tokenHash,
-                            discordUserId: ticket.discordUserId,
-                            username: ticket.username,
-                            displayName: ticket.displayName,
-                            avatarUrl: ticket.avatarUrl,
-                            createdAt: ticket.createdAt,
-                            expiresAt: ticket.expiresAt,
-                            invalidatedAt: candidateWins ? null : input.now,
-                        },
-                    });
-                } catch (error) {
-                    operationError = error;
-                }
-
-                let releaseError: unknown;
-                try {
-                    const releaseRows = await transaction.$queryRaw<{ released: number | string | null }[]>`
-                        SELECT RELEASE_LOCK(${lockName}) AS released
-                    `;
-                    if (Number(releaseRows[0]?.released) !== 1) {
-                        throw new Error("Could not release the Discord link ticket lock");
-                    }
-                } catch (error) {
-                    releaseError = error;
-                }
-
-                if (operationError && releaseError) {
-                    throw new AggregateError([operationError, releaseError], "Discord link ticket issuance and lock release failed");
-                }
-                if (operationError) throw operationError;
-                if (releaseError) throw releaseError;
-                if (!ticket) throw new Error("Discord link ticket was not created");
-                return ticket;
-            },
-            { maxWait: 5_000, timeout: 35_000 },
-        );
+        throw new Error("Discord link ticket transaction retry limit was exhausted");
     }
 
     async consume(tokenHash: string, now: Date): Promise<DiscordLinkTicket | null> {
@@ -135,4 +114,21 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
             return ticket;
         });
     }
+}
+
+function isRetryableTransactionConflict(error: unknown): boolean {
+    if (!isRecord(error) || typeof error.code !== "string") return false;
+    if (error.code === "P2034") return true;
+    if (error.code !== "P2010" || !isRecord(error.meta) || !isRecord(error.meta.driverAdapterError)) return false;
+    return hasMariaDbTransactionConflict(error.meta.driverAdapterError);
+}
+
+function hasMariaDbTransactionConflict(value: Record<string, unknown>): boolean {
+    if (value.kind === "TransactionWriteConflict") return true;
+    if (value.originalCode === "1020" || value.originalCode === "1213" || value.code === 1020 || value.code === 1213) return true;
+    return isRecord(value.cause) && hasMariaDbTransactionConflict(value.cause);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
 }
