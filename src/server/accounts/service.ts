@@ -347,12 +347,10 @@ interface PrismaAccountSurface extends Omit<CanonicalAccountDatabase, "$transact
 function createDatabaseAdapter(prisma: PrismaAccountSurface): CanonicalAccountDatabase {
     const ownedRecordDefinitions: readonly [string, boolean][] = [
         ["accountDeletionReauthChallenge", true],
-        ["osuOAuthState", false],
-        ["companionAuthorizationRequest", false],
-        ["companionAuthorizationCode", false],
-        ["companionDevice", false],
-        ["companionTokenFamily", false],
-        ["companionAccessToken", false],
+        ["osuProfile", true],
+        ["oauthRefreshToken", false],
+        ["oauthAccessToken", false],
+        ["oauthConsent", false],
     ];
     const ownedRecords = ownedRecordDefinitions.flatMap(([name, uniquePerUser]) => {
         const delegate = prisma[name as string];

@@ -36,6 +36,19 @@ const successfulCentralIdentityHistory = [
     ...successfulPrismaHistory,
     { migrationName: "1_central_identity", finished: true, rolledBack: false },
 ];
+const finalTables = [
+    "user",
+    "session",
+    "account",
+    "verification",
+    "accountDeletionReauthChallenge",
+    "discordLinkTicket",
+    ...centralIdentityTables,
+];
+const successfulFinalHistory = [
+    ...successfulCentralIdentityHistory,
+    { migrationName: "2_remove_unused_tables", finished: true, rolledBack: false },
+];
 
 describe("classifyWebDatabaseTables", () => {
     test("recognizes an empty database", () => {
@@ -56,6 +69,15 @@ describe("classifyWebDatabaseTables", () => {
             classifyWebDatabaseTables({
                 tableNames: ["_prisma_migrations", ...legacyTables, ...centralIdentityTables],
                 prismaMigrations: successfulCentralIdentityHistory,
+            }),
+        ).toBe("prisma-history");
+    });
+
+    test("recognizes the final cleaned schema on restart", () => {
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...finalTables],
+                prismaMigrations: successfulFinalHistory,
             }),
         ).toBe("prisma-history");
     });

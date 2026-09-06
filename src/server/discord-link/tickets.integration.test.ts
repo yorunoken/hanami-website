@@ -1,17 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../../generated/prisma/web/client";
-import mysql from "mysql2/promise";
 
 import { assertDisposableTestDatabase, parseMariaDbConnection } from "../database/config";
-import { runBetterAuthSchemaMigrations } from "../auth-schema";
-import { runWebMigrations } from "../migrations";
 import { createSecureToken, hashToken } from "../security/tokens";
 import { PrismaDiscordLinkTicketStore } from "./tickets";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
-const pool = testDatabaseUrl ? mysql.createPool({ uri: testDatabaseUrl, timezone: "Z" }) : null;
 const prisma = testDatabaseUrl ? new PrismaClient({ adapter: new PrismaMariaDb(parseMariaDbConnection(testDatabaseUrl, "web")) }) : null;
 const store = prisma ? new PrismaDiscordLinkTicketStore(prisma) : null;
 const now = new Date("2026-07-15T12:00:00.000Z");
@@ -20,19 +16,13 @@ let disposableDatabaseVerified = false;
 
 describeDatabase("Prisma Discord link tickets", () => {
     beforeAll(async () => {
-        if (!pool || !prisma) throw new Error("TEST_DATABASE_URL is required");
+        if (!prisma) throw new Error("TEST_DATABASE_URL is required");
         assertDisposableTestDatabase(testDatabaseUrl, {
             webUrl: process.env.WEB_DATABASE_URL,
             botUrl: process.env.BOT_DATABASE_URL,
         });
         disposableDatabaseVerified = true;
-        const testAuth = (await import("better-auth")).betterAuth({
-            database: pool,
-            baseURL: "https://hanami-ticket-test.invalid",
-            secret: "hanami-ticket-test-secret-at-least-thirty-two-characters",
-        });
-        await runBetterAuthSchemaMigrations(testAuth.options);
-        await runWebMigrations(pool);
+        await deployTestMigrations(testDatabaseUrl!);
     });
 
     beforeEach(async () => {
@@ -44,7 +34,6 @@ describeDatabase("Prisma Discord link tickets", () => {
         if (disposableDatabaseVerified && prisma) {
             await prisma.discordLinkTicket.deleteMany({ where: { discordUserId: { in: testDiscordUserIds } } });
         }
-        await pool?.end();
         await prisma?.$disconnect();
     });
 
@@ -73,7 +62,7 @@ describeDatabase("Prisma Discord link tickets", () => {
     });
 
     it("serializes concurrent issuance so only the newest ticket remains valid", async () => {
-        if (!pool || !prisma || !store) throw new Error("Ticket store is unavailable");
+        if (!prisma || !store) throw new Error("Ticket store is unavailable");
         const olderNow = new Date(now.getTime() + 3_000);
         const newerNow = new Date(now.getTime() + 4_000);
 
@@ -142,6 +131,16 @@ describeDatabase("Prisma Discord link tickets", () => {
         ).toBe(6);
     });
 });
+
+async function deployTestMigrations(databaseUrl: string): Promise<void> {
+    const child = Bun.spawn([process.execPath, "src/scripts/migrate.ts"], {
+        env: { ...process.env, WEB_DATABASE_URL: databaseUrl, BOT_DATABASE_URL: "" },
+        stdout: "pipe",
+        stderr: "pipe",
+    });
+    const [code, error] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+    if (code !== 0) throw new Error(error);
+}
 
 async function issue(token: string, createdAt: Date) {
     if (!store) throw new Error("Ticket store is unavailable");

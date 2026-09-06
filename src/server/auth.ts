@@ -2,7 +2,6 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
 import { jwt } from "better-auth/plugins";
-import { createPool } from "mysql2/promise";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
 import { createOsuOAuthProvider } from "./identities/osu-provider";
@@ -26,11 +25,6 @@ const developmentOrigins =
         : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "http://127.0.0.1:4173"];
 
 export const trustedOrigins = [...new Set([baseOrigin, ...developmentOrigins])];
-
-export const webDatabase = createPool({
-    uri: process.env.WEB_DATABASE_URL,
-    timezone: "Z",
-});
 
 export const discordLinkTicketStore = new PrismaDiscordLinkTicketStore(webPrisma);
 const canonicalAccountService = new CanonicalAccountService(createCanonicalAccountDatabase(webPrisma));

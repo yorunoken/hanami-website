@@ -23,7 +23,6 @@
         "clsx": "^2.1.1",
         "elysia": "^1.4.28",
         "lucide-react": "^0.536.0",
-        "mysql2": "^3.22.4",
         "react": "19.1.0",
         "react-dom": "19.1.0",
         "react-router-dom": "^7.17.0",

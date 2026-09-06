@@ -66,13 +66,11 @@ export async function reconcileOsuGuessrClient(
         disabled: false,
     };
 
-    return database.oauthClient.upsert(
-        {
-            where: { clientId: config.clientId },
-            update: persisted,
-            create: { id: crypto.randomUUID(), ...persisted },
-        } as never,
-    );
+    return database.oauthClient.upsert({
+        where: { clientId: config.clientId },
+        update: persisted,
+        create: { id: crypto.randomUUID(), ...persisted },
+    } as never);
 }
 
 function isAllowedRedirectUri(value: string): boolean {

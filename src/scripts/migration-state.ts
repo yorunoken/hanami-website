@@ -1,5 +1,3 @@
-import { expectedWebMigrationIds } from "../server/migrations";
-
 export const expectedLegacyWebTables = [
     "user",
     "session",
@@ -17,7 +15,11 @@ export const expectedLegacyWebTables = [
     "companionRefreshToken",
 ] as const;
 
-export const expectedLegacyWebMigrationIds = expectedWebMigrationIds;
+export const expectedLegacyWebMigrationIds = [
+    "20260715_account_deletion_reauthentication",
+    "20260715_discord_magic_link_and_osu_state",
+    "20260716_companion_oauth",
+] as const;
 
 export const expectedCentralIdentityWebTables = [
     "osuProfile",
@@ -32,6 +34,16 @@ export const expectedCentralIdentityWebTables = [
 ] as const;
 
 export const expectedCurrentWebTables = [...expectedLegacyWebTables, ...expectedCentralIdentityWebTables] as const;
+
+export const expectedFinalWebTables = [
+    "user",
+    "session",
+    "account",
+    "verification",
+    "accountDeletionReauthChallenge",
+    "discordLinkTicket",
+    ...expectedCentralIdentityWebTables,
+] as const;
 
 export interface PrismaMigrationRecord {
     migrationName: string;
@@ -52,6 +64,10 @@ export const allowedPrismaWebStates: readonly AllowedPrismaWebState[] = [
     {
         migrationNames: ["0_init", "1_central_identity"],
         tableNames: expectedCurrentWebTables,
+    },
+    {
+        migrationNames: ["0_init", "1_central_identity", "2_remove_unused_tables"],
+        tableNames: expectedFinalWebTables,
     },
 ];
 
