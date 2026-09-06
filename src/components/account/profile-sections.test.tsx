@@ -10,7 +10,12 @@ describe("profile identity controls", () => {
                 currentUser={{ name: "Yoru", image: null }}
                 loginMethods={[
                     { provider: "discord", providerUserId: "123456789012345678" },
-                    { provider: "osu", providerUserId: "24680" },
+                    {
+                        provider: "osu",
+                        providerUserId: "24680",
+                        displayName: "Yoru",
+                        avatarUrl: "https://a.ppy.sh/24680",
+                    },
                 ]}
                 loading={false}
                 action={null}
@@ -23,6 +28,9 @@ describe("profile identity controls", () => {
         expect(markup).toContain("osu! identity");
         expect(markup).toContain("Disconnect Discord");
         expect(markup).toContain("Disconnect osu!");
+        expect(markup).toContain("Yoru");
+        expect(markup).toContain("https://a.ppy.sh/24680");
+        expect(markup).not.toContain("Linked player");
     });
 
     it("offers explicit link buttons without implying the providers are already combined", () => {

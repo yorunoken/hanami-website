@@ -10,7 +10,9 @@ import { CanonicalAccountService, createCanonicalAccountDatabase, isLoginProvide
 
 export interface AccountRouteDependencies {
     getCurrent(headers: Headers): Promise<(HanamiIdentity & { sessionCreatedAt: Date }) | null>;
-    listLoginMethods(userId: string): Promise<Array<Pick<LoginMethod, "provider" | "providerUserId">>>;
+    listLoginMethods(userId: string): Promise<
+        Array<Pick<LoginMethod, "provider" | "providerUserId"> & { displayName?: string | null; avatarUrl?: string | null }>
+    >;
     beginLink(input: {
         userId: string;
         provider: LoginProvider;
@@ -114,7 +116,18 @@ export const accountRoutes = createAccountRoutes({
         const session = await auth.api.getSession({ headers });
         return session ? { ...identity, sessionCreatedAt: new Date(session.session.createdAt) } : null;
     },
-    listLoginMethods: (userId) => productionAccountService.listLoginMethods(userId),
+    listLoginMethods: async (userId) => {
+        const methods = await productionAccountService.listLoginMethods(userId);
+        const profile = await webPrisma.osuProfile.findUnique({
+            where: { userId },
+            select: { osuId: true, username: true, avatarUrl: true },
+        });
+        return methods.map((method) =>
+            method.provider === "osu" && profile?.osuId === method.providerUserId
+                ? { ...method, displayName: profile.username, avatarUrl: profile.avatarUrl }
+                : method,
+        );
+    },
     beginLink: async ({ provider, headers, callbackURL, errorCallbackURL }) => {
         const result = await auth.api.linkSocialAccount({
             headers,

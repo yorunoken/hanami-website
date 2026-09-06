@@ -25,6 +25,8 @@ const identityDetailsClass =
 export interface LoginMethod {
     provider: "discord" | "osu";
     providerUserId: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
 }
 
 export interface BotSettings {
@@ -54,6 +56,7 @@ interface IdentitySectionProps {
 
 export function IdentitySection({ currentUser, loginMethods, loading, action, onLink, onUnlink }: IdentitySectionProps) {
     const linked = new Set(loginMethods.map((method) => method.provider));
+    const osuMethod = loginMethods.find((method) => method.provider === "osu");
     return (
         <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
@@ -108,16 +111,16 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                     ) : linked.has("osu") ? (
                         <>
                             <div className={identityPersonClass}>
-                                <Avatar src={undefined} name="osu! player" />
+                                <Avatar src={osuMethod?.avatarUrl} name={osuMethod?.displayName || "osu! player"} />
                                 <div>
                                     <p>osu! identity</p>
                                     <h3>
                                         <a
-                                            href={`https://osu.ppy.sh/users/${loginMethods.find((method) => method.provider === "osu")?.providerUserId}`}
+                                            href={`https://osu.ppy.sh/users/${osuMethod?.providerUserId}`}
                                             target="_blank"
                                             rel="noreferrer"
                                         >
-                                            Linked player
+                                            {osuMethod?.displayName || "Linked player"}
                                             <ExternalLink aria-hidden="true" />
                                         </a>
                                     </h3>
@@ -127,7 +130,7 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                             <dl className={identityDetailsClass}>
                                 <div>
                                     <dt>Provider account</dt>
-                                    <dd>{loginMethods.find((method) => method.provider === "osu")?.providerUserId}</dd>
+                                    <dd>{osuMethod?.providerUserId}</dd>
                                 </div>
                             </dl>
                             <button
