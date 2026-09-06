@@ -30,6 +30,21 @@ describe("durable osu profile lifecycle", () => {
         expect(database.state[0]?.username).toBe("Existing");
     });
 
+    it("surfaces durable profile persistence failures to the authentication flow", async () => {
+        const database = makeDatabase();
+        database.osuProfile.upsert = async () => {
+            throw new Error("Web database unavailable");
+        };
+
+        await expect(
+            synchronizeOsuProfile({ userId: "user-1", accountId: "24680", accessToken: "fresh-token" }, database, async () => ({
+                id: "24680",
+                name: "Yoru",
+                emailVerified: false,
+            })),
+        ).rejects.toThrow("Web database unavailable");
+    });
+
     it("removes stale claims before unlink and allows the osu identity to be linked again", async () => {
         const database = makeDatabase([{ userId: "user-1", osuId: "24680", username: "Old", avatarUrl: null }]);
 

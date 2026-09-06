@@ -38,7 +38,7 @@ export const botAccountCompatibility = new BotAccountCompatibility(canonicalAcco
 const osuProvider = process.env.OSU_AUTH_CLIENT_ID || process.env.OSU_CLIENT_ID ? createOsuOAuthProvider() : null;
 
 async function refreshOsuProfile(account: { userId: string; accountId: string; accessToken?: string | null }): Promise<void> {
-    await botAccountCompatibility.runBestEffort("synchronize the durable osu! profile", () => synchronizeOsuProfile(account, webPrisma));
+    await synchronizeOsuProfile(account, webPrisma);
 }
 
 export const auth = betterAuth({
