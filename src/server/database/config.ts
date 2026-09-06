@@ -6,7 +6,7 @@ export interface MariaDbConnectionConfig {
     database: string;
 }
 
-export type DatabaseRole = "web" | "bot";
+export type DatabaseRole = "web" | "bot" | "test";
 
 export function parseMariaDbConnection(url: string, role: DatabaseRole): MariaDbConnectionConfig {
     const variableName = `${role.toUpperCase()}_DATABASE_URL`;
@@ -42,6 +42,21 @@ export function assertSeparateDatabases(webUrl: string, botUrl: string): void {
     if (web.host === bot.host && web.port === bot.port && web.database === bot.database) {
         throw new Error("WEB_DATABASE_URL and BOT_DATABASE_URL must point to different databases");
     }
+}
+
+export function assertDisposableTestDatabase(
+    testUrl: string | undefined,
+    configuredDatabases: { webUrl?: string; botUrl?: string } = {},
+): void {
+    if (!testUrl) throw new Error("TEST_DATABASE_URL is required");
+
+    const test = parseMariaDbConnection(testUrl, "test");
+    if (!/(^|[-_])(test|testing|disposable)([-_]|$)/i.test(test.database)) {
+        throw new Error("TEST_DATABASE_URL must use a database name explicitly marked test-only or disposable");
+    }
+
+    if (configuredDatabases.webUrl) assertSeparateDatabases(configuredDatabases.webUrl, testUrl);
+    if (configuredDatabases.botUrl) assertSeparateDatabases(testUrl, configuredDatabases.botUrl);
 }
 
 function normalizeHost(hostname: string): string {

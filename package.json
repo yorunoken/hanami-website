@@ -8,7 +8,7 @@
         "build": "bun run db:generate && vite build",
         "start": "bun src/server/index.ts",
         "db:generate": "bunx prisma generate --schema prisma/web/schema.prisma && bunx prisma generate --schema prisma/bot/schema.prisma",
-        "db:migrate": "bun src/scripts/migrate.ts",
+        "db:migrate": "bunx prisma migrate deploy --schema prisma/web/schema.prisma",
         "format": "prettier . --write",
         "format:check": "prettier . --check",
         "lint": "eslint .",

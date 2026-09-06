@@ -19,40 +19,55 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
     constructor(private readonly prisma: PrismaClient) {}
 
     async issue(input: DiscordLinkRequest & { tokenHash: string; now: Date }): Promise<DiscordLinkTicket> {
-        return this.prisma.$transaction(async (transaction) => {
-            await transaction.discordLinkTicket.updateMany({
-                where: {
-                    discordUserId: input.discordUserId,
-                    consumedAt: null,
-                    invalidatedAt: null,
-                },
-                data: { invalidatedAt: input.now },
-            });
+        return this.prisma.$transaction(
+            async (transaction) => {
+                const lockName = `hanami-discord-link-ticket:${input.discordUserId}`;
+                const lockRows = await transaction.$queryRaw<{ acquired: number | string | null }[]>`
+                SELECT GET_LOCK(${lockName}, 30) AS acquired
+            `;
+                if (Number(lockRows[0]?.acquired) !== 1) throw new Error("Could not acquire the Discord link ticket lock");
 
-            const ticket: DiscordLinkTicket = {
-                id: crypto.randomUUID(),
-                discordUserId: input.discordUserId,
-                username: input.username,
-                displayName: input.displayName,
-                avatarUrl: input.avatarUrl,
-                createdAt: input.now,
-                expiresAt: new Date(input.now.getTime() + DISCORD_LINK_TICKET_LIFETIME_MS),
-            };
+                try {
+                    await transaction.discordLinkTicket.updateMany({
+                        where: {
+                            discordUserId: input.discordUserId,
+                            consumedAt: null,
+                            invalidatedAt: null,
+                        },
+                        data: { invalidatedAt: input.now },
+                    });
 
-            await transaction.discordLinkTicket.create({
-                data: {
-                    id: ticket.id,
-                    tokenHash: input.tokenHash,
-                    discordUserId: ticket.discordUserId,
-                    username: ticket.username,
-                    displayName: ticket.displayName,
-                    avatarUrl: ticket.avatarUrl,
-                    createdAt: ticket.createdAt,
-                    expiresAt: ticket.expiresAt,
-                },
-            });
-            return ticket;
-        });
+                    const ticket: DiscordLinkTicket = {
+                        id: crypto.randomUUID(),
+                        discordUserId: input.discordUserId,
+                        username: input.username,
+                        displayName: input.displayName,
+                        avatarUrl: input.avatarUrl,
+                        createdAt: input.now,
+                        expiresAt: new Date(input.now.getTime() + DISCORD_LINK_TICKET_LIFETIME_MS),
+                    };
+
+                    await transaction.discordLinkTicket.create({
+                        data: {
+                            id: ticket.id,
+                            tokenHash: input.tokenHash,
+                            discordUserId: ticket.discordUserId,
+                            username: ticket.username,
+                            displayName: ticket.displayName,
+                            avatarUrl: ticket.avatarUrl,
+                            createdAt: ticket.createdAt,
+                            expiresAt: ticket.expiresAt,
+                        },
+                    });
+                    return ticket;
+                } finally {
+                    await transaction.$queryRaw`
+                    SELECT RELEASE_LOCK(${lockName})
+                `.catch(() => undefined);
+                }
+            },
+            { maxWait: 5_000, timeout: 35_000 },
+        );
     }
 
     async consume(tokenHash: string, now: Date): Promise<DiscordLinkTicket | null> {

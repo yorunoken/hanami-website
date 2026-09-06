@@ -3,7 +3,7 @@ import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../../generated/prisma/web/client";
 import mysql from "mysql2/promise";
 
-import { assertSeparateDatabases, parseMariaDbConnection } from "../database/config";
+import { assertDisposableTestDatabase, parseMariaDbConnection } from "../database/config";
 import { runBetterAuthSchemaMigrations } from "../auth-schema";
 import { runWebMigrations } from "../migrations";
 import { createChallengeToken, hashChallengeToken } from "./domain";
@@ -24,7 +24,10 @@ const now = new Date("2026-07-14T18:00:00.000Z");
 describeDatabase("Prisma immediate account deletion store", () => {
     beforeAll(async () => {
         if (!pool || !prisma) throw new Error("TEST_DATABASE_URL is required");
-        assertDisposableDatabase();
+        assertDisposableTestDatabase(testDatabaseUrl, {
+            webUrl: process.env.WEB_DATABASE_URL,
+            botUrl: process.env.BOT_DATABASE_URL,
+        });
         const testAuth = (await import("better-auth")).betterAuth({
             database: pool,
             baseURL: "https://hanami-deletion-test.invalid",
@@ -42,6 +45,7 @@ describeDatabase("Prisma immediate account deletion store", () => {
     });
 
     afterAll(async () => {
+        if (prisma) await prisma.user.deleteMany({ where: { id: "user-1" } });
         await pool?.end();
         await prisma?.$disconnect();
     });
@@ -106,10 +110,4 @@ async function seedUser(userId: string, discordId: string, sessionId: string): P
             },
         },
     });
-}
-
-function assertDisposableDatabase(): void {
-    if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required");
-    if (process.env.WEB_DATABASE_URL) assertSeparateDatabases(process.env.WEB_DATABASE_URL, testDatabaseUrl);
-    if (process.env.BOT_DATABASE_URL) assertSeparateDatabases(testDatabaseUrl, process.env.BOT_DATABASE_URL);
 }
