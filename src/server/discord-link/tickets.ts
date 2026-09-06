@@ -28,17 +28,33 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
                 if (Number(lockRows[0]?.acquired) !== 1) throw new Error("Could not acquire the Discord link ticket lock");
 
                 let ticket: DiscordLinkTicket | undefined;
-                let operationFailed = false;
                 let operationError: unknown;
                 try {
-                    await transaction.discordLinkTicket.updateMany({
+                    const activeTicket = await transaction.discordLinkTicket.findFirst({
                         where: {
                             discordUserId: input.discordUserId,
                             consumedAt: null,
                             invalidatedAt: null,
+                            expiresAt: { gt: input.now },
                         },
-                        data: { invalidatedAt: input.now },
+                        orderBy: [{ createdAt: "desc" }, { tokenHash: "desc" }],
+                        select: { createdAt: true, tokenHash: true },
                     });
+                    const candidateWins =
+                        !activeTicket ||
+                        input.now > activeTicket.createdAt ||
+                        (input.now.getTime() === activeTicket.createdAt.getTime() && input.tokenHash > activeTicket.tokenHash);
+
+                    if (candidateWins) {
+                        await transaction.discordLinkTicket.updateMany({
+                            where: {
+                                discordUserId: input.discordUserId,
+                                consumedAt: null,
+                                invalidatedAt: null,
+                            },
+                            data: { invalidatedAt: input.now },
+                        });
+                    }
 
                     ticket = {
                         id: crypto.randomUUID(),
@@ -60,21 +76,30 @@ export class PrismaDiscordLinkTicketStore implements DiscordLinkTicketStore {
                             avatarUrl: ticket.avatarUrl,
                             createdAt: ticket.createdAt,
                             expiresAt: ticket.expiresAt,
+                            invalidatedAt: candidateWins ? null : input.now,
                         },
                     });
                 } catch (error) {
-                    operationFailed = true;
                     operationError = error;
                 }
 
-                const releaseRows = await transaction.$queryRaw<{ released: number | string | null }[]>`
-                    SELECT RELEASE_LOCK(${lockName}) AS released
-                `;
-                if (Number(releaseRows[0]?.released) !== 1) {
-                    throw new Error("Could not release the Discord link ticket lock");
+                let releaseError: unknown;
+                try {
+                    const releaseRows = await transaction.$queryRaw<{ released: number | string | null }[]>`
+                        SELECT RELEASE_LOCK(${lockName}) AS released
+                    `;
+                    if (Number(releaseRows[0]?.released) !== 1) {
+                        throw new Error("Could not release the Discord link ticket lock");
+                    }
+                } catch (error) {
+                    releaseError = error;
                 }
 
-                if (operationFailed) throw operationError;
+                if (operationError && releaseError) {
+                    throw new AggregateError([operationError, releaseError], "Discord link ticket issuance and lock release failed");
+                }
+                if (operationError) throw operationError;
+                if (releaseError) throw releaseError;
                 if (!ticket) throw new Error("Discord link ticket was not created");
                 return ticket;
             },

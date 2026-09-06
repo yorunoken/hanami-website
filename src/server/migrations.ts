@@ -2,6 +2,12 @@ import type { Pool, PoolConnection, RowDataPacket } from "mysql2/promise";
 
 const migrationLockName = "hanami-web-schema-migrations";
 
+export const expectedWebMigrationIds = [
+    "20260715_account_deletion_reauthentication",
+    "20260715_discord_magic_link_and_osu_state",
+    "20260716_companion_oauth",
+] as const;
+
 interface MigrationLockRow extends RowDataPacket {
     acquired: number | string | null;
 }
@@ -15,7 +21,7 @@ interface IndexRow extends RowDataPacket {
 }
 
 const companionOAuthMigration = {
-    id: "20260716_companion_oauth",
+    id: expectedWebMigrationIds[2],
     statements: [
         `CREATE TABLE IF NOT EXISTS companionAuthorizationRequest (
                 id VARCHAR(36) NOT NULL,
@@ -136,7 +142,7 @@ const companionOAuthMigration = {
 
 const migrations = [
     {
-        id: "20260715_account_deletion_reauthentication",
+        id: expectedWebMigrationIds[0],
         statements: [
             `CREATE TABLE IF NOT EXISTS accountDeletionReauthChallenge (
                 id VARCHAR(36) NOT NULL,
@@ -156,7 +162,7 @@ const migrations = [
         ],
     },
     {
-        id: "20260715_discord_magic_link_and_osu_state",
+        id: expectedWebMigrationIds[1],
         statements: [
             `CREATE TABLE IF NOT EXISTS discordLinkTicket (
                 id VARCHAR(36) NOT NULL,

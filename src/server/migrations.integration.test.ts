@@ -1,9 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { betterAuth } from "better-auth";
 import mysql, { type RowDataPacket } from "mysql2/promise";
 
-import { runBetterAuthSchemaMigrations } from "./auth-schema";
-import { runWebMigrations } from "./migrations";
+import { assertDisposableTestDatabase } from "./database/config";
+import { expectedLegacyWebTables } from "../scripts/migration-state";
 
 const databaseUrl = process.env.TEST_EMPTY_DATABASE_URL;
 const describeDatabase = databaseUrl ? describe : describe.skip;
@@ -12,6 +11,7 @@ const pool = databaseUrl ? mysql.createPool({ uri: databaseUrl, timezone: "Z" })
 describeDatabase("empty database migration bootstrap", () => {
     beforeAll(async () => {
         if (!pool) throw new Error("TEST_EMPTY_DATABASE_URL is required");
+        assertDisposableTestDatabase(databaseUrl);
         const [rows] = await pool.query<RowDataPacket[]>(
             "SELECT COUNT(*) AS count FROM information_schema.tables WHERE table_schema = DATABASE()",
         );
@@ -22,51 +22,45 @@ describeDatabase("empty database migration bootstrap", () => {
         await pool?.end();
     });
 
-    it("creates Better Auth tables before Hanami foreign keys and reruns safely", async () => {
+    it("applies the Prisma Web baseline and reruns safely", async () => {
         if (!pool) throw new Error("TEST_EMPTY_DATABASE_URL is required");
-        const testAuth = betterAuth({
-            database: pool,
-            baseURL: "https://hanami-migration.test",
-            secret: "hanami-migration-test-secret-at-least-thirty-two-characters",
-        });
-        const options = {
-            prepareAuthenticationSchema: () => runBetterAuthSchemaMigrations(testAuth.options),
-        };
-
-        await runWebMigrations(pool, options);
-        await runWebMigrations(pool, options);
+        for (let run = 0; run < 2; run += 1) {
+            const child = Bun.spawn([process.execPath, "src/scripts/migrate.ts"], {
+                env: { ...process.env, WEB_DATABASE_URL: databaseUrl },
+                stdin: "ignore",
+                stdout: "pipe",
+                stderr: "pipe",
+            });
+            const [exitCode, output] = await Promise.all([
+                child.exited,
+                Promise.all([
+                    child.stdout ? new Response(child.stdout).text() : Promise.resolve(""),
+                    child.stderr ? new Response(child.stderr).text() : Promise.resolve(""),
+                ]),
+            ]);
+            expect(exitCode).toBe(0);
+            expect(`${output[0]}${output[1]}`).not.toContain("password");
+        }
 
         const [tableRows] = await pool.query<RowDataPacket[]>(
             "SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.tables WHERE table_schema = DATABASE() ORDER BY TABLE_NAME",
         );
-        expect(tableRows.map((row) => row.TABLE_NAME)).toEqual([
-            "account",
-            "accountDeletionReauthChallenge",
-            "companionAccessToken",
-            "companionAuthorizationCode",
-            "companionAuthorizationRequest",
-            "companionDevice",
-            "companionRefreshToken",
-            "companionTokenFamily",
-            "discordLinkTicket",
-            "osuOAuthState",
-            "session",
-            "user",
-            "verification",
-            "webSchemaMigration",
-        ]);
+        expect(new Set(tableRows.map((row) => row.TABLE_NAME))).toEqual(new Set(["_prisma_migrations", ...expectedLegacyWebTables]));
 
         const [databaseRows] = await pool.query<RowDataPacket[]>(
             "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.schemata WHERE schema_name = DATABASE()",
         );
         expect(databaseRows[0]?.DEFAULT_CHARACTER_SET_NAME).toBe("utf8mb4");
-        expect(new Set(tableRows.map((row) => row.TABLE_COLLATION))).toEqual(new Set([databaseRows[0]?.DEFAULT_COLLATION_NAME]));
+        expect(new Set(tableRows.filter((row) => row.TABLE_NAME !== "_prisma_migrations").map((row) => row.TABLE_COLLATION))).toEqual(
+            new Set([databaseRows[0]?.DEFAULT_COLLATION_NAME]),
+        );
 
-        const [migrationRows] = await pool.query<RowDataPacket[]>("SELECT id FROM webSchemaMigration ORDER BY id");
-        expect(migrationRows.map((row) => row.id)).toEqual([
-            "20260715_account_deletion_reauthentication",
-            "20260715_discord_magic_link_and_osu_state",
-            "20260716_companion_oauth",
-        ]);
+        const [migrationRows] = await pool.query<RowDataPacket[]>(
+            "SELECT migration_name, finished_at, rolled_back_at FROM _prisma_migrations",
+        );
+        expect(migrationRows).toHaveLength(1);
+        expect(migrationRows[0]?.migration_name).toBe("0_init");
+        expect(migrationRows[0]?.finished_at).not.toBeNull();
+        expect(migrationRows[0]?.rolled_back_at).toBeNull();
     });
 });

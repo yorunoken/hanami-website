@@ -16,6 +16,7 @@ const prisma = testDatabaseUrl ? new PrismaClient({ adapter: new PrismaMariaDb(p
 const store = prisma ? new PrismaDiscordLinkTicketStore(prisma) : null;
 const now = new Date("2026-07-15T12:00:00.000Z");
 const testDiscordUserIds = ["123456789012345678", "preserved-1", "preserved-2", "preserved-3", "preserved-4", "preserved-5", "preserved-6"];
+let disposableDatabaseVerified = false;
 
 describeDatabase("Prisma Discord link tickets", () => {
     beforeAll(async () => {
@@ -24,6 +25,7 @@ describeDatabase("Prisma Discord link tickets", () => {
             webUrl: process.env.WEB_DATABASE_URL,
             botUrl: process.env.BOT_DATABASE_URL,
         });
+        disposableDatabaseVerified = true;
         const testAuth = (await import("better-auth")).betterAuth({
             database: pool,
             baseURL: "https://hanami-ticket-test.invalid",
@@ -39,7 +41,9 @@ describeDatabase("Prisma Discord link tickets", () => {
     });
 
     afterAll(async () => {
-        if (prisma) await prisma.discordLinkTicket.deleteMany({ where: { discordUserId: { in: testDiscordUserIds } } });
+        if (disposableDatabaseVerified && prisma) {
+            await prisma.discordLinkTicket.deleteMany({ where: { discordUserId: { in: testDiscordUserIds } } });
+        }
         await pool?.end();
         await prisma?.$disconnect();
     });
@@ -70,55 +74,33 @@ describeDatabase("Prisma Discord link tickets", () => {
 
     it("serializes concurrent issuance so only the newest ticket remains valid", async () => {
         if (!pool || !prisma || !store) throw new Error("Ticket store is unavailable");
-        const olderToken = createSecureToken();
-        const newerToken = createSecureToken();
         const olderNow = new Date(now.getTime() + 3_000);
         const newerNow = new Date(now.getTime() + 4_000);
         const lockName = "hanami-discord-link-ticket:123456789012345678";
-        const lockConnection = await pool.getConnection();
-        let olderIssue: Promise<Awaited<ReturnType<typeof issue>>> | undefined;
-        let newerIssue: Promise<Awaited<ReturnType<typeof issue>>> | undefined;
-        let olderFinished = false;
-        let newerFinished = false;
 
-        try {
+        for (const order of ["older-first", "newer-first"] as const) {
+            const olderToken = createSecureToken();
+            const newerToken = createSecureToken();
+            const lockConnection = await pool.getConnection();
             const [lockRows] = await lockConnection.execute<RowDataPacket[]>("SELECT GET_LOCK(?, 0) AS acquired", [lockName]);
             expect(Number(lockRows[0]?.acquired)).toBe(1);
 
-            olderIssue = issue(olderToken, olderNow).then((ticket) => {
-                olderFinished = true;
-                return ticket;
-            });
-            newerIssue = issue(newerToken, newerNow).then((ticket) => {
-                newerFinished = true;
-                return ticket;
-            });
-            await Promise.race([
-                Promise.all([olderIssue, newerIssue]).then(() => "completed" as const),
-                new Promise<"waiting">((resolve) => setTimeout(() => resolve("waiting"), 100)),
-            ]);
-            expect(olderFinished).toBe(false);
-            expect(newerFinished).toBe(false);
-        } finally {
-            await lockConnection.execute("SELECT RELEASE_LOCK(?)", [lockName]).catch(() => undefined);
+            const firstIssue = order === "older-first" ? issue(olderToken, olderNow) : issue(newerToken, newerNow);
+            const secondIssue = order === "older-first" ? issue(newerToken, newerNow) : issue(olderToken, olderNow);
+            await Promise.resolve();
+            await lockConnection.execute("SELECT RELEASE_LOCK(?)", [lockName]);
             lockConnection.release();
-            await Promise.allSettled([olderIssue, newerIssue].filter(Boolean));
+            await Promise.all([firstIssue, secondIssue]);
+
+            const activeTickets = await prisma.discordLinkTicket.findMany({
+                where: { discordUserId: "123456789012345678", consumedAt: null, invalidatedAt: null },
+                select: { id: true, tokenHash: true },
+            });
+            expect(activeTickets).toHaveLength(1);
+            expect(activeTickets[0]?.tokenHash).toBe(await hashToken(newerToken));
+
+            await prisma.discordLinkTicket.deleteMany({ where: { discordUserId: "123456789012345678" } });
         }
-
-        if (!olderIssue || !newerIssue) throw new Error("Concurrent issuance did not start");
-        await Promise.all([olderIssue, newerIssue]);
-        const activeTickets = await prisma.discordLinkTicket.findMany({
-            where: { discordUserId: "123456789012345678", consumedAt: null, invalidatedAt: null },
-            select: { id: true },
-        });
-
-        expect(activeTickets).toHaveLength(1);
-        const consumedTickets = await Promise.all([
-            store.consume(await hashToken(olderToken), new Date(now.getTime() + 5_000)),
-            store.consume(await hashToken(newerToken), new Date(now.getTime() + 5_000)),
-        ]);
-        expect(consumedTickets.filter(Boolean)).toHaveLength(1);
-        expect(consumedTickets.find(Boolean)?.id).toBe(activeTickets[0]?.id);
     });
 
     it("invalidates an older unused ticket for the same Discord user", async () => {

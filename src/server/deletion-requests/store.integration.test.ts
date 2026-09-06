@@ -20,6 +20,7 @@ const store = pool
       })
     : null;
 const now = new Date("2026-07-14T18:00:00.000Z");
+let disposableDatabaseVerified = false;
 
 describeDatabase("Prisma immediate account deletion store", () => {
     beforeAll(async () => {
@@ -28,6 +29,7 @@ describeDatabase("Prisma immediate account deletion store", () => {
             webUrl: process.env.WEB_DATABASE_URL,
             botUrl: process.env.BOT_DATABASE_URL,
         });
+        disposableDatabaseVerified = true;
         const testAuth = (await import("better-auth")).betterAuth({
             database: pool,
             baseURL: "https://hanami-deletion-test.invalid",
@@ -45,7 +47,7 @@ describeDatabase("Prisma immediate account deletion store", () => {
     });
 
     afterAll(async () => {
-        if (prisma) await prisma.user.deleteMany({ where: { id: "user-1" } });
+        if (disposableDatabaseVerified && prisma) await prisma.user.deleteMany({ where: { id: "user-1" } });
         await pool?.end();
         await prisma?.$disconnect();
     });

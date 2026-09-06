@@ -18,6 +18,7 @@ const now = new Date("2026-07-16T12:00:00.000Z");
 const userId = "companion-store-user";
 const redirectUri = "http://127.0.0.1:43127/callback";
 const verifier = "a".repeat(43);
+let disposableDatabaseVerified = false;
 
 describeDatabase("MySQL Companion token store", () => {
     beforeAll(async () => {
@@ -26,6 +27,7 @@ describeDatabase("MySQL Companion token store", () => {
             webUrl: process.env.WEB_DATABASE_URL,
             botUrl: process.env.BOT_DATABASE_URL,
         });
+        disposableDatabaseVerified = true;
         const testAuth = betterAuth({
             database: pool,
             baseURL: "https://hanami-companion-test.invalid",
@@ -46,7 +48,7 @@ describeDatabase("MySQL Companion token store", () => {
     });
 
     afterAll(async () => {
-        if (pool) await pool.execute("DELETE FROM user WHERE id = ?", [userId]);
+        if (disposableDatabaseVerified && pool) await pool.execute("DELETE FROM user WHERE id = ?", [userId]);
         await pool?.end();
     });
 
