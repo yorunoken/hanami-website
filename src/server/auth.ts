@@ -31,7 +31,7 @@ export const webDatabase = createPool({
 
 export const discordLinkTicketStore = new PrismaDiscordLinkTicketStore(webPrisma);
 const canonicalAccountService = new CanonicalAccountService(createCanonicalAccountDatabase(webPrisma));
-const botAccountCompatibility = new BotAccountCompatibility(canonicalAccountService);
+export const botAccountCompatibility = new BotAccountCompatibility(canonicalAccountService);
 const osuProvider = process.env.OSU_AUTH_CLIENT_ID || process.env.OSU_CLIENT_ID ? createOsuOAuthProvider() : null;
 
 export const auth = betterAuth({
@@ -78,6 +78,7 @@ export const auth = betterAuth({
     plugins: [
         discordBotLinkPlugin({
             ticketStore: discordLinkTicketStore,
+            synchronizeUser: (userId) => botAccountCompatibility.synchronizeUser(userId),
         }),
         ...(osuProvider ? [genericOAuth({ config: [osuProvider] })] : []),
     ],

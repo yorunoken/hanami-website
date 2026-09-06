@@ -1,8 +1,16 @@
 import { describe, expect, it } from "bun:test";
 
-import { CanonicalAccountService, type CanonicalAccountDatabase, type CanonicalAccountRecord, type CanonicalUserRecord } from "./service";
+import {
+    CanonicalAccountService,
+    type CanonicalAccountDatabase,
+    type CanonicalAccountRecord,
+    type CanonicalUserRecord,
+    type MergeProofVerifier,
+    type VerifiedProviderProof,
+} from "./service";
 
 const createdAt = new Date("2026-09-06T10:00:00.000Z");
+const proofTime = new Date("2026-09-06T10:05:00.000Z");
 
 describe("canonical account service", () => {
     it("links a provider when neither provider subject exists", async () => {
@@ -55,14 +63,14 @@ describe("canonical account service", () => {
             { id: "session-1", userId: "retained" },
             { id: "session-2", userId: "duplicate" },
         ];
-        const service = new CanonicalAccountService(database);
+        const service = createMergeService(database);
 
         await expect(
             service.mergeUsers({
                 retainedUserId: "retained",
                 duplicateUserId: "duplicate",
-                retainedProof: { provider: "discord", providerAccountId: "123456789012345678" },
-                duplicateProof: { provider: "osu", providerAccountId: "24680" },
+                retainedProofToken: "retained-proof",
+                duplicateProofToken: "duplicate-proof",
             }),
         ).resolves.toEqual({ status: "merged", retainedUserId: "retained" });
         expect(database.state.users.map((candidate) => candidate.id)).toEqual(["retained"]);
@@ -72,26 +80,109 @@ describe("canonical account service", () => {
         ]);
         expect(database.state.ownedRecords).toEqual([{ id: "record-1", userId: "retained" }]);
         expect(database.state.sessions).toEqual([]);
+        expect(database.state.transactionOptions).toEqual({ isolationLevel: "Serializable" });
     });
 
-    it("rejects a merge when either proof is not owned by the claimed user", async () => {
+    it("rejects a merge when either opaque proof is invalid", async () => {
         const database = makeDatabase(
             [user("retained"), user("duplicate")],
             [account("discord", "123456789012345678", "retained"), account("osu", "24680", "duplicate")],
         );
-        const service = new CanonicalAccountService(database);
+        const service = createMergeService(database, { "retained-proof": null });
 
         await expect(
             service.mergeUsers({
                 retainedUserId: "retained",
                 duplicateUserId: "duplicate",
-                retainedProof: { provider: "discord", providerAccountId: "111111111111111111" },
-                duplicateProof: { provider: "osu", providerAccountId: "24680" },
+                retainedProofToken: "retained-proof",
+                duplicateProofToken: "duplicate-proof",
             }),
-        ).rejects.toMatchObject({ code: "MERGE_PROOF_REQUIRED" });
+        ).rejects.toMatchObject({ code: "MERGE_PROOF_INVALID" });
         expect(database.state.users).toHaveLength(2);
     });
+
+    it("rejects a stale merge proof before opening the transaction", async () => {
+        const database = makeDatabase(
+            [user("retained"), user("duplicate")],
+            [account("discord", "123456789012345678", "retained"), account("osu", "24680", "duplicate")],
+        );
+        const service = createMergeService(database, {
+            "retained-proof": {
+                provider: "discord",
+                userId: "retained",
+                providerAccountId: "123456789012345678",
+                authenticatedAt: new Date(proofTime.getTime() - 6 * 60_000),
+            },
+        });
+
+        await expect(
+            service.mergeUsers({
+                retainedUserId: "retained",
+                duplicateUserId: "duplicate",
+                retainedProofToken: "retained-proof",
+                duplicateProofToken: "duplicate-proof",
+            }),
+        ).rejects.toMatchObject({ code: "MERGE_PROOF_STALE" });
+        expect(database.state.transactionOptions).toBeNull();
+    });
+
+    it("rechecks provider ownership inside the serializable transaction", async () => {
+        const database = makeDatabase([user("retained"), user("duplicate")], [account("osu", "24680", "duplicate")]);
+        const service = createMergeService(database);
+
+        await expect(
+            service.mergeUsers({
+                retainedUserId: "retained",
+                duplicateUserId: "duplicate",
+                retainedProofToken: "retained-proof",
+                duplicateProofToken: "duplicate-proof",
+            }),
+        ).rejects.toMatchObject({ code: "MERGE_PROOF_INVALID" });
+        expect(database.state.transactionOptions).toEqual({ isolationLevel: "Serializable" });
+        expect(database.state.users).toHaveLength(2);
+    });
+
+    it("rejects merge by default when no proof verifier is installed", async () => {
+        const database = makeDatabase(
+            [user("retained"), user("duplicate")],
+            [account("discord", "123456789012345678", "retained"), account("osu", "24680", "duplicate")],
+        );
+
+        await expect(
+            new CanonicalAccountService(database).mergeUsers({
+                retainedUserId: "retained",
+                duplicateUserId: "duplicate",
+                retainedProofToken: "retained-proof",
+                duplicateProofToken: "duplicate-proof",
+            }),
+        ).rejects.toMatchObject({ code: "MERGE_PROOF_INVALID" });
+    });
 });
+
+function createMergeService(
+    database: CanonicalAccountDatabase,
+    overrides: Record<string, VerifiedProviderProof | null> = {},
+): CanonicalAccountService {
+    const proofs: Record<string, VerifiedProviderProof | null> = {
+        "retained-proof": {
+            provider: "discord",
+            userId: "retained",
+            providerAccountId: "123456789012345678",
+            authenticatedAt: new Date(proofTime.getTime() - 60_000),
+        },
+        "duplicate-proof": {
+            provider: "osu",
+            userId: "duplicate",
+            providerAccountId: "24680",
+            authenticatedAt: new Date(proofTime.getTime() - 60_000),
+        },
+        ...overrides,
+    };
+    const proofVerifier: MergeProofVerifier = {
+        verify: async (token) => proofs[token] ?? null,
+    };
+    return new CanonicalAccountService(database, { proofVerifier, now: () => proofTime });
+}
 
 function user(id: string): CanonicalUserRecord {
     return { id, name: id, email: `${id}@users.hanami.invalid`, emailVerified: false, image: null, createdAt, updatedAt: createdAt };
@@ -110,6 +201,7 @@ function makeDatabase(
         accounts: CanonicalAccountRecord[];
         sessions: Array<{ id: string; userId: string }>;
         ownedRecords: Array<{ id: string; userId: string }>;
+        transactionOptions: { isolationLevel: "Serializable" } | null;
     };
 } {
     const state: {
@@ -117,7 +209,8 @@ function makeDatabase(
         accounts: CanonicalAccountRecord[];
         sessions: Array<{ id: string; userId: string }>;
         ownedRecords: Array<{ id: string; userId: string }>;
-    } = { users: [...initialUsers], accounts: [...initialAccounts], sessions: [], ownedRecords: [] };
+        transactionOptions: { isolationLevel: "Serializable" } | null;
+    } = { users: [...initialUsers], accounts: [...initialAccounts], sessions: [], ownedRecords: [], transactionOptions: null };
     const database = {
         state,
         user: {
@@ -160,8 +253,13 @@ function makeDatabase(
                 },
             },
         ],
-        $transaction: async <T>(callback: (transaction: CanonicalAccountDatabase) => Promise<T>) =>
-            callback(database as CanonicalAccountDatabase),
+        $transaction: async <T>(
+            callback: (transaction: CanonicalAccountDatabase) => Promise<T>,
+            options: { isolationLevel: "Serializable" },
+        ) => {
+            state.transactionOptions = options;
+            return callback(database as CanonicalAccountDatabase);
+        },
     } as unknown as CanonicalAccountDatabase & { state: typeof state };
     return database;
 }

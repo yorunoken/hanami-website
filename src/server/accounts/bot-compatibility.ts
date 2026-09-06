@@ -28,17 +28,17 @@ export class BotAccountCompatibility {
         const methods = await this.accounts.listLoginMethods(userId);
         const discord = methods.find((method) => method.provider === "discord");
         const osu = methods.find((method) => method.provider === "osu");
-        if (!discord) {
-            if (removed?.provider === "discord") {
-                await this.botDatabase.user.updateMany({ where: { id: removed.providerUserId }, data: { banchoId: null } });
-            }
+
+        if (removed?.provider === "discord") {
+            await this.botDatabase.user.updateMany({ where: { id: removed.providerUserId }, data: { banchoId: null } });
             return;
         }
-
-        if (!osu) {
+        if (removed?.provider === "osu") {
+            if (!discord) return;
             await this.botDatabase.user.updateMany({ where: { id: discord.providerUserId }, data: { banchoId: null } });
             return;
         }
+        if (!discord || !osu) return;
 
         await this.botDatabase.user.upsert({
             where: { id: discord.providerUserId },

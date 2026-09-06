@@ -24,7 +24,7 @@ describe("Bot account compatibility", () => {
         expect(clear).not.toHaveBeenCalled();
     });
 
-    it("clears an existing Bot mirror when the canonical pair is incomplete", async () => {
+    it("does not clear an existing Bot mirror for an abandoned or incomplete link", async () => {
         const upsert = mock(async () => undefined);
         const clear = mock(async () => undefined);
         const database: BotAccountDatabase = { user: { upsert, updateMany: clear } };
@@ -33,6 +33,23 @@ describe("Bot account compatibility", () => {
         };
 
         await new BotAccountCompatibility(accounts, database).synchronizeUser("user-1");
+
+        expect(clear).not.toHaveBeenCalled();
+        expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it("clears the Discord Bot mirror when osu! was explicitly removed", async () => {
+        const upsert = mock(async () => undefined);
+        const clear = mock(async () => undefined);
+        const database: BotAccountDatabase = { user: { upsert, updateMany: clear } };
+        const accounts = {
+            listLoginMethods: async () => [{ provider: "discord" as const, providerUserId: "123456789012345678" }],
+        };
+
+        await new BotAccountCompatibility(accounts, database).synchronizeUser("user-1", {
+            provider: "osu",
+            providerUserId: "24680",
+        });
 
         expect(clear).toHaveBeenCalledWith({ where: { id: "123456789012345678" }, data: { banchoId: null } });
         expect(upsert).not.toHaveBeenCalled();

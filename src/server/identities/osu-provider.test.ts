@@ -18,6 +18,7 @@ describe("osu! Better Auth provider", () => {
             scopes: ["identify"],
             pkce: true,
         });
+        expect(config.overrideUserInfo).toBeUndefined();
     });
 
     it("maps only a validated osu! profile and creates a synthetic non-contact email", () => {

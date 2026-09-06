@@ -31,7 +31,6 @@ export function createOsuOAuthProvider(environment: NodeJS.ProcessEnv = process.
         },
         getUserInfo: fetchOsuUserInfo,
         mapProfileToUser: mapOsuProfileToUser,
-        overrideUserInfo: true,
     };
 }
 

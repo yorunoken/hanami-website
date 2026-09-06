@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { auth, trustedOrigins } from "../auth";
+import { auth, botAccountCompatibility, trustedOrigins } from "../auth";
 import { webPrisma } from "../database/web";
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import { serverIdentity, type HanamiIdentity } from "../identity";
@@ -16,7 +16,8 @@ export interface AccountRouteDependencies {
         headers: Headers;
         callbackURL: string;
         errorCallbackURL: string;
-    }): Promise<string>;
+    }): Promise<{ url: string; headers: Headers }>;
+    clearBotLink(input: { userId: string; provider: LoginProvider; providerAccountId: string }): Promise<void>;
     unlink(input: { userId: string; provider: LoginProvider; providerAccountId: string; headers: Headers }): Promise<void>;
     isFreshSession(sessionCreatedAt: Date): boolean;
 }
@@ -54,15 +55,14 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
                 const callbackURL = new URL("/profile", origin).toString();
                 const errorCallbackURL = new URL("/profile", origin);
                 errorCallbackURL.searchParams.set("linkError", params.provider);
-                return {
-                    url: await dependencies.beginLink({
-                        userId: identity.userId,
-                        provider: params.provider,
-                        headers: request.headers,
-                        callbackURL,
-                        errorCallbackURL: errorCallbackURL.toString(),
-                    }),
-                };
+                const link = await dependencies.beginLink({
+                    userId: identity.userId,
+                    provider: params.provider,
+                    headers: request.headers,
+                    callbackURL,
+                    errorCallbackURL: errorCallbackURL.toString(),
+                });
+                return createLinkResponse(link);
             } catch (error) {
                 logSafeFailure(`start ${params.provider} account linking`, error);
                 const details = readErrorDetails(error);
@@ -85,6 +85,11 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
                 const target = methods.find((method) => method.provider === params.provider);
                 if (!target) return fail(set, 409, `${providerLabel(params.provider)} was not found.`);
                 if (methods.length <= 1) return fail(set, 409, "Your final sign-in method cannot be removed.");
+                await dependencies.clearBotLink({
+                    userId: identity.userId,
+                    provider: params.provider,
+                    providerAccountId: target.providerUserId,
+                });
                 await dependencies.unlink({
                     userId: identity.userId,
                     provider: params.provider,
@@ -119,8 +124,10 @@ export const accountRoutes = createAccountRoutes({
         if (!response || typeof response !== "object" || !("url" in response) || typeof response.url !== "string") {
             throw new Error("Better Auth did not return a provider authorization URL");
         }
-        return response.url;
+        return { url: response.url, headers: result.headers };
     },
+    clearBotLink: ({ userId, provider, providerAccountId }) =>
+        botAccountCompatibility.synchronizeUser(userId, { provider, providerUserId: providerAccountId }),
     unlink: async ({ headers, userId, provider, providerAccountId }) => {
         const account = await webPrisma.account.findFirst({
             where: { userId, providerId: provider, accountId: providerAccountId },
@@ -131,6 +138,12 @@ export const accountRoutes = createAccountRoutes({
     },
     isFreshSession: (sessionCreatedAt) => isFreshAuthentication(sessionCreatedAt),
 });
+
+function createLinkResponse(link: { url: string; headers: Headers }): Response {
+    const headers = new Headers({ "Cache-Control": "no-store" });
+    for (const cookie of link.headers.getSetCookie()) headers.append("Set-Cookie", cookie);
+    return Response.json({ url: link.url }, { headers });
+}
 
 function fail(set: { status?: number | string }, status: number, error: string) {
     set.status = status;

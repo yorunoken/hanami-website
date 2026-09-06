@@ -90,9 +90,9 @@ export const osuLinkRoute = new Elysia()
 
             return {
                 mode: parseMode(settings.mode),
-                score_embeds: parseBinary(settings.score_embeds),
+                score_embeds: parseBinary(settings.score_embeds, defaultSettings.score_embeds),
                 embed_type: parseEmbedType(settings.embed_type),
-                score_data: parseBinary(settings.score_data),
+                score_data: parseBinary(settings.score_data, defaultSettings.score_data),
             } satisfies BotSettings;
         } catch (error) {
             logRouteFailure("read bot preferences", error);
@@ -213,8 +213,8 @@ function parseEmbedType(value: string | null): BotSettings["embed_type"] {
     return isOneOf(value, ["hanami", "bathbot", "owobot"] as const) ? value : defaultSettings.embed_type;
 }
 
-function parseBinary(value: number | null): 0 | 1 {
-    return value === 0 || value === 1 ? value : 0;
+export function parseBinary(value: number | null, fallback: 0 | 1): 0 | 1 {
+    return value === 0 || value === 1 ? value : fallback;
 }
 
 function isOneOf<const T extends readonly string[]>(value: unknown, choices: T): value is T[number] {

@@ -49,7 +49,10 @@ export interface CanonicalAccountDatabase {
         deleteMany(args: { where: { userId: { in: string[] } } }): Promise<unknown>;
     };
     ownedRecords?: readonly CanonicalOwnedRecordDelegate[];
-    $transaction<T>(callback: (transaction: CanonicalAccountDatabase) => Promise<T>): Promise<T>;
+    $transaction<T>(
+        callback: (transaction: CanonicalAccountDatabase) => Promise<T>,
+        options: { isolationLevel: "Serializable" },
+    ): Promise<T>;
 }
 
 export interface LoginMethod {
@@ -78,23 +81,35 @@ export type LinkProviderResult =
     | { status: "already-linked"; userId: string }
     | { status: "conflict"; userId: string; ownerUserId: string };
 
-export interface ProviderProof {
+export interface VerifiedProviderProof {
     provider: LoginProvider;
+    userId: string;
     providerAccountId: string;
+    authenticatedAt: Date;
+}
+
+export interface MergeProofVerifier {
+    verify(proofToken: string): Promise<VerifiedProviderProof | null>;
 }
 
 export interface MergeUsersInput {
     retainedUserId: string;
     duplicateUserId: string;
-    retainedProof: ProviderProof;
-    duplicateProof: ProviderProof;
+    retainedProofToken: string;
+    duplicateProofToken: string;
 }
 
 export type MergeUsersResult = { status: "merged"; retainedUserId: string };
 
 export class CanonicalAccountError extends Error {
     constructor(
-        readonly code: "CANONICAL_USER_NOT_FOUND" | "INVALID_PROVIDER_ACCOUNT_ID" | "MERGE_PROOF_REQUIRED" | "MERGE_PROVIDER_CONFLICT",
+        readonly code:
+            | "CANONICAL_USER_NOT_FOUND"
+            | "INVALID_PROVIDER_ACCOUNT_ID"
+            | "MERGE_PROOF_REQUIRED"
+            | "MERGE_PROOF_INVALID"
+            | "MERGE_PROOF_STALE"
+            | "MERGE_PROVIDER_CONFLICT",
         message: string,
     ) {
         super(message);
@@ -102,8 +117,29 @@ export class CanonicalAccountError extends Error {
     }
 }
 
+export interface CanonicalAccountServiceOptions {
+    proofVerifier?: MergeProofVerifier;
+    now?(): Date;
+    mergeProofMaxAgeMs?: number;
+}
+
+const rejectingMergeProofVerifier: MergeProofVerifier = {
+    verify: async () => null,
+};
+
 export class CanonicalAccountService {
-    constructor(private readonly database: CanonicalAccountDatabase) {}
+    private readonly proofVerifier: MergeProofVerifier;
+    private readonly now: () => Date;
+    private readonly mergeProofMaxAgeMs: number;
+
+    constructor(
+        private readonly database: CanonicalAccountDatabase,
+        options: CanonicalAccountServiceOptions = {},
+    ) {
+        this.proofVerifier = options.proofVerifier ?? rejectingMergeProofVerifier;
+        this.now = options.now ?? (() => new Date());
+        this.mergeProofMaxAgeMs = options.mergeProofMaxAgeMs ?? 5 * 60_000;
+    }
 
     async linkProvider(input: LinkProviderInput): Promise<LinkProviderResult> {
         validateProviderAccountId(input.provider, input.providerAccountId);
@@ -180,49 +216,88 @@ export class CanonicalAccountService {
     async mergeUsers(input: MergeUsersInput): Promise<MergeUsersResult> {
         if (input.retainedUserId === input.duplicateUserId)
             throw new CanonicalAccountError("MERGE_PROOF_REQUIRED", "Two distinct users are required.");
-        validateProviderAccountId(input.retainedProof.provider, input.retainedProof.providerAccountId);
-        validateProviderAccountId(input.duplicateProof.provider, input.duplicateProof.providerAccountId);
+        const [retainedProof, duplicateProof] = await Promise.all([
+            this.verifyMergeProof(input.retainedProofToken, input.retainedUserId),
+            this.verifyMergeProof(input.duplicateProofToken, input.duplicateUserId),
+        ]);
 
-        return this.database.$transaction(async (transaction) => {
-            const [retained, duplicate] = await Promise.all([
-                transaction.user.findUnique({ where: { id: input.retainedUserId } }),
-                transaction.user.findUnique({ where: { id: input.duplicateUserId } }),
-            ]);
-            if (!retained || !duplicate) throw new CanonicalAccountError("MERGE_PROOF_REQUIRED", "Both canonical users must exist.");
+        return this.database.$transaction(
+            async (transaction) => {
+                const [retained, duplicate] = await Promise.all([
+                    transaction.user.findUnique({ where: { id: input.retainedUserId } }),
+                    transaction.user.findUnique({ where: { id: input.duplicateUserId } }),
+                ]);
+                if (!retained || !duplicate) throw new CanonicalAccountError("MERGE_PROOF_REQUIRED", "Both canonical users must exist.");
 
-            await requireProof(transaction, input.retainedUserId, input.retainedProof);
-            await requireProof(transaction, input.duplicateUserId, input.duplicateProof);
+                await requireVerifiedOwnership(transaction, retainedProof);
+                await requireVerifiedOwnership(transaction, duplicateProof);
 
-            const [retainedAccounts, duplicateAccounts] = await Promise.all([
-                transaction.account.findMany({ where: { userId: input.retainedUserId } }),
-                transaction.account.findMany({ where: { userId: input.duplicateUserId } }),
-            ]);
-            const retainedProviders = new Set(retainedAccounts.map((account) => account.providerId));
-            if (duplicateAccounts.some((account) => retainedProviders.has(account.providerId))) {
-                throw new CanonicalAccountError(
-                    "MERGE_PROVIDER_CONFLICT",
-                    "The canonical users have overlapping provider identities that must be resolved first.",
-                );
-            }
-
-            for (const account of duplicateAccounts) {
-                await transaction.account.update({ where: { id: account.id }, data: { userId: input.retainedUserId } });
-            }
-            for (const record of transaction.ownedRecords ?? []) {
-                if (record.uniquePerUser && record.findFirst && record.deleteMany) {
-                    const retainedRecord = await record.findFirst({ where: { userId: input.retainedUserId } });
-                    if (retainedRecord) {
-                        await record.deleteMany({ where: { userId: input.duplicateUserId } });
-                        continue;
-                    }
+                const [retainedAccounts, duplicateAccounts] = await Promise.all([
+                    transaction.account.findMany({ where: { userId: input.retainedUserId } }),
+                    transaction.account.findMany({ where: { userId: input.duplicateUserId } }),
+                ]);
+                const retainedProviders = new Set(retainedAccounts.map((account) => account.providerId));
+                if (duplicateAccounts.some((account) => retainedProviders.has(account.providerId))) {
+                    throw new CanonicalAccountError(
+                        "MERGE_PROVIDER_CONFLICT",
+                        "The canonical users have overlapping provider identities that must be resolved first.",
+                    );
                 }
-                await record.updateMany({ where: { userId: input.duplicateUserId }, data: { userId: input.retainedUserId } });
-            }
-            await transaction.session.deleteMany({ where: { userId: { in: [input.retainedUserId, input.duplicateUserId] } } });
-            await transaction.user.delete({ where: { id: input.duplicateUserId } });
 
-            return { status: "merged", retainedUserId: input.retainedUserId };
-        });
+                for (const account of duplicateAccounts) {
+                    await transaction.account.update({ where: { id: account.id }, data: { userId: input.retainedUserId } });
+                }
+                for (const record of transaction.ownedRecords ?? []) {
+                    if (record.uniquePerUser && record.findFirst && record.deleteMany) {
+                        const retainedRecord = await record.findFirst({ where: { userId: input.retainedUserId } });
+                        if (retainedRecord) {
+                            await record.deleteMany({ where: { userId: input.duplicateUserId } });
+                            continue;
+                        }
+                    }
+                    await record.updateMany({ where: { userId: input.duplicateUserId }, data: { userId: input.retainedUserId } });
+                }
+                await transaction.session.deleteMany({ where: { userId: { in: [input.retainedUserId, input.duplicateUserId] } } });
+                await transaction.user.delete({ where: { id: input.duplicateUserId } });
+
+                return { status: "merged", retainedUserId: input.retainedUserId };
+            },
+            { isolationLevel: "Serializable" },
+        );
+    }
+
+    private async verifyMergeProof(proofToken: string, expectedUserId: string): Promise<VerifiedProviderProof> {
+        if (!proofToken || proofToken.length > 4096) {
+            throw new CanonicalAccountError("MERGE_PROOF_INVALID", "A valid proof for both provider identities is required.");
+        }
+
+        let proof: VerifiedProviderProof | null;
+        try {
+            proof = await this.proofVerifier.verify(proofToken);
+        } catch {
+            throw new CanonicalAccountError("MERGE_PROOF_INVALID", "A valid proof for both provider identities is required.");
+        }
+        if (!proof || proof.userId !== expectedUserId || !isLoginProvider(proof.provider)) {
+            throw new CanonicalAccountError("MERGE_PROOF_INVALID", "A valid proof for both provider identities is required.");
+        }
+        try {
+            validateProviderAccountId(proof.provider, proof.providerAccountId);
+        } catch {
+            throw new CanonicalAccountError("MERGE_PROOF_INVALID", "A valid proof for both provider identities is required.");
+        }
+
+        if (!(proof.authenticatedAt instanceof Date)) {
+            throw new CanonicalAccountError("MERGE_PROOF_INVALID", "A valid proof for both provider identities is required.");
+        }
+        const authenticatedAt = proof.authenticatedAt.getTime();
+        const age = this.now().getTime() - authenticatedAt;
+        if (!Number.isFinite(authenticatedAt) || age < 0) {
+            throw new CanonicalAccountError("MERGE_PROOF_INVALID", "A valid proof for both provider identities is required.");
+        }
+        if (age > this.mergeProofMaxAgeMs) {
+            throw new CanonicalAccountError("MERGE_PROOF_STALE", "Both provider identities must be authenticated again before merging.");
+        }
+        return proof;
     }
 }
 
@@ -257,16 +332,16 @@ function validateProviderAccountId(provider: LoginProvider, accountId: string): 
     if (!valid) throw new CanonicalAccountError("INVALID_PROVIDER_ACCOUNT_ID", `The ${provider} provider account ID is invalid.`);
 }
 
-async function requireProof(database: CanonicalAccountDatabase, userId: string, proof: ProviderProof): Promise<void> {
+async function requireVerifiedOwnership(database: CanonicalAccountDatabase, proof: VerifiedProviderProof): Promise<void> {
     const account = await database.account.findFirst({
-        where: { userId, providerId: proof.provider, accountId: proof.providerAccountId },
+        where: { userId: proof.userId, providerId: proof.provider, accountId: proof.providerAccountId },
     });
-    if (!account) throw new CanonicalAccountError("MERGE_PROOF_REQUIRED", "Fresh proof for both provider identities is required.");
+    if (!account) throw new CanonicalAccountError("MERGE_PROOF_INVALID", "Provider ownership changed before the merge completed.");
 }
 
 interface PrismaAccountSurface extends Omit<CanonicalAccountDatabase, "$transaction" | "ownedRecords"> {
     [key: string]: unknown;
-    $transaction(callback: (transaction: unknown) => Promise<unknown>): Promise<unknown>;
+    $transaction(callback: (transaction: unknown) => Promise<unknown>, options: { isolationLevel: "Serializable" }): Promise<unknown>;
 }
 
 function createDatabaseAdapter(prisma: PrismaAccountSurface): CanonicalAccountDatabase {
@@ -302,8 +377,14 @@ function createDatabaseAdapter(prisma: PrismaAccountSurface): CanonicalAccountDa
         account: prisma.account,
         session: prisma.session,
         ownedRecords,
-        $transaction: async <T>(callback: (transaction: CanonicalAccountDatabase) => Promise<T>) =>
-            prisma.$transaction((transaction) => callback(createDatabaseAdapter(transaction as PrismaAccountSurface))) as Promise<T>,
+        $transaction: async <T>(
+            callback: (transaction: CanonicalAccountDatabase) => Promise<T>,
+            options: { isolationLevel: "Serializable" },
+        ) =>
+            prisma.$transaction(
+                (transaction) => callback(createDatabaseAdapter(transaction as PrismaAccountSurface)),
+                options,
+            ) as Promise<T>,
     };
 }
 

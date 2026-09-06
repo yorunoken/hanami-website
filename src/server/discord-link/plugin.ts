@@ -10,6 +10,7 @@ import type { DiscordLinkTicketStore } from "./tickets";
 
 interface DiscordBotLinkPluginDependencies {
     ticketStore: DiscordLinkTicketStore;
+    synchronizeUser(userId: string): Promise<void>;
     now?(): Date;
 }
 
@@ -42,6 +43,7 @@ export function discordBotLinkPlugin(dependencies: DiscordBotLinkPluginDependenc
 
                     try {
                         const user = await resolveDiscordIdentity(ctx.context.internalAdapter, ticket);
+                        await dependencies.synchronizeUser(user.id);
                         const session = await ctx.context.internalAdapter.createSession(user.id);
                         if (!session) throw new Error("Better Auth did not create a session");
 
