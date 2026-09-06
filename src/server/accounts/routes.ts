@@ -5,6 +5,7 @@ import { webPrisma } from "../database/web";
 import { isFreshAuthentication } from "../deletion-requests/domain";
 import { serverIdentity, type HanamiIdentity } from "../identity";
 import { Prisma } from "../../generated/prisma/web/client";
+import { createOsuPlaceholderEmail } from "../../lib/osu-identity";
 import { logSafeFailure } from "../security/http";
 import { CanonicalAccountService, createCanonicalAccountDatabase, isLoginProvider, type LoginMethod, type LoginProvider } from "./service";
 
@@ -155,6 +156,23 @@ export const accountRoutes = createAccountRoutes({
                 );
                 if (!account) throw new Error("The provider account was not found.");
                 if (loginAccounts.length <= 1) throw new Error("The final sign-in method cannot be removed.");
+                if (provider === "discord") {
+                    const remainingOsu = loginAccounts.find((candidate) => candidate.providerId === "osu");
+                    const profile = remainingOsu
+                        ? await database.osuProfile.findUnique({ where: { userId, osuId: remainingOsu.accountId } })
+                        : null;
+                    if (!remainingOsu || !profile) throw new Error("The remaining osu! identity profile was not found.");
+                    await database.user.update({
+                        where: { id: userId },
+                        data: {
+                            name: profile.username,
+                            email: createOsuPlaceholderEmail(profile.osuId),
+                            emailVerified: false,
+                            image: profile.avatarUrl,
+                            updatedAt: new Date(),
+                        },
+                    });
+                }
                 if (provider === "osu") await database.osuProfile.deleteMany({ where: { userId, osuId: providerAccountId } });
                 await database.account.delete({ where: { id: account.id } });
             },
