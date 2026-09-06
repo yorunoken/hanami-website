@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2, MessageCircle, Music2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -6,6 +6,7 @@ import { claimPendingAttempt, signInWithDiscord, signInWithOsu, type IdentityPro
 import { getAuthenticatedLoginDestination, readOAuthError, readReturnTo } from "@/client/lib/auth-navigation";
 import { routes } from "@/client/routes/paths";
 import { AccountPage } from "@/components/account/account-shell";
+import { DiscordLogo, OsuLogo } from "@/components/icons/provider-icons";
 import { siteContainerClass } from "@/components/layout/styles";
 import { Eyebrow } from "@/components/marketing";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
@@ -152,7 +153,7 @@ export function LoginPanel({
                     {redirectingProvider === "discord" ? (
                         <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
                     ) : (
-                        <MessageCircle aria-hidden="true" />
+                        <DiscordLogo aria-hidden="true" />
                     )}
                     {redirectingProvider === "discord" ? "Opening Discord…" : "Continue with Discord"}
                 </button>
@@ -165,7 +166,7 @@ export function LoginPanel({
                     {redirectingProvider === "osu" ? (
                         <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
                     ) : (
-                        <Music2 aria-hidden="true" />
+                        <OsuLogo aria-hidden="true" />
                     )}
                     {redirectingProvider === "osu" ? "Opening osu!…" : "Continue with osu!"}
                 </button>

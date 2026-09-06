@@ -1,7 +1,8 @@
-import { Check, ExternalLink, Link2, Loader2, Unlink } from "lucide-react";
+import { Check, ExternalLink, Loader2, Unlink } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 
 import { routes } from "@/client/routes/paths";
+import { DiscordLogo, OsuLogo } from "@/components/icons/provider-icons";
 import { PrefetchLink } from "@/components/navigation/prefetch-link";
 import {
     compactActionClass,
@@ -66,10 +67,13 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
             <div className="grid grid-cols-1 min-[821px]:grid-cols-2">
                 <article className={identityBlockClass}>
                     <div className={identityPersonClass}>
-                        <Avatar
-                            src={linked.has("discord") ? currentUser.image : undefined}
-                            name={linked.has("discord") ? currentUser.name : "Discord"}
-                        />
+                        {linked.has("discord") ? (
+                            <Avatar src={currentUser.image} name={currentUser.name} />
+                        ) : (
+                            <ProviderMark>
+                                <DiscordLogo className="size-7" aria-hidden="true" />
+                            </ProviderMark>
+                        )}
                         <div>
                             <p>Discord identity</p>
                             <h3>{linked.has("discord") ? currentUser.name : "Not connected"}</h3>
@@ -108,7 +112,7 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                 onClick={() => onLink("discord")}
                                 disabled={action === "linking"}
                             >
-                                <Link2 aria-hidden="true" />
+                                <DiscordLogo aria-hidden="true" />
                                 {action === "linking" ? "Opening Discord…" : "Connect Discord"}
                             </button>
                         </>
@@ -156,12 +160,9 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                     ) : (
                         <>
                             <div className={identityPersonClass}>
-                                <span
-                                    className="osu-mark grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong text-[0.85rem] font-extrabold text-accent-soft"
-                                    aria-hidden="true"
-                                >
-                                    osu!
-                                </span>
+                                <ProviderMark className="text-accent-soft">
+                                    <OsuLogo className="size-8" aria-hidden="true" />
+                                </ProviderMark>
                                 <div>
                                     <p>osu! identity</p>
                                     <h3>Not connected</h3>
@@ -177,7 +178,7 @@ export function IdentitySection({ currentUser, loginMethods, loading, action, on
                                 onClick={() => onLink("osu")}
                                 disabled={action === "linking"}
                             >
-                                <Link2 aria-hidden="true" />
+                                <OsuLogo aria-hidden="true" />
                                 {action === "linking" ? "Opening osu!…" : "Connect osu!"}
                             </button>
                         </>
@@ -320,6 +321,20 @@ function Avatar({ src, name }: { src?: string | null; name: string }) {
             aria-hidden="true"
         >
             {name.slice(0, 1).toUpperCase()}
+        </span>
+    );
+}
+
+function ProviderMark({ children, className }: { children: ReactNode; className?: string }) {
+    return (
+        <span
+            className={cn(
+                "account-avatar grid size-15 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-strong text-white",
+                className,
+            )}
+            aria-hidden="true"
+        >
+            {children}
         </span>
     );
 }

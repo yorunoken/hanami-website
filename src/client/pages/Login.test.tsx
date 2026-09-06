@@ -11,6 +11,8 @@ describe("fallback login panel", () => {
         expect(markup.match(/<button/g)).toHaveLength(2);
         expect(markup).toContain("Continue with Discord");
         expect(markup).toContain("Continue with osu!");
+        expect(markup).toContain('data-provider-logo="discord"');
+        expect(markup).toContain('data-provider-logo="osu"');
         expect(markup).toContain('href="/"');
     });
 

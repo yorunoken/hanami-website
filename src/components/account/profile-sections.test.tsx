@@ -47,6 +47,8 @@ describe("profile identity controls", () => {
 
         expect(markup).toContain("Connect Discord");
         expect(markup).toContain("Connect osu!");
+        expect(markup.match(/data-provider-logo="discord"/g)).toHaveLength(2);
+        expect(markup.match(/data-provider-logo="osu"/g)).toHaveLength(2);
         expect(markup).toContain("Linking is optional.");
     });
 
