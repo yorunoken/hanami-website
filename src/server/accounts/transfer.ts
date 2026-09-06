@@ -11,9 +11,10 @@ export async function transferVerifiedOsuIdentity(targetUserId: string, osuId: s
                 database.account.findFirst({ where: { providerId: "osu", accountId: osuId }, select: { id: true, userId: true } }),
                 database.account.findFirst({ where: { userId: targetUserId, providerId: "osu" }, select: { accountId: true } }),
             ]);
-            if (!targetUser || !sourceAccount) throw new Error("The verified osu! identity could not be resolved.");
-            if (sourceAccount.userId === targetUserId) return null;
+            if (!targetUser) throw new Error("The current Hanami account could not be resolved.");
+            if (sourceAccount?.userId === targetUserId) return null;
             if (targetOsuAccount) throw new Error("The current Hanami account already has a different osu! identity.");
+            if (!sourceAccount) return null;
 
             const sourceUserId = sourceAccount.userId;
             const sourceProfile = await database.osuProfile.findUnique({ where: { osuId } });
@@ -50,8 +51,8 @@ export async function transferVerifiedDiscordIdentity(
                 }),
                 database.account.findFirst({ where: { userId: targetUserId, providerId: "discord" }, select: { accountId: true } }),
             ]);
-            if (!targetUser || !sourceAccount) throw new Error("The verified Discord identity could not be resolved.");
-            if (sourceAccount.userId === targetUserId) {
+            if (!targetUser) throw new Error("The current Hanami account could not be resolved.");
+            if (sourceAccount?.userId === targetUserId) {
                 await database.user.update({
                     where: { id: targetUserId },
                     data: { name: identity.displayName, image: identity.avatarUrl, updatedAt: new Date() },
@@ -59,6 +60,13 @@ export async function transferVerifiedDiscordIdentity(
                 return null;
             }
             if (targetDiscordAccount) throw new Error("The current Hanami account already has a different Discord identity.");
+            if (!sourceAccount) {
+                await database.user.update({
+                    where: { id: targetUserId },
+                    data: { name: identity.displayName, image: identity.avatarUrl, updatedAt: new Date() },
+                });
+                return null;
+            }
 
             const sourceUserId = sourceAccount.userId;
             await database.oauthAccessToken.deleteMany({ where: { userId: sourceUserId } });
