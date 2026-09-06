@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 
-import { claimPendingAttempt, signInWithDiscord, signOutFromHanami } from "./auth";
+import { claimPendingAttempt, signInWithDiscord, signInWithOsu, signOutFromHanami } from "./auth";
 
 describe("shared authentication actions", () => {
     it("starts Discord OAuth with validated success and error destinations", async () => {
@@ -27,6 +27,19 @@ describe("shared authentication actions", () => {
         });
         await signInWithDiscord("//example.com", execute);
         expect(callbackURL).toBe("/profile");
+    });
+
+    it("starts osu! OAuth with the canonical provider id", async () => {
+        const execute = async (input: { provider: "osu"; callbackURL: string; errorCallbackURL: string }) => {
+            expect(input).toEqual({
+                provider: "osu",
+                callbackURL: "/profile",
+                errorCallbackURL: "/login?returnTo=%2Fprofile",
+            });
+            return { error: null };
+        };
+
+        await signInWithOsu("/profile", execute);
     });
 
     it("allows only one pending activation", () => {

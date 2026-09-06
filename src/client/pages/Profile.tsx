@@ -1,5 +1,5 @@
 import { AlertCircle } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { fetchJson } from "@/client/lib/fetch-json";
 import { AccountLayout, AccountPage, profileHeadingClass, profileLayoutClass } from "@/components/account/account-shell";
@@ -9,23 +9,23 @@ import {
     BotPreferencesSection,
     IdentitySection,
     type BotSettings,
-    type LinkStatus,
+    type LoginMethod,
     type ProfileAction,
 } from "@/components/account/profile-sections";
 import { Eyebrow } from "@/components/marketing";
 import { formMessageClass } from "@/components/ui/action-styles";
-import { getDiscordContactEmail } from "@/lib/discord-identity";
 import { cn } from "@/lib/utils";
 
 export default function Profile() {
     const session = useAuthenticatedSession();
-    const [linkStatus, setLinkStatus] = useState<LinkStatus | null>(null);
+    const [loginMethods, setLoginMethods] = useState<LoginMethod[]>([]);
     const [settings, setSettings] = useState<BotSettings | null>(null);
     const [linkLoading, setLinkLoading] = useState(true);
     const [settingsLoading, setSettingsLoading] = useState(true);
     const [action, setAction] = useState<ProfileAction>(null);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
+    const botLinkAttempted = useRef(false);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -33,13 +33,13 @@ export default function Profile() {
         setSettingsLoading(true);
         setError(null);
 
-        void fetchJson<LinkStatus>("/api/osu-link/status", controller.signal)
-            .then((status) => {
-                setLinkStatus(status);
+        void fetchJson<{ loginMethods: LoginMethod[] }>("/api/account/providers", controller.signal)
+            .then(({ loginMethods: methods }) => {
+                setLoginMethods(methods);
             })
             .catch((requestError: unknown) => {
                 if (requestError instanceof DOMException && requestError.name === "AbortError") return;
-                setError("The osu! link status could not be loaded. Please refresh and try again.");
+                setError("Linked identities could not be loaded. Please refresh and try again.");
             })
             .finally(() => {
                 if (!controller.signal.aborted) setLinkLoading(false);
@@ -60,23 +60,31 @@ export default function Profile() {
         return () => controller.abort();
     }, [session.user.id]);
 
-    async function handleLinkOsu() {
+    useEffect(() => {
+        if (linkLoading || botLinkAttempted.current || new URLSearchParams(window.location.search).get("link") !== "osu") return;
+        if (!loginMethods.some((method) => method.provider === "osu")) {
+            botLinkAttempted.current = true;
+            void handleLinkProvider("osu");
+        }
+    }, [linkLoading, loginMethods]);
+
+    async function handleLinkProvider(provider: "discord" | "osu") {
         setAction("linking");
         setError(null);
         try {
-            const data = await fetchJson<{ url?: string }>("/api/auth");
+            const data = await fetchJson<{ url?: string }>(`/api/account/providers/${provider}/link`, undefined, { method: "POST" });
             if (!data.url) throw new Error("Missing authorization URL");
             window.location.assign(data.url);
         } catch {
-            setError("osu! authorization could not be started.");
+            setError(`${provider === "osu" ? "osu!" : "Discord"} authorization could not be started.`);
             setAction(null);
         }
     }
 
-    async function handleUnlinkOsu() {
+    async function handleUnlinkProvider(provider: "discord" | "osu") {
         if (
             !window.confirm(
-                "Disconnect this osu! account? This removes the ID link, but does not delete either provider account or your Hanami web account.",
+                `Disconnect this ${provider === "osu" ? "osu!" : "Discord"} account? Your other linked provider will remain available.`,
             )
         )
             return;
@@ -84,12 +92,12 @@ export default function Profile() {
         setAction("unlinking");
         setError(null);
         try {
-            await fetchJson<{ success: boolean }>("/api/osu-link/unlink", undefined, {
+            await fetchJson<{ unlinked: boolean }>(`/api/account/providers/${provider}`, undefined, {
                 method: "DELETE",
             });
-            setLinkStatus({ linked: false });
+            setLoginMethods((methods) => methods.filter((method) => method.provider !== provider));
         } catch {
-            setError("The osu! account could not be disconnected.");
+            setError(`The ${provider === "osu" ? "osu!" : "Discord"} account could not be disconnected.`);
         } finally {
             setAction(null);
         }
@@ -116,7 +124,7 @@ export default function Profile() {
         }
     }
 
-    const displayName = session.user.name || "Discord user";
+    const displayName = session.user.name || "Hanami user";
 
     return (
         <AccountPage>
@@ -124,7 +132,7 @@ export default function Profile() {
                 <header className={profileHeadingClass}>
                     <Eyebrow>Account</Eyebrow>
                     <h1>Linked accounts and bot preferences</h1>
-                    <p>Manage the Discord identity used for sign-in and the optional osu! ID stored by Hanami Bot.</p>
+                    <p>Manage the Discord and osu! identities connected to your Hanami account.</p>
                 </header>
 
                 {error && (
@@ -135,16 +143,12 @@ export default function Profile() {
                 )}
 
                 <IdentitySection
-                    discordUser={{
-                        name: displayName,
-                        email: getDiscordContactEmail(session.user.email),
-                        image: session.user.image,
-                    }}
-                    linkStatus={linkStatus}
+                    loginMethods={loginMethods}
+                    currentUser={{ name: displayName, image: session.user.image }}
                     loading={linkLoading}
                     action={action}
-                    onLink={handleLinkOsu}
-                    onUnlink={handleUnlinkOsu}
+                    onLink={handleLinkProvider}
+                    onUnlink={handleUnlinkProvider}
                 />
 
                 <BotPreferencesSection

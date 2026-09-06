@@ -1,18 +1,7 @@
 import { Elysia } from "elysia";
-import mysql, { type Connection, type RowDataPacket } from "mysql2/promise";
 
+import { botPrisma } from "../database/bot";
 import { serverIdentity } from "../identity";
-
-interface BotLinkRow extends RowDataPacket {
-    banchoId: string | null;
-}
-
-interface BotSettingsRow extends RowDataPacket {
-    mode: BotSettings["mode"] | null;
-    score_embeds: 0 | 1 | null;
-    embed_type: BotSettings["embed_type"] | null;
-    score_data: 0 | 1 | null;
-}
 
 interface BotSettings {
     mode: "osu" | "mania" | "taiko" | "fruits";
@@ -46,63 +35,28 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withBotDatabase(async (botDb) => {
-                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
-                if (!discordId) {
-                    set.status = 400;
-                    return { error: "No Discord account is linked to this session" };
-                }
+            const discordId = await serverIdentity.resolveDiscordId(identity.userId);
+            if (!discordId) {
+                set.status = 400;
+                return { error: "No Discord account is linked to this session" };
+            }
 
-                const [users] = await botDb.execute<BotLinkRow[]>("SELECT banchoId FROM users WHERE id = ?", [discordId]);
-                const banchoId = users[0]?.banchoId;
-                if (!banchoId) return { linked: false };
+            const user = await botPrisma.user.findUnique({ where: { id: discordId }, select: { banchoId: true } });
+            const banchoId = user?.banchoId;
+            if (!banchoId) return { linked: false };
 
-                const profile = await fetchPublicOsuProfile(banchoId);
-                return {
-                    linked: true,
-                    banchoId,
-                    username: profile?.username ?? "Unknown osu! player",
-                    avatarUrl: profile?.avatarUrl ?? `https://a.ppy.sh/${banchoId}`,
-                    globalRank: profile?.globalRank ?? null,
-                };
-            });
+            const profile = await fetchPublicOsuProfile(banchoId);
+            return {
+                linked: true,
+                banchoId,
+                username: profile?.username ?? "Unknown osu! player",
+                avatarUrl: profile?.avatarUrl ?? `https://a.ppy.sh/${banchoId}`,
+                globalRank: profile?.globalRank ?? null,
+            };
         } catch (error) {
             logRouteFailure("read osu! link status", error);
             set.status = 500;
             return { error: "Could not read the osu! link status" };
-        }
-    })
-    .delete("/osu-link/unlink", async ({ request, set }) => {
-        const identity = await serverIdentity.getCurrent(request.headers);
-        if (!identity) {
-            set.status = 401;
-            return { error: "Unauthorized" };
-        }
-        if (new URL(request.url).searchParams.size > 0) {
-            set.status = 400;
-            return { error: "Invalid request" };
-        }
-
-        if (!hasDatabaseConfiguration()) {
-            set.status = 500;
-            return { error: "Server configuration error" };
-        }
-
-        try {
-            return await withBotDatabase(async (botDb) => {
-                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
-                if (!discordId) {
-                    set.status = 400;
-                    return { error: "No Discord account is linked to this session" };
-                }
-
-                await botDb.execute("UPDATE users SET banchoId = NULL WHERE id = ?", [discordId]);
-                return { success: true };
-            });
-        } catch (error) {
-            logRouteFailure("unlink osu! account", error);
-            set.status = 500;
-            return { error: "Could not unlink the osu! account" };
         }
     })
     .get("/osu-link/settings", async ({ request, set }) => {
@@ -122,27 +76,24 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withBotDatabase(async (botDb) => {
-                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
-                if (!discordId) {
-                    set.status = 400;
-                    return { error: "No Discord account is linked to this session" };
-                }
+            const discordId = await serverIdentity.resolveDiscordId(identity.userId);
+            if (!discordId) {
+                set.status = 400;
+                return { error: "No Discord account is linked to this session" };
+            }
 
-                const [users] = await botDb.execute<BotSettingsRow[]>(
-                    "SELECT mode, score_embeds, embed_type, score_data FROM users WHERE id = ?",
-                    [discordId],
-                );
-                const settings = users[0];
-                if (!settings) return defaultSettings;
-
-                return {
-                    mode: settings.mode ?? defaultSettings.mode,
-                    score_embeds: settings.score_embeds ?? defaultSettings.score_embeds,
-                    embed_type: settings.embed_type ?? defaultSettings.embed_type,
-                    score_data: settings.score_data ?? defaultSettings.score_data,
-                } satisfies BotSettings;
+            const settings = await botPrisma.user.findUnique({
+                where: { id: discordId },
+                select: { mode: true, score_embeds: true, embed_type: true, score_data: true },
             });
+            if (!settings) return defaultSettings;
+
+            return {
+                mode: parseMode(settings.mode),
+                score_embeds: parseBinary(settings.score_embeds),
+                embed_type: parseEmbedType(settings.embed_type),
+                score_data: parseBinary(settings.score_data),
+            } satisfies BotSettings;
         } catch (error) {
             logRouteFailure("read bot preferences", error);
             set.status = 500;
@@ -172,41 +123,24 @@ export const osuLinkRoute = new Elysia()
         }
 
         try {
-            return await withBotDatabase(async (botDb) => {
-                const discordId = await serverIdentity.resolveDiscordId(identity.userId);
-                if (!discordId) {
-                    set.status = 400;
-                    return { error: "No Discord account is linked to this session" };
-                }
+            const discordId = await serverIdentity.resolveDiscordId(identity.userId);
+            if (!discordId) {
+                set.status = 400;
+                return { error: "No Discord account is linked to this session" };
+            }
 
-                await botDb.execute(
-                    `INSERT INTO users (id, mode, score_embeds, embed_type, score_data)
-           VALUES (?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             mode = VALUES(mode),
-             score_embeds = VALUES(score_embeds),
-             embed_type = VALUES(embed_type),
-             score_data = VALUES(score_data)`,
-                    [discordId, settings.mode, settings.score_embeds, settings.embed_type, settings.score_data],
-                );
-                return { success: true };
+            await botPrisma.user.upsert({
+                where: { id: discordId },
+                create: { id: discordId, ...settings },
+                update: settings,
             });
+            return { success: true };
         } catch (error) {
             logRouteFailure("update bot preferences", error);
             set.status = 500;
             return { error: "Could not update bot preferences" };
         }
     });
-
-async function withBotDatabase<T>(callback: (botDb: Connection) => Promise<T>): Promise<T> {
-    let botDb: Connection | null = null;
-    try {
-        botDb = await mysql.createConnection(process.env.BOT_DATABASE_URL as string);
-        return await callback(botDb);
-    } finally {
-        await botDb?.end();
-    }
-}
 
 async function fetchPublicOsuProfile(banchoId: string): Promise<{
     username: string;
@@ -269,6 +203,18 @@ function parseSettings(value: unknown): BotSettings | null {
         score_embeds: value.score_embeds,
         score_data: value.score_data,
     };
+}
+
+function parseMode(value: string | null): BotSettings["mode"] {
+    return isOneOf(value, ["osu", "mania", "taiko", "fruits"] as const) ? value : defaultSettings.mode;
+}
+
+function parseEmbedType(value: string | null): BotSettings["embed_type"] {
+    return isOneOf(value, ["hanami", "bathbot", "owobot"] as const) ? value : defaultSettings.embed_type;
+}
+
+function parseBinary(value: number | null): 0 | 1 {
+    return value === 0 || value === 1 ? value : 0;
 }
 
 function isOneOf<const T extends readonly string[]>(value: unknown, choices: T): value is T[number] {

@@ -1,8 +1,8 @@
-import { ArrowLeft, Loader2, MessageCircle } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Music2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { claimPendingAttempt, signInWithDiscord, useSession } from "@/client/lib/auth";
+import { claimPendingAttempt, signInWithDiscord, signInWithOsu, type IdentityProvider, useSession } from "@/client/lib/auth";
 import { getAuthenticatedLoginDestination, readOAuthError, readReturnTo } from "@/client/lib/auth-navigation";
 import { routes } from "@/client/routes/paths";
 import { AccountPage } from "@/components/account/account-shell";
@@ -20,7 +20,7 @@ export default function Login() {
     const oauthError = useMemo(() => readOAuthError(location.search), [location.search]);
     const accountDeleted = useMemo(() => new URLSearchParams(location.search).get("deleted") === "1", [location.search]);
     const initiationPending = useRef(false);
-    const [isRedirecting, setIsRedirecting] = useState(false);
+    const [redirectingProvider, setRedirectingProvider] = useState<IdentityProvider | null>(null);
     const [localError, setLocalError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -28,17 +28,18 @@ export default function Login() {
         if (destination) navigate(destination, { replace: true });
     }, [isSessionPending, navigate, returnTo, session]);
 
-    async function handleSignIn() {
+    async function handleSignIn(provider: IdentityProvider) {
         if (!claimPendingAttempt(initiationPending)) return;
-        setIsRedirecting(true);
+        setRedirectingProvider(provider);
         setLocalError(null);
 
         try {
-            await signInWithDiscord(returnTo);
+            if (provider === "discord") await signInWithDiscord(returnTo);
+            else await signInWithOsu(returnTo);
         } catch {
             initiationPending.current = false;
-            setLocalError("Discord sign-in could not be started. Check your connection and try again.");
-            setIsRedirecting(false);
+            setLocalError(`${provider === "osu" ? "osu!" : "Discord"} sign-in could not be started. Check your connection and try again.`);
+            setRedirectingProvider(null);
         }
     }
 
@@ -57,7 +58,7 @@ export default function Login() {
             <LoginPanel
                 error={localError || oauthError}
                 status={accountDeleted ? "Your Hanami account was deleted." : null}
-                isRedirecting={isRedirecting}
+                redirectingProvider={redirectingProvider}
                 onSignIn={handleSignIn}
             />
         </LoginScene>
@@ -102,13 +103,13 @@ function LoginScene({ children }: { children: ReactNode }) {
 export function LoginPanel({
     error,
     status = null,
-    isRedirecting,
+    redirectingProvider,
     onSignIn,
 }: {
     error: string | null;
     status?: string | null;
-    isRedirecting: boolean;
-    onSignIn: () => void;
+    redirectingProvider: IdentityProvider | null;
+    onSignIn: (provider: IdentityProvider) => void;
 }) {
     return (
         <section
@@ -123,7 +124,8 @@ export function LoginPanel({
                 Sign in to Hanami
             </h1>
             <p className="mt-6 max-w-[54ch] text-[clamp(1rem,1.5vw,1.12rem)] leading-[1.7] text-muted">
-                Discord is Hanami’s sign-in provider. We use your account ID and the profile details Discord makes available.
+                Choose Discord or osu! to sign in. Hanami keeps both provider identities attached to one canonical account when you
+                explicitly link them.
             </p>
 
             {status && (
@@ -140,19 +142,34 @@ export function LoginPanel({
                 </div>
             )}
 
-            <button
-                className={cn(primaryActionClass, "mt-8 w-[min(100%,23rem)]")}
-                type="button"
-                onClick={onSignIn}
-                disabled={isRedirecting}
-            >
-                {isRedirecting ? (
-                    <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
-                ) : (
-                    <MessageCircle aria-hidden="true" />
-                )}
-                {isRedirecting ? "Opening Discord…" : "Sign in with Discord"}
-            </button>
+            <div className="mt-8 flex flex-wrap gap-3">
+                <button
+                    className={cn(primaryActionClass, "w-[min(100%,15rem)]")}
+                    type="button"
+                    onClick={() => onSignIn("discord")}
+                    disabled={redirectingProvider !== null}
+                >
+                    {redirectingProvider === "discord" ? (
+                        <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
+                    ) : (
+                        <MessageCircle aria-hidden="true" />
+                    )}
+                    {redirectingProvider === "discord" ? "Opening Discord…" : "Continue with Discord"}
+                </button>
+                <button
+                    className={cn(primaryActionClass, "w-[min(100%,15rem)]")}
+                    type="button"
+                    onClick={() => onSignIn("osu")}
+                    disabled={redirectingProvider !== null}
+                >
+                    {redirectingProvider === "osu" ? (
+                        <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
+                    ) : (
+                        <Music2 aria-hidden="true" />
+                    )}
+                    {redirectingProvider === "osu" ? "Opening osu!…" : "Continue with osu!"}
+                </button>
+            </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4 border-t border-border pt-5">
                 <PrefetchLink className={textButtonClass} to={routes.home} prefetch="none">

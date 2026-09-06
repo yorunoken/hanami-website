@@ -13,18 +13,7 @@ export async function resolveDiscordIdentity(adapter: InternalAdapter<BetterAuth
     }
 
     const email = createDiscordPlaceholderEmail(ticket.discordUserId);
-    const existingUser = await adapter.findUserByEmail(email, { includeAccounts: true });
-
     try {
-        if (existingUser) {
-            await adapter.linkAccount({
-                providerId: "discord",
-                accountId: ticket.discordUserId,
-                userId: existingUser.user.id,
-            });
-            return updateSnapshot(adapter, existingUser.user.id, ticket);
-        }
-
         const created = await adapter.createOAuthUser(
             {
                 name: ticket.displayName || ticket.username,

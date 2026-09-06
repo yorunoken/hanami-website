@@ -1,11 +1,13 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { genericOAuth } from "better-auth/plugins";
 import { createPool } from "mysql2/promise";
 
 import { mapDiscordProfileToUser } from "@/lib/discord-identity";
+import { createOsuOAuthProvider } from "./identities/osu-provider";
+import { BotAccountCompatibility } from "./accounts/bot-compatibility";
+import { CanonicalAccountService, createCanonicalAccountDatabase } from "./accounts/service";
 import { webPrisma } from "./database/web";
-import { MySqlOAuthStateStore } from "./oauth-state";
-import { getOsuAuthorizationConfiguration } from "./osu-authorization";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
 import { PrismaDiscordLinkTicketStore } from "./discord-link/tickets";
 
@@ -28,7 +30,9 @@ export const webDatabase = createPool({
 });
 
 export const discordLinkTicketStore = new PrismaDiscordLinkTicketStore(webPrisma);
-export const osuOAuthStateStore = new MySqlOAuthStateStore(webDatabase);
+const canonicalAccountService = new CanonicalAccountService(createCanonicalAccountDatabase(webPrisma));
+const botAccountCompatibility = new BotAccountCompatibility(canonicalAccountService);
+const osuProvider = process.env.OSU_AUTH_CLIENT_ID || process.env.OSU_CLIENT_ID ? createOsuOAuthProvider() : null;
 
 export const auth = betterAuth({
     database: prismaAdapter(webPrisma, { provider: "mysql" }),
@@ -37,12 +41,45 @@ export const auth = betterAuth({
     session: {
         freshAge: 15 * 60,
     },
+    account: {
+        accountLinking: {
+            allowDifferentEmails: true,
+            disableImplicitLinking: true,
+            trustedProviders: ["discord", "osu"],
+            updateUserInfoOnLink: false,
+        },
+    },
+    databaseHooks: {
+        account: {
+            create: {
+                after: async (account) => {
+                    if (account.providerId === "discord" || account.providerId === "osu") {
+                        await botAccountCompatibility.runBestEffort("synchronize linked identities", () =>
+                            botAccountCompatibility.synchronizeUser(account.userId),
+                        );
+                    }
+                },
+            },
+            delete: {
+                after: async (account) => {
+                    const provider = account.providerId === "discord" || account.providerId === "osu" ? account.providerId : null;
+                    if (provider) {
+                        await botAccountCompatibility.runBestEffort("clear an unlinked identity", () =>
+                            botAccountCompatibility.synchronizeUser(account.userId, {
+                                provider,
+                                providerUserId: account.accountId,
+                            }),
+                        );
+                    }
+                },
+            },
+        },
+    },
     plugins: [
         discordBotLinkPlugin({
             ticketStore: discordLinkTicketStore,
-            oauthStateStore: osuOAuthStateStore,
-            getOsuConfiguration: getOsuAuthorizationConfiguration,
         }),
+        ...(osuProvider ? [genericOAuth({ config: [osuProvider] })] : []),
     ],
     socialProviders: {
         discord: {

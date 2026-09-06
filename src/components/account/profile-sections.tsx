@@ -22,12 +22,9 @@ const identityPersonClass =
 const identityDetailsClass =
     "mt-7 mb-5 [&>div]:flex [&>div]:justify-between [&>div]:gap-4 [&>div]:border-b [&>div]:border-border [&>div]:py-2.5 [&>div]:text-[0.78rem] [&_dd]:text-right [&_dd]:text-[#d8d2d9] [&_dt]:text-quiet";
 
-export interface LinkStatus {
-    linked: boolean;
-    banchoId?: string;
-    username?: string;
-    avatarUrl?: string;
-    globalRank?: number | null;
+export interface LoginMethod {
+    provider: "discord" | "osu";
+    providerUserId: string;
 }
 
 export interface BotSettings {
@@ -47,15 +44,16 @@ export const defaultSettings: BotSettings = {
 export type ProfileAction = "linking" | "unlinking" | "saving" | null;
 
 interface IdentitySectionProps {
-    discordUser: { name: string; email?: string | null; image?: string | null };
-    linkStatus: LinkStatus | null;
+    currentUser: { name: string; image?: string | null };
+    loginMethods: LoginMethod[];
     loading: boolean;
     action: ProfileAction;
-    onLink: () => void;
-    onUnlink: () => void;
+    onLink: (provider: "discord" | "osu") => void;
+    onUnlink: (provider: "discord" | "osu") => void;
 }
 
-export function IdentitySection({ discordUser, linkStatus, loading, action, onLink, onUnlink }: IdentitySectionProps) {
+export function IdentitySection({ currentUser, loginMethods, loading, action, onLink, onUnlink }: IdentitySectionProps) {
+    const linked = new Set(loginMethods.map((method) => method.provider));
     return (
         <section className="mt-10" aria-labelledby="identity-title">
             <div className={sectionHeadingClass}>
@@ -65,65 +63,77 @@ export function IdentitySection({ discordUser, linkStatus, loading, action, onLi
             <div className="grid grid-cols-1 min-[821px]:grid-cols-2">
                 <article className={identityBlockClass}>
                     <div className={identityPersonClass}>
-                        <Avatar src={discordUser.image} name={discordUser.name} />
+                        <Avatar
+                            src={linked.has("discord") ? currentUser.image : undefined}
+                            name={linked.has("discord") ? currentUser.name : "Discord"}
+                        />
                         <div>
-                            <p>Discord sign-in</p>
-                            <h3>{discordUser.name}</h3>
-                            {discordUser.email && <span>{discordUser.email}</span>}
+                            <p>Discord identity</p>
+                            <h3>{linked.has("discord") ? currentUser.name : "Not connected"}</h3>
+                            <span>
+                                {linked.has("discord") ? "Available for sign-in and Bot access." : "Link a Discord account explicitly."}
+                            </span>
                         </div>
                     </div>
-                    <dl className={identityDetailsClass}>
-                        <div>
-                            <dt>Provider</dt>
-                            <dd>Discord OAuth</dd>
-                        </div>
-                        <div>
-                            <dt>Requested scope</dt>
-                            <dd>Identity; email when available</dd>
-                        </div>
-                        <div>
-                            <dt>Session</dt>
-                            <dd>Active</dd>
-                        </div>
-                    </dl>
+                    {linked.has("discord") ? (
+                        <>
+                            <dl className={identityDetailsClass}>
+                                <div>
+                                    <dt>Provider account</dt>
+                                    <dd>{loginMethods.find((method) => method.provider === "discord")?.providerUserId}</dd>
+                                </div>
+                                <div>
+                                    <dt>Session</dt>
+                                    <dd>Active</dd>
+                                </div>
+                            </dl>
+                            {loginMethods.length > 1 && (
+                                <button className={cn(textButtonClass, "text-danger")} type="button" onClick={() => onUnlink("discord")}>
+                                    <Unlink aria-hidden="true" />
+                                    {action === "unlinking" ? "Disconnecting…" : "Disconnect Discord"}
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <button className={cn(primaryActionClass, compactActionClass)} type="button" onClick={() => onLink("discord")}>
+                            <Link2 aria-hidden="true" />
+                            Connect Discord
+                        </button>
+                    )}
                 </article>
 
                 <article className={identityBlockClass}>
                     {loading ? (
-                        <LoadingInline label="Checking osu! link" />
-                    ) : linkStatus?.linked ? (
+                        <LoadingInline label="Checking linked identities" />
+                    ) : linked.has("osu") ? (
                         <>
                             <div className={identityPersonClass}>
-                                <Avatar src={linkStatus.avatarUrl} name={linkStatus.username || "osu! player"} />
+                                <Avatar src={undefined} name="osu! player" />
                                 <div>
-                                    <p>osu! link</p>
+                                    <p>osu! identity</p>
                                     <h3>
-                                        <a href={`https://osu.ppy.sh/users/${linkStatus.banchoId}`} target="_blank" rel="noreferrer">
-                                            {linkStatus.username || "Linked player"}
+                                        <a
+                                            href={`https://osu.ppy.sh/users/${loginMethods.find((method) => method.provider === "osu")?.providerUserId}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            Linked player
                                             <ExternalLink aria-hidden="true" />
                                         </a>
                                     </h3>
-                                    <span>
-                                        {linkStatus.globalRank
-                                            ? `Global rank #${linkStatus.globalRank.toLocaleString()}`
-                                            : "Public rank unavailable"}
-                                    </span>
+                                    <span>Available for sign-in and future Hanami services.</span>
                                 </div>
                             </div>
                             <dl className={identityDetailsClass}>
                                 <div>
-                                    <dt>Stored link</dt>
-                                    <dd>Discord ID → osu! ID</dd>
-                                </div>
-                                <div>
-                                    <dt>osu! ID</dt>
-                                    <dd>{linkStatus.banchoId}</dd>
+                                    <dt>Provider account</dt>
+                                    <dd>{loginMethods.find((method) => method.provider === "osu")?.providerUserId}</dd>
                                 </div>
                             </dl>
                             <button
                                 className={cn(textButtonClass, "text-danger")}
                                 type="button"
-                                onClick={onUnlink}
+                                onClick={() => onUnlink("osu")}
                                 disabled={action === "unlinking"}
                             >
                                 <Unlink aria-hidden="true" />
@@ -140,7 +150,7 @@ export function IdentitySection({ discordUser, linkStatus, loading, action, onLi
                                     osu!
                                 </span>
                                 <div>
-                                    <p>osu! link</p>
+                                    <p>osu! identity</p>
                                     <h3>Not connected</h3>
                                     <span>Linking is optional.</span>
                                 </div>
@@ -151,7 +161,7 @@ export function IdentitySection({ discordUser, linkStatus, loading, action, onLi
                             <button
                                 className={cn(primaryActionClass, compactActionClass)}
                                 type="button"
-                                onClick={onLink}
+                                onClick={() => onLink("osu")}
                                 disabled={action === "linking"}
                             >
                                 <Link2 aria-hidden="true" />

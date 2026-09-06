@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import { betterAuth } from "better-auth";
 import { memoryAdapter, type MemoryDB } from "better-auth/adapters/memory";
 
-import { type OAuthStateBinding, type OAuthStateStore } from "../oauth-state";
 import { createSecureToken } from "../security/tokens";
 import { discordBotLinkPlugin } from "./plugin";
 import type { DiscordLinkTicket, DiscordLinkTicketStore } from "./tickets";
@@ -10,11 +9,10 @@ import type { DiscordLinkTicket, DiscordLinkTicketStore } from "./tickets";
 const now = new Date("2026-07-15T12:00:00.000Z");
 
 describe("Discord bot link Better Auth plugin", () => {
-    it("creates a normal session cookie, redirects into osu!, and rejects replay", async () => {
+    it("creates a normal session cookie, redirects into explicit osu! linking, and rejects replay", async () => {
         const database: MemoryDB = { user: [], account: [], session: [], verification: [] };
         const token = createSecureToken();
         const ticketStore = new SingleUseTicketStore(makeTicket());
-        const stateStore = new MemoryStateStore();
         const testAuth = betterAuth({
             database: memoryAdapter(database),
             baseURL: "https://hanami.yorunoken.com",
@@ -22,11 +20,6 @@ describe("Discord bot link Better Auth plugin", () => {
             plugins: [
                 discordBotLinkPlugin({
                     ticketStore,
-                    oauthStateStore: stateStore,
-                    getOsuConfiguration: () => ({
-                        clientId: "12345",
-                        callbackUrl: "https://hanami.yorunoken.com/api/callback",
-                    }),
                     now: () => now,
                 }),
             ],
@@ -35,7 +28,7 @@ describe("Discord bot link Better Auth plugin", () => {
         const response = await testAuth.handler(makeRequest(token));
 
         expect(response.status).toBe(302);
-        expect(response.headers.get("location")).toStartWith("https://osu.ppy.sh/oauth/authorize?");
+        expect(response.headers.get("location")).toBe("https://hanami.yorunoken.com/profile?link=osu&source=bot");
         expect(response.headers.get("cache-control")).toBe("no-store");
         expect(response.headers.get("set-cookie")).toContain("better-auth.session_token=");
         expect(database.user).toHaveLength(1);
@@ -46,7 +39,6 @@ describe("Discord bot link Better Auth plugin", () => {
             accountId: "123456789012345678",
             userId: database.user[0].id,
         });
-        expect(stateStore.created[0]).toMatchObject({ userId: database.user[0].id, sessionId: database.session[0].id });
 
         const replay = await testAuth.handler(makeRequest(token));
         expect(replay.status).toBe(302);
@@ -88,17 +80,5 @@ class SingleUseTicketStore implements DiscordLinkTicketStore {
         if (this.used) return null;
         this.used = true;
         return this.ticket;
-    }
-}
-
-class MemoryStateStore implements OAuthStateStore {
-    readonly created: Array<OAuthStateBinding & { stateHash: string; createdAt: Date; expiresAt: Date }> = [];
-
-    async create(input: OAuthStateBinding & { stateHash: string; createdAt: Date; expiresAt: Date }): Promise<void> {
-        this.created.push(input);
-    }
-
-    async consume(): Promise<boolean> {
-        return false;
     }
 }

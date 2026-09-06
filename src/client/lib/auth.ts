@@ -2,9 +2,11 @@ import { createAuthClient } from "better-auth/react";
 
 import { createLoginPath, validateReturnTo } from "./auth-navigation";
 
-export const { signIn, signOut, useSession } = createAuthClient({
+const authClient = createAuthClient({
     basePath: "/api/auth",
 });
+export const { signIn, signOut, useSession } = authClient;
+export type IdentityProvider = "discord" | "osu";
 
 interface AuthOperationResult {
     error?: unknown;
@@ -15,6 +17,8 @@ type SocialSignInOperation = (input: {
     callbackURL: string;
     errorCallbackURL: string;
 }) => Promise<AuthOperationResult>;
+
+type OsuSignInOperation = (input: { provider: "osu"; callbackURL: string; errorCallbackURL: string }) => Promise<AuthOperationResult>;
 
 type SignOutOperation = () => Promise<AuthOperationResult>;
 
@@ -28,6 +32,28 @@ export async function signInWithDiscord(returnTo?: string, execute: SocialSignIn
 
     if (result.error) throw new Error("Discord sign-in could not be started.");
     return result;
+}
+
+const signInWithOsuProvider = (
+    signIn as unknown as {
+        social: (input: { provider: "osu"; callbackURL: string; errorCallbackURL: string }) => Promise<AuthOperationResult>;
+    }
+).social;
+
+export async function signInWithOsu(returnTo?: string, execute: OsuSignInOperation = signInWithOsuProvider) {
+    const callbackURL = validateReturnTo(returnTo);
+    const result = await execute({
+        provider: "osu",
+        callbackURL,
+        errorCallbackURL: createLoginPath(callbackURL),
+    });
+
+    if (result.error) throw new Error("osu! sign-in could not be started.");
+    return result;
+}
+
+export async function signInWithProvider(provider: IdentityProvider, returnTo?: string) {
+    return provider === "discord" ? signInWithDiscord(returnTo) : signInWithOsu(returnTo);
 }
 
 export async function reauthenticateWithDiscord(callbackURL: string, errorCallbackURL: string) {
