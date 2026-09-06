@@ -1,10 +1,11 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 
 import {
     createDiscordPlaceholderEmail,
     getDiscordContactEmail,
     isDiscordPlaceholderEmail,
     mapDiscordProfileToUser,
+    mapVerifiedDiscordProfileToUser,
 } from "./discord-identity";
 
 describe("Discord profile mapping", () => {
@@ -30,5 +31,17 @@ describe("Discord profile mapping", () => {
         expect(getDiscordContactEmail(placeholder)).toBeNull();
         expect(getDiscordContactEmail("discord-123456789012345678@discord.invalid")).toBeNull();
         expect(getDiscordContactEmail("player@example.com")).toBe("player@example.com");
+    });
+
+    it("runs ownership transfer only after mapping a verified Discord profile", async () => {
+        const onVerifiedIdentity = mock(async () => undefined);
+
+        await expect(
+            mapVerifiedDiscordProfileToUser(
+                { id: "123456789012345678", email: "player@example.com", verified: true },
+                onVerifiedIdentity,
+            ),
+        ).resolves.toEqual({ email: "player@example.com", emailVerified: true });
+        expect(onVerifiedIdentity).toHaveBeenCalledWith({ discordId: "123456789012345678" });
     });
 });

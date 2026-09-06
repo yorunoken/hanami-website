@@ -22,6 +22,15 @@ export function mapDiscordProfileToUser(profile: DiscordIdentityProfile): { emai
     };
 }
 
+export async function mapVerifiedDiscordProfileToUser(
+    profile: DiscordIdentityProfile,
+    onVerifiedIdentity: (identity: { discordId: string }) => Promise<void>,
+): Promise<{ email: string; emailVerified: boolean }> {
+    const user = mapDiscordProfileToUser(profile);
+    await onVerifiedIdentity({ discordId: profile.id });
+    return user;
+}
+
 export function isDiscordPlaceholderEmail(email: string | null | undefined): boolean {
     const normalized = email?.toLowerCase();
     return Boolean(normalized?.endsWith(`@${discordPlaceholderDomain}`) || normalized?.endsWith(`@${legacyDiscordPlaceholderDomain}`));

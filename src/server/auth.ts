@@ -4,12 +4,12 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
 import { jwt } from "better-auth/plugins";
 
-import { mapDiscordProfileToUser } from "@/lib/discord-identity";
+import { mapVerifiedDiscordProfileToUser } from "@/lib/discord-identity";
 import { createOsuOAuthProvider } from "./identities/osu-provider";
 import { synchronizeOsuProfile } from "./identities/osu-profile";
 import { BotAccountCompatibility } from "./accounts/bot-compatibility";
 import { CanonicalAccountService, createCanonicalAccountDatabase } from "./accounts/service";
-import { transferVerifiedOsuIdentity } from "./accounts/transfer";
+import { transferVerifiedDiscordIdentity, transferVerifiedOsuIdentity } from "./accounts/transfer";
 import { webPrisma } from "./database/web";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
 import { PrismaDiscordLinkTicketStore } from "./discord-link/tickets";
@@ -31,6 +31,18 @@ export const trustedOrigins = [...new Set([baseOrigin, ...developmentOrigins])];
 export const discordLinkTicketStore = new PrismaDiscordLinkTicketStore(webPrisma);
 const canonicalAccountService = new CanonicalAccountService(createCanonicalAccountDatabase(webPrisma));
 export const botAccountCompatibility = new BotAccountCompatibility(canonicalAccountService);
+async function synchronizeTransferredIdentity(
+    targetUserId: string,
+    sourceUserId: string,
+    provider: "discord" | "osu",
+    providerUserId: string,
+): Promise<void> {
+    await botAccountCompatibility.runBestEffort(`synchronize transferred ${provider} identity`, async () => {
+        await botAccountCompatibility.synchronizeUser(sourceUserId, { provider, providerUserId });
+        await botAccountCompatibility.synchronizeUser(targetUserId);
+    });
+}
+
 const osuProvider =
     process.env.OSU_AUTH_CLIENT_ID || process.env.OSU_CLIENT_ID
         ? createOsuOAuthProvider(process.env, {
@@ -40,10 +52,7 @@ const osuProvider =
                   if (!targetUserId) return;
                   const sourceUserId = await transferVerifiedOsuIdentity(targetUserId, osuId);
                   if (!sourceUserId) return;
-                  await botAccountCompatibility.runBestEffort("synchronize transferred osu! identity", async () => {
-                      await botAccountCompatibility.synchronizeUser(targetUserId);
-                      await botAccountCompatibility.synchronizeUser(sourceUserId, { provider: "osu", providerUserId: osuId });
-                  });
+                  await synchronizeTransferredIdentity(targetUserId, sourceUserId, "osu", osuId);
               },
           })
         : null;
@@ -115,7 +124,15 @@ export const auth = betterAuth({
         discord: {
             clientId: process.env.DISCORD_CLIENT_ID as string,
             clientSecret: process.env.DISCORD_CLIENT_SECRET as string,
-            mapProfileToUser: mapDiscordProfileToUser,
+            mapProfileToUser: (profile) =>
+                mapVerifiedDiscordProfileToUser(profile, async ({ discordId }) => {
+                    const state = await getOAuthState();
+                    const targetUserId = state?.link?.userId;
+                    if (!targetUserId) return;
+                    const sourceUserId = await transferVerifiedDiscordIdentity(targetUserId, discordId);
+                    if (!sourceUserId) return;
+                    await synchronizeTransferredIdentity(targetUserId, sourceUserId, "discord", discordId);
+                }),
             // Discord's provider account ID remains the identity anchor. Refreshing
             // profile fields keeps names/avatars current and replaces a synthetic
             // email if the provider later supplies a real one.
