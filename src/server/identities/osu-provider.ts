@@ -9,7 +9,14 @@ export interface OsuProfile {
     avatarUrl: string | null;
 }
 
-export function createOsuOAuthProvider(environment: NodeJS.ProcessEnv = process.env): GenericOAuthConfig<"osu"> {
+interface OsuOAuthProviderHooks {
+    onVerifiedIdentity?(identity: { osuId: string }): Promise<void>;
+}
+
+export function createOsuOAuthProvider(
+    environment: NodeJS.ProcessEnv = process.env,
+    hooks: OsuOAuthProviderHooks = {},
+): GenericOAuthConfig<"osu"> {
     const clientId = environment.OSU_AUTH_CLIENT_ID ?? environment.OSU_CLIENT_ID;
     const clientSecret = environment.OSU_AUTH_CLIENT_SECRET ?? environment.OSU_CLIENT_SECRET;
     if (!clientId || !clientSecret) throw new Error("OSU_CLIENT_ID and OSU_CLIENT_SECRET are required for osu! authentication.");
@@ -29,7 +36,11 @@ export function createOsuOAuthProvider(environment: NodeJS.ProcessEnv = process.
             if (!profile) throw new Error("osu! returned an invalid identity profile.");
             return profile.id;
         },
-        getUserInfo: fetchOsuUserInfo,
+        getUserInfo: async (tokens) => {
+            const result = await fetchOsuUserInfo(tokens);
+            if (result?.id !== undefined && result.id !== null) await hooks.onVerifiedIdentity?.({ osuId: String(result.id) });
+            return result;
+        },
         mapProfileToUser: mapOsuProfileToUser,
     };
 }

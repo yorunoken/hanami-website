@@ -45,18 +45,23 @@ describe("osu! Better Auth provider", () => {
     });
 
     it("fetches the provider profile without accepting a mismatched subject", async () => {
+        const onVerifiedIdentity = mock(async () => undefined);
         const fetch = spyOn(globalThis, "fetch").mockImplementation(
             mock(async () => Response.json({ id: 13579, username: "Yoru", avatar_url: null })) as unknown as typeof globalThis.fetch,
         );
-        const config = createOsuOAuthProvider({
-            OSU_AUTH_CLIENT_ID: "client-id",
-            OSU_AUTH_CLIENT_SECRET: "client-secret",
-        } as NodeJS.ProcessEnv);
+        const config = createOsuOAuthProvider(
+            {
+                OSU_AUTH_CLIENT_ID: "client-id",
+                OSU_AUTH_CLIENT_SECRET: "client-secret",
+            } as NodeJS.ProcessEnv,
+            { onVerifiedIdentity },
+        );
 
         const profile = await config.getUserInfo?.({ accessToken: "token" });
 
         expect(profile).toMatchObject({ id: "13579", username: "Yoru", emailVerified: false });
         expect(await config.accountSubject?.({ profile: profile!, tokens: { accessToken: "token" } })).toBe("13579");
+        expect(onVerifiedIdentity).toHaveBeenCalledWith({ osuId: "13579" });
         expect(fetch).toHaveBeenCalledTimes(1);
         fetch.mockRestore();
     });

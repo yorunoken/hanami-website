@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { getOAuthState } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { genericOAuth } from "better-auth/plugins";
 import { jwt } from "better-auth/plugins";
@@ -8,6 +9,7 @@ import { createOsuOAuthProvider } from "./identities/osu-provider";
 import { synchronizeOsuProfile } from "./identities/osu-profile";
 import { BotAccountCompatibility } from "./accounts/bot-compatibility";
 import { CanonicalAccountService, createCanonicalAccountDatabase } from "./accounts/service";
+import { transferVerifiedOsuIdentity } from "./accounts/transfer";
 import { webPrisma } from "./database/web";
 import { discordBotLinkPlugin } from "./discord-link/plugin";
 import { PrismaDiscordLinkTicketStore } from "./discord-link/tickets";
@@ -29,7 +31,22 @@ export const trustedOrigins = [...new Set([baseOrigin, ...developmentOrigins])];
 export const discordLinkTicketStore = new PrismaDiscordLinkTicketStore(webPrisma);
 const canonicalAccountService = new CanonicalAccountService(createCanonicalAccountDatabase(webPrisma));
 export const botAccountCompatibility = new BotAccountCompatibility(canonicalAccountService);
-const osuProvider = process.env.OSU_AUTH_CLIENT_ID || process.env.OSU_CLIENT_ID ? createOsuOAuthProvider() : null;
+const osuProvider =
+    process.env.OSU_AUTH_CLIENT_ID || process.env.OSU_CLIENT_ID
+        ? createOsuOAuthProvider(process.env, {
+              onVerifiedIdentity: async ({ osuId }) => {
+                  const state = await getOAuthState();
+                  const targetUserId = state?.link?.userId;
+                  if (!targetUserId) return;
+                  const sourceUserId = await transferVerifiedOsuIdentity(targetUserId, osuId);
+                  if (!sourceUserId) return;
+                  await botAccountCompatibility.runBestEffort("synchronize transferred osu! identity", async () => {
+                      await botAccountCompatibility.synchronizeUser(targetUserId);
+                      await botAccountCompatibility.synchronizeUser(sourceUserId, { provider: "osu", providerUserId: osuId });
+                  });
+              },
+          })
+        : null;
 
 async function refreshOsuProfile(account: { userId: string; accountId: string; accessToken?: string | null }): Promise<void> {
     await synchronizeOsuProfile(account, webPrisma);
