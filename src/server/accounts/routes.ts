@@ -2,7 +2,6 @@ import { Elysia } from "elysia";
 
 import { auth, botAccountCompatibility, trustedOrigins } from "../auth";
 import { webPrisma } from "../database/web";
-import { isFreshAuthentication } from "../deletion-requests/domain";
 import { serverIdentity, type HanamiIdentity } from "../identity";
 import { Prisma } from "../../generated/prisma/web/client";
 import { createOsuPlaceholderEmail } from "../../lib/osu-identity";
@@ -10,7 +9,7 @@ import { logSafeFailure } from "../security/http";
 import { CanonicalAccountService, createCanonicalAccountDatabase, isLoginProvider, type LoginMethod, type LoginProvider } from "./service";
 
 export interface AccountRouteDependencies {
-    getCurrent(headers: Headers): Promise<(HanamiIdentity & { sessionCreatedAt: Date }) | null>;
+    getCurrent(headers: Headers): Promise<HanamiIdentity | null>;
     listLoginMethods(
         userId: string,
     ): Promise<Array<Pick<LoginMethod, "provider" | "providerUserId"> & { displayName?: string | null; avatarUrl?: string | null }>>;
@@ -25,7 +24,6 @@ export interface AccountRouteDependencies {
     }): Promise<{ url: string; headers: Headers }>;
     clearBotLink(input: { userId: string; provider: LoginProvider; providerAccountId: string }): Promise<void>;
     unlink(input: { userId: string; provider: LoginProvider; providerAccountId: string; headers: Headers }): Promise<void>;
-    isFreshSession(sessionCreatedAt: Date): boolean;
 }
 
 export function createAccountRoutes(dependencies: AccountRouteDependencies) {
@@ -51,9 +49,6 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
             const identity = await dependencies.getCurrent(request.headers);
             if (!identity) return fail(set, 401, "Sign in before linking an account.");
             if (!hasTrustedOrigin(request, trustedOrigins)) return fail(set, 403, "This action could not be verified.");
-            if (!dependencies.isFreshSession(identity.sessionCreatedAt)) {
-                return fail(set, 403, "Sign out and sign in again before linking another login method.");
-            }
 
             const oauthQuery = readContinuationOAuthQuery(body);
             if (!oauthQuery) return fail(set, 400, "This authorization request could not be verified.");
@@ -88,9 +83,6 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
             if (!identity) return fail(set, 401, "Sign in before linking an account.");
             if (!hasTrustedOrigin(request, trustedOrigins)) return fail(set, 403, "This action could not be verified.");
             if (!isLoginProvider(params.provider)) return fail(set, 404, "Unsupported login provider.");
-            if (!dependencies.isFreshSession(identity.sessionCreatedAt)) {
-                return fail(set, 403, "Sign out and sign in again before linking another login method.");
-            }
 
             try {
                 const origin = new URL(request.url).origin;
@@ -118,9 +110,6 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
             if (!identity) return fail(set, 401, "Sign in before unlinking an account.");
             if (!hasTrustedOrigin(request, trustedOrigins)) return fail(set, 403, "This action could not be verified.");
             if (!isLoginProvider(params.provider)) return fail(set, 404, "Unsupported login provider.");
-            if (!dependencies.isFreshSession(identity.sessionCreatedAt)) {
-                return fail(set, 403, "Sign out and sign in again before removing a login method.");
-            }
 
             try {
                 const methods = await dependencies.listLoginMethods(identity.userId);
@@ -149,12 +138,7 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
 const productionAccountService = new CanonicalAccountService(createCanonicalAccountDatabase(webPrisma));
 
 export const accountRoutes = createAccountRoutes({
-    getCurrent: async (headers) => {
-        const identity = await serverIdentity.getCurrent(headers);
-        if (!identity) return null;
-        const session = await auth.api.getSession({ headers });
-        return session ? { ...identity, sessionCreatedAt: new Date(session.session.createdAt) } : null;
-    },
+    getCurrent: (headers) => serverIdentity.getCurrent(headers),
     listLoginMethods: async (userId) => {
         const methods = await productionAccountService.listLoginMethods(userId);
         const profile = await webPrisma.osuProfile.findUnique({
@@ -220,7 +204,6 @@ export const accountRoutes = createAccountRoutes({
             { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
     },
-    isFreshSession: (sessionCreatedAt) => isFreshAuthentication(sessionCreatedAt),
 });
 
 function createLinkResponse(link: { url: string; headers: Headers }): Response {

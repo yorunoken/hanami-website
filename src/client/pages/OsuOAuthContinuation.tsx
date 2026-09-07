@@ -9,7 +9,7 @@ import { AuthLayout, AuthPanel } from "@/components/account/account-shell";
 import { Eyebrow } from "@/components/marketing";
 import { primaryActionClass, textButtonClass } from "@/components/ui/action-styles";
 
-type ContinuationState = "ready" | "connecting" | "stale" | "conflict" | "continuing" | "error";
+type ContinuationState = "ready" | "connecting" | "conflict" | "continuing" | "error";
 
 export default function OsuOAuthContinuation() {
     const { data: session, isPending } = useSession();
@@ -65,21 +65,16 @@ export default function OsuOAuthContinuation() {
             window.location.assign(result.url);
         } catch (requestError: unknown) {
             const status = readErrorStatus(requestError);
-            if (status === 403) {
-                setState("stale");
-                setError("Your Hanami session is too old to link another login method.");
-            } else {
-                setState("error");
-                setError(
-                    status === 409
-                        ? "That osu! account belongs to another Hanami account. Sign in with that account first."
-                        : "osu! could not be connected. Start again and try once more.",
-                );
-            }
+            setState("error");
+            setError(
+                status === 409
+                    ? "That osu! account belongs to another Hanami account. Sign in with that account first."
+                    : "osu! could not be connected. Start again and try once more.",
+            );
         }
     }
 
-    async function restartWithFreshSession() {
+    async function restartOsuSignIn() {
         if (!oauthQuery) return;
         setState("continuing");
         setError(null);
@@ -98,7 +93,7 @@ export default function OsuOAuthContinuation() {
                 state={isPending ? "continuing" : state}
                 error={error}
                 onConnect={connectOsu}
-                onRestart={restartWithFreshSession}
+                onRestart={restartOsuSignIn}
             />
         </AuthLayout>
     );
@@ -126,14 +121,6 @@ export function OsuOAuthContinuationPanel({
                     <p>Hanami needs your osu! account to finish this authorization request.</p>
                     <button className={`${primaryActionClass} mt-8`} type="button" onClick={onConnect} disabled={isBusy}>
                         {state === "connecting" ? "Opening osu!…" : "Connect osu!"}
-                    </button>
-                </>
-            ) : state === "stale" ? (
-                <>
-                    <h1>Sign in again to continue</h1>
-                    <p>Your session is no longer fresh enough to connect another login method. Start a fresh Hanami sign-in.</p>
-                    <button className={`${primaryActionClass} mt-8`} type="button" onClick={onRestart} disabled={isBusy}>
-                        Restart osu! sign-in
                     </button>
                 </>
             ) : state === "conflict" ? (

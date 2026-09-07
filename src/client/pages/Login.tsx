@@ -97,7 +97,7 @@ function LoginScene({ children }: { children: ReactNode }) {
                 >
                     {children}
                     <div
-                        className="pointer-events-none relative h-full min-h-125 self-end overflow-hidden border-l border-border max-[900px]:absolute max-[900px]:-right-24 max-[900px]:bottom-0 max-[900px]:h-96 max-[900px]:min-h-0 max-[900px]:w-90 max-[900px]:border-0 max-[900px]:opacity-12 max-[600px]:-right-32 max-[600px]:h-80 max-[600px]:w-80"
+                        className="pointer-events-none relative h-full min-h-125 self-end max-[900px]:absolute max-[900px]:-right-24 max-[900px]:bottom-0 max-[900px]:h-96 max-[900px]:min-h-0 max-[900px]:w-90 max-[900px]:opacity-12 max-[600px]:-right-32 max-[600px]:h-80 max-[600px]:w-80"
                         aria-hidden="true"
                     >
                         <div className="relative size-full motion-safe:animate-[reveal-up_550ms_150ms_cubic-bezier(0.2,0.7,0.2,1)_both]">

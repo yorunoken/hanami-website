@@ -13,14 +13,6 @@ describe("osu OAuth continuation", () => {
         expect(markup).not.toContain("Discord");
     });
 
-    it("offers a fresh osu! restart when the current session is stale", () => {
-        const markup = render({ state: "stale", onConnect: () => {}, onRestart: () => {} });
-
-        expect(markup).toContain("fresh Hanami sign-in");
-        expect(markup).toContain("Restart osu! sign-in");
-        expect(markup).not.toContain("Connect osu!");
-    });
-
     it("requires the existing owner account instead of transferring an osu! identity", () => {
         const markup = render({ state: "conflict", onRestart: () => {} });
 

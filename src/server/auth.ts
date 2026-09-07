@@ -66,9 +66,6 @@ export const auth = betterAuth({
     baseURL,
     trustedOrigins,
     disabledPaths: ["/unlink-account"],
-    session: {
-        freshAge: 15 * 60,
-    },
     account: {
         accountLinking: {
             allowDifferentEmails: true,
