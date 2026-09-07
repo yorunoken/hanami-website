@@ -13,6 +13,7 @@ export const routes = {
     profilePrivacy: "/profile/privacy",
     profilePrivacyConfirm: "/profile/privacy/confirm",
     login: "/login",
+    oauthContinuation: "/oauth/continue/osu",
     linkError: "/link-error",
 } as const;
 

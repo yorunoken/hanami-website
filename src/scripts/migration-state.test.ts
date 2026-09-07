@@ -49,6 +49,10 @@ const successfulFinalHistory = [
     ...successfulCentralIdentityHistory,
     { migrationName: "2_remove_unused_tables", finished: true, rolledBack: false },
 ];
+const successfulExpandedTokenHistory = [
+    ...successfulFinalHistory,
+    { migrationName: "3_expand_oauth_authorization_code_ids", finished: true, rolledBack: false },
+];
 
 describe("classifyWebDatabaseTables", () => {
     test("recognizes an empty database", () => {
@@ -78,6 +82,15 @@ describe("classifyWebDatabaseTables", () => {
             classifyWebDatabaseTables({
                 tableNames: ["_prisma_migrations", ...finalTables],
                 prismaMigrations: successfulFinalHistory,
+            }),
+        ).toBe("prisma-history");
+    });
+
+    test("recognizes the expanded OAuth token schema on restart", () => {
+        expect(
+            classifyWebDatabaseTables({
+                tableNames: ["_prisma_migrations", ...finalTables],
+                prismaMigrations: successfulExpandedTokenHistory,
             }),
         ).toBe("prisma-history");
     });

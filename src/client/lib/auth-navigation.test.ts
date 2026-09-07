@@ -6,6 +6,7 @@ import {
     describeOAuthError,
     getAuthenticatedLoginDestination,
     getCanonicalDevelopmentAuthURL,
+    isOsuOAuthContinuationRequest,
     readReturnTo,
     validateReturnTo,
 } from "./auth-navigation";
@@ -50,6 +51,13 @@ describe("post-authentication destinations", () => {
         );
     });
 
+    it("keeps the signed authorization query visible when the continuation session has expired", () => {
+        const signedQuery =
+            "?scope=openid+osu&client_id=guessr-client&ba_iat=1730000000000&exp=1730000600&ba_param=ba_iat&ba_param=ba_param&ba_param=client_id&ba_param=exp&ba_param=scope&sig=signature";
+
+        expect(createProtectedLoginPath({ pathname: "/oauth/continue/osu", search: signedQuery, hash: "" })).toBe(`/login${signedQuery}`);
+    });
+
     it("uses a safe fallback and human-readable OAuth errors", () => {
         expect(readReturnTo("")).toBe("/profile");
         expect(describeOAuthError("access_denied")).toContain("cancelled");
@@ -72,5 +80,15 @@ describe("post-authentication destinations", () => {
         expect(getAuthenticatedLoginDestination(false, false, "/profile/privacy")).toBeNull();
         expect(getAuthenticatedLoginDestination(false, true, "/profile/privacy")).toBe("/profile/privacy");
         expect(getAuthenticatedLoginDestination(false, true, "//example.com")).toBe("/profile");
+    });
+
+    it("recognizes only signed-looking osu-scoped authorization requests", () => {
+        const signedQuery =
+            "?scope=openid+osu&client_id=guessr-client&ba_iat=1730000000000&exp=1730000600&ba_param=ba_iat&ba_param=ba_param&ba_param=client_id&ba_param=exp&ba_param=scope&sig=signature";
+
+        expect(isOsuOAuthContinuationRequest(signedQuery)).toBe(true);
+        expect(isOsuOAuthContinuationRequest(signedQuery.replace("scope=openid+osu", "scope=openid"))).toBe(false);
+        expect(isOsuOAuthContinuationRequest(signedQuery.replace("sig=signature", "sig="))).toBe(false);
+        expect(isOsuOAuthContinuationRequest("?scope=openid+osu&client_id=guessr-client")).toBe(false);
     });
 });

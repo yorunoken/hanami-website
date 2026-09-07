@@ -76,7 +76,9 @@ export async function reconcileOsuGuessrClient(
 function isAllowedRedirectUri(value: string): boolean {
     try {
         const uri = new URL(value);
-        return uri.protocol === "https:" && !uri.hash;
+        if (uri.hash) return false;
+        if (uri.protocol === "https:") return true;
+        return uri.protocol === "http:" && new Set(["localhost", "127.0.0.1", "[::1]"]).has(uri.hostname);
     } catch {
         return false;
     }

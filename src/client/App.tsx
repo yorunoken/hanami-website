@@ -23,6 +23,7 @@ const {
     MapAnalyzerPage,
     NotFoundPage,
     OsuGuessrPage,
+    OsuOAuthContinuationPage,
     PrivacyPolicy,
     ProfilePage,
     TermsOfService,
@@ -97,6 +98,7 @@ export function AppContent() {
                             <Route path={routes.profile} element={<ProfilePage />} />
                             <Route path={routes.profilePrivacy} element={<AccountPrivacyPage />} />
                             <Route path={routes.profilePrivacyConfirm} element={<AccountPrivacyPage />} />
+                            <Route path={routes.oauthContinuation} element={<OsuOAuthContinuationPage />} />
                         </Route>
                         <Route path={routes.login} element={<LoginPage />} />
                         <Route path={routes.linkError} element={<LinkErrorPage />} />

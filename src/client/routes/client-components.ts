@@ -33,6 +33,7 @@ const login = createPreloadableRoute(() => import("../pages/Login"));
 const mapAnalyzer = createPreloadableRoute(() => import("../pages/MapAnalyzer"));
 const notFound = createPreloadableRoute(() => import("../pages/NotFound"));
 const osuGuessr = createPreloadableRoute(() => import("../pages/OsuGuessr"));
+const osuOAuthContinuation = createPreloadableRoute(() => import("../pages/OsuOAuthContinuation"));
 const profile = createPreloadableRoute(() => import("../pages/Profile"));
 
 const cookiePolicy = createPreloadableRoute(() => import("@/components/legal/cookie-policy"));
@@ -54,6 +55,7 @@ export const clientRouteComponents = {
     MapAnalyzerPage: mapAnalyzer.Component,
     NotFoundPage: notFound.Component,
     OsuGuessrPage: osuGuessr.Component,
+    OsuOAuthContinuationPage: osuOAuthContinuation.Component,
     PrivacyPolicy: privacyPolicy.Component,
     ProfilePage: profile.Component,
     TermsOfService: termsOfService.Component,
@@ -73,6 +75,7 @@ const routePreloaders: Partial<Record<InternalRoutePath, () => Promise<unknown>>
     [routes.profile]: profile.preload,
     [routes.profilePrivacy]: accountPrivacy.preload,
     [routes.profilePrivacyConfirm]: accountPrivacy.preload,
+    [routes.oauthContinuation]: osuOAuthContinuation.preload,
     [routes.login]: login.preload,
     [routes.linkError]: linkError.preload,
 };

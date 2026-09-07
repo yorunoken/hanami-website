@@ -69,6 +69,10 @@ export const allowedPrismaWebStates: readonly AllowedPrismaWebState[] = [
         migrationNames: ["0_init", "1_central_identity", "2_remove_unused_tables"],
         tableNames: expectedFinalWebTables,
     },
+    {
+        migrationNames: ["0_init", "1_central_identity", "2_remove_unused_tables", "3_expand_oauth_authorization_code_ids"],
+        tableNames: expectedFinalWebTables,
+    },
 ];
 
 export type WebDatabaseMigrationState = "empty" | "prisma-history" | "legacy" | "unexpected";
