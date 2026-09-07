@@ -3,7 +3,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { claimPendingAttempt, signInWithDiscord, signInWithOsu, type IdentityProvider, useSession } from "@/client/lib/auth";
-import { getAuthenticatedLoginDestination, readOAuthError, readReturnTo } from "@/client/lib/auth-navigation";
+import {
+    getAuthenticatedLoginDestination,
+    isOsuOAuthContinuationRequest,
+    readOAuthError,
+    readReturnTo,
+} from "@/client/lib/auth-navigation";
 import { routes } from "@/client/routes/paths";
 import { AccountPage } from "@/components/account/account-shell";
 import { DiscordLogo, OsuLogo } from "@/components/icons/provider-icons";
@@ -18,7 +23,11 @@ export default function Login() {
     const location = useLocation();
     const navigate = useNavigate();
     const returnTo = useMemo(() => readReturnTo(location.search), [location.search]);
-    const oauthError = useMemo(() => readOAuthError(location.search), [location.search]);
+    const osuAuthorization = useMemo(() => isOsuOAuthContinuationRequest(location.search), [location.search]);
+    const oauthError = useMemo(
+        () => readOAuthError(location.search, osuAuthorization ? "osu" : "discord"),
+        [location.search, osuAuthorization],
+    );
     const accountDeleted = useMemo(() => new URLSearchParams(location.search).get("deleted") === "1", [location.search]);
     const initiationPending = useRef(false);
     const [redirectingProvider, setRedirectingProvider] = useState<IdentityProvider | null>(null);
@@ -28,6 +37,11 @@ export default function Login() {
         const destination = getAuthenticatedLoginDestination(isSessionPending, Boolean(session), returnTo);
         if (destination) navigate(destination, { replace: true });
     }, [isSessionPending, navigate, returnTo, session]);
+
+    useEffect(() => {
+        if (!osuAuthorization || isSessionPending || session || initiationPending.current) return;
+        void handleSignIn("osu");
+    }, [isSessionPending, osuAuthorization, session]);
 
     async function handleSignIn(provider: IdentityProvider) {
         if (!claimPendingAttempt(initiationPending)) return;
@@ -59,6 +73,7 @@ export default function Login() {
             <LoginPanel
                 error={localError || oauthError}
                 status={accountDeleted ? "Your Hanami account was deleted." : null}
+                mode={osuAuthorization ? "osu" : "general"}
                 redirectingProvider={redirectingProvider}
                 onSignIn={handleSignIn}
             />
@@ -104,14 +119,18 @@ function LoginScene({ children }: { children: ReactNode }) {
 export function LoginPanel({
     error,
     status = null,
+    mode = "general",
     redirectingProvider,
     onSignIn,
 }: {
     error: string | null;
     status?: string | null;
+    mode?: "general" | "osu";
     redirectingProvider: IdentityProvider | null;
     onSignIn: (provider: IdentityProvider) => void;
 }) {
+    const osuMode = mode === "osu";
+
     return (
         <section
             className="relative z-10 max-w-165 motion-safe:animate-[reveal-up_420ms_60ms_cubic-bezier(0.2,0.7,0.2,1)_both]"
@@ -125,7 +144,9 @@ export function LoginPanel({
                 Sign in to Hanami
             </h1>
             <p className="mt-6 max-w-[54ch] text-[clamp(1rem,1.5vw,1.12rem)] leading-[1.7] text-muted">
-                Sign in with Discord or osu!. If you’ve linked both accounts, you can use either one.
+                {osuMode
+                    ? "Use osu! to return to the requesting app."
+                    : "Sign in with Discord or osu!. If you’ve linked both accounts, you can use either one."}
             </p>
 
             {status && (
@@ -143,19 +164,21 @@ export function LoginPanel({
             )}
 
             <div className="mt-8 flex flex-wrap gap-3">
-                <button
-                    className={cn(primaryActionClass, "w-[min(100%,15rem)]")}
-                    type="button"
-                    onClick={() => onSignIn("discord")}
-                    disabled={redirectingProvider !== null}
-                >
-                    {redirectingProvider === "discord" ? (
-                        <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
-                    ) : (
-                        <DiscordLogo aria-hidden="true" />
-                    )}
-                    {redirectingProvider === "discord" ? "Opening Discord…" : "Continue with Discord"}
-                </button>
+                {!osuMode && (
+                    <button
+                        className={cn(primaryActionClass, "w-[min(100%,15rem)]")}
+                        type="button"
+                        onClick={() => onSignIn("discord")}
+                        disabled={redirectingProvider !== null}
+                    >
+                        {redirectingProvider === "discord" ? (
+                            <Loader2 className="animate-[spin_900ms_linear_infinite] motion-reduce:animate-none" aria-hidden="true" />
+                        ) : (
+                            <DiscordLogo aria-hidden="true" />
+                        )}
+                        {redirectingProvider === "discord" ? "Opening Discord…" : "Continue with Discord"}
+                    </button>
+                )}
                 <button
                     className={cn(primaryActionClass, "w-[min(100%,15rem)]")}
                     type="button"
@@ -167,13 +190,15 @@ export function LoginPanel({
                     ) : (
                         <OsuLogo aria-hidden="true" />
                     )}
-                    {redirectingProvider === "osu" ? "Opening osu!…" : "Continue with osu!"}
+                    {redirectingProvider === "osu" ? "Opening osu!…" : osuMode ? "Try osu! again" : "Continue with osu!"}
                 </button>
             </div>
 
-            <p className="mt-5 max-w-[60ch] border-l border-border-strong pl-4 text-[0.76rem] leading-[1.6] text-quiet">
-                Connecting a Discord or osu! account that is already linked elsewhere will move it to your current Hanami account.
-            </p>
+            {!osuMode && (
+                <p className="mt-5 max-w-[60ch] border-l border-border-strong pl-4 text-[0.76rem] leading-[1.6] text-quiet">
+                    Connecting a Discord or osu! account that is already linked elsewhere will move it to your current Hanami account.
+                </p>
+            )}
 
             <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4">
                 <PrefetchLink className={textButtonClass} to={routes.home} prefetch="none">

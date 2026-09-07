@@ -137,9 +137,114 @@ describe("Hanami OAuth provider routes", () => {
         expect(replayResponse.status).toBe(400);
         expect(await replayResponse.json()).toMatchObject({ error: "invalid_grant" });
     });
+
+    it("sends an osu-scoped session without a durable profile to the protected continuation page", async () => {
+        const { auth, context } = await makeAuth({ profiles: [] });
+        await context.test.saveUser(context.test.createUser({ id: "discord-only-user" }));
+        const login = await context.test.login({ userId: "discord-only-user" });
+        const challenge = await createPkceChallenge("a".repeat(43));
+
+        const response = await authorize(
+            auth,
+            { client_id: "guessr-client", redirect_uri: redirectUri, code_challenge: challenge, scope: "openid osu" },
+            login.headers,
+        );
+
+        const body = await response.json();
+        expect(response.status).toBe(200);
+        expect(body.url).toStartWith("/oauth/continue/osu?");
+        expect(body.url).toContain("scope=openid+osu");
+        expect(body.url).toContain("sig=");
+    });
+
+    it("rejects a modified signed authorization query before starting a social link", async () => {
+        const { auth, context } = await makeAuth({ profiles: [] });
+        await context.test.saveUser(context.test.createUser({ id: "discord-only-user" }));
+        const login = await context.test.login({ userId: "discord-only-user" });
+        const challenge = await createPkceChallenge("a".repeat(43));
+        const authorization = await authorize(auth, {
+            client_id: "guessr-client",
+            redirect_uri: redirectUri,
+            code_challenge: challenge,
+            scope: "openid osu",
+        });
+        const authorizationURL = new URL((await authorization.json()).url, origin);
+        authorizationURL.searchParams.set("client_id", "modified-client");
+
+        const response = await auth.handler(
+            new Request(`${origin}/api/auth/link-social`, {
+                method: "POST",
+                headers: { ...Object.fromEntries(login.headers), "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    provider: "discord",
+                    callbackURL: "/profile",
+                    disableRedirect: true,
+                    oauth_query: authorizationURL.searchParams.toString(),
+                }),
+            }),
+        );
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toMatchObject({ error: "invalid_signature" });
+    });
+
+    it("finishes the preserved authorization request after the osu profile is linked", async () => {
+        const { auth, context, profiles } = await makeAuth({ profiles: [] });
+        await context.test.saveUser(context.test.createUser({ id: "discord-only-user" }));
+        const login = await context.test.login({ userId: "discord-only-user" });
+        const challenge = await createPkceChallenge("a".repeat(43));
+        const authorization = await authorize(
+            auth,
+            { client_id: "guessr-client", redirect_uri: redirectUri, code_challenge: challenge, scope: "openid osu" },
+            login.headers,
+        );
+        const authorizationURL = new URL((await authorization.json()).url, origin);
+        profiles.push({
+            userId: "discord-only-user",
+            osuId: "24680",
+            username: "Yoru",
+            avatarUrl: "https://a.ppy.sh/24680",
+        });
+        const headers = new Headers(login.headers);
+        headers.set("Content-Type", "application/json");
+
+        const response = await auth.handler(
+            new Request(`${origin}/api/auth/oauth2/continue`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({
+                    postLogin: true,
+                    oauth_query: authorizationURL.searchParams.toString(),
+                }),
+            }),
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(body.url).toStartWith(`${redirectUri}?code=`);
+        expect(body.url).toContain("state=state-1");
+    });
+
+    it("does not invoke the osu continuation gate when a durable profile exists", async () => {
+        const { auth, context } = await makeAuth();
+        await context.test.saveUser(context.test.createUser({ id: "hanami-user-1" }));
+        const login = await context.test.login({ userId: "hanami-user-1" });
+        const challenge = await createPkceChallenge("a".repeat(43));
+
+        const response = await authorize(
+            auth,
+            { client_id: "guessr-client", redirect_uri: redirectUri, code_challenge: challenge, scope: "openid osu" },
+            login.headers,
+        );
+
+        const body = await response.json();
+        expect(response.status).toBe(200);
+        expect(body.url).toContain(`${redirectUri}?code=`);
+        expect(body.url).not.toContain("/oauth/continue/osu");
+    });
 });
 
-async function makeAuth() {
+async function makeAuth(options: { profiles?: Array<{ userId: string; osuId: string; username: string; avatarUrl: string }> } = {}) {
     const database: MemoryDB = {
         user: [],
         account: [],
@@ -154,7 +259,9 @@ async function makeAuth() {
         oauthConsent: [],
         oauthClientAssertion: [],
     };
-    const profiles = [{ userId: "hanami-user-1", osuId: "24680", username: "Yoru", avatarUrl: "https://a.ppy.sh/24680" }];
+    const profiles = options.profiles ?? [
+        { userId: "hanami-user-1", osuId: "24680", username: "Yoru", avatarUrl: "https://a.ppy.sh/24680" },
+    ];
     const claimsDatabase = {
         osuProfile: {
             findUnique: async ({ where }: { where: { userId: string } }) =>
@@ -182,7 +289,7 @@ async function makeAuth() {
         secret: "test-secret-that-is-at-least-thirty-two-characters",
         plugins: [jwt(), createHanamiOAuthProviderPlugin(claimsDatabase), testUtils()],
     });
-    return { auth };
+    return { auth, context: await auth.$context, profiles };
 }
 
 async function authorize(

@@ -203,6 +203,11 @@ export const routeMetadata = {
         description: "Sign in to Hanami with Discord or osu!.",
         indexable: false,
     },
+    "/oauth/continue/osu": {
+        title: "Connect osu! | Hanami",
+        description: "Connect an osu! account to continue the Hanami authorization request.",
+        indexable: false,
+    },
     "/link-error": {
         title: "Link unavailable | Hanami",
         description: "The Discord account link expired or was already used.",

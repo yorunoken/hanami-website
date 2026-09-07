@@ -11,15 +11,17 @@ import { CanonicalAccountService, createCanonicalAccountDatabase, isLoginProvide
 
 export interface AccountRouteDependencies {
     getCurrent(headers: Headers): Promise<(HanamiIdentity & { sessionCreatedAt: Date }) | null>;
-    listLoginMethods(userId: string): Promise<
-        Array<Pick<LoginMethod, "provider" | "providerUserId"> & { displayName?: string | null; avatarUrl?: string | null }>
-    >;
+    listLoginMethods(
+        userId: string,
+    ): Promise<Array<Pick<LoginMethod, "provider" | "providerUserId"> & { displayName?: string | null; avatarUrl?: string | null }>>;
     beginLink(input: {
         userId: string;
         provider: LoginProvider;
         headers: Headers;
         callbackURL: string;
         errorCallbackURL: string;
+        oauthQuery?: string;
+        preventIdentityTransfer?: boolean;
     }): Promise<{ url: string; headers: Headers }>;
     clearBotLink(input: { userId: string; provider: LoginProvider; providerAccountId: string }): Promise<void>;
     unlink(input: { userId: string; provider: LoginProvider; providerAccountId: string; headers: Headers }): Promise<void>;
@@ -42,6 +44,42 @@ export function createAccountRoutes(dependencies: AccountRouteDependencies) {
                 logSafeFailure("read canonical login methods", error);
                 set.status = 500;
                 return { error: "Linked accounts could not be loaded." };
+            }
+        })
+        .post("/providers/osu/link/continuation", async ({ body, request, set }) => {
+            set.headers["Cache-Control"] = "no-store";
+            const identity = await dependencies.getCurrent(request.headers);
+            if (!identity) return fail(set, 401, "Sign in before linking an account.");
+            if (!hasTrustedOrigin(request, trustedOrigins)) return fail(set, 403, "This action could not be verified.");
+            if (!dependencies.isFreshSession(identity.sessionCreatedAt)) {
+                return fail(set, 403, "Sign out and sign in again before linking another login method.");
+            }
+
+            const oauthQuery = readContinuationOAuthQuery(body);
+            if (!oauthQuery) return fail(set, 400, "This authorization request could not be verified.");
+
+            try {
+                const callbackURL = createContinuationURL(request.url, oauthQuery);
+                const errorCallbackURL = createContinuationURL(request.url, oauthQuery);
+                callbackURL.searchParams.set("linked", "1");
+                const link = await dependencies.beginLink({
+                    userId: identity.userId,
+                    provider: "osu",
+                    headers: request.headers,
+                    callbackURL: callbackURL.toString(),
+                    errorCallbackURL: errorCallbackURL.toString(),
+                    oauthQuery,
+                    preventIdentityTransfer: true,
+                });
+                return createLinkResponse(link);
+            } catch (error) {
+                logSafeFailure("start osu account linking for authorization continuation", error);
+                const details = readErrorDetails(error);
+                if (isInvalidOAuthSignature(details.code, details.message)) {
+                    return fail(set, 400, "This authorization request could not be verified.");
+                }
+                if (isOwnershipConflict(details.code, details.message)) return fail(set, 409, providerConflictMessage("osu"));
+                return fail(set, 502, "osu! account linking could not be started.");
             }
         })
         .post("/providers/:provider/link", async ({ params, request, set }) => {
@@ -129,11 +167,14 @@ export const accountRoutes = createAccountRoutes({
                 : method,
         );
     },
-    beginLink: async ({ provider, headers, callbackURL, errorCallbackURL }) => {
+    beginLink: async ({ provider, headers, callbackURL, errorCallbackURL, oauthQuery, preventIdentityTransfer }) => {
+        const body = { provider, callbackURL, errorCallbackURL, disableRedirect: true };
+        if (oauthQuery) Object.assign(body, { oauth_query: oauthQuery });
+        if (preventIdentityTransfer) Object.assign(body, { additionalData: { preventIdentityTransfer: true } });
         const result = await auth.api.linkSocialAccount({
             headers,
             returnHeaders: true,
-            body: { provider, callbackURL, errorCallbackURL, disableRedirect: true },
+            body,
         });
         const response = result.response;
         if (!response || typeof response !== "object" || !("url" in response) || typeof response.url !== "string") {
@@ -197,10 +238,21 @@ function isOwnershipConflict(code?: string, message?: string): boolean {
     return code === "ACCOUNT_ALREADY_LINKED" || message?.toLowerCase().includes("already linked") === true;
 }
 
+function isInvalidOAuthSignature(code?: string, message?: string): boolean {
+    return code?.toLowerCase() === "invalid_signature" || message?.toLowerCase().includes("invalid_signature") === true;
+}
+
 function readErrorDetails(error: unknown): { code?: string; message?: string } {
     if (!(error instanceof Error)) return {};
+    const body = "body" in error && error.body && typeof error.body === "object" ? error.body : null;
+    const bodyCode =
+        body && "error" in body && typeof body.error === "string"
+            ? body.error
+            : body && "code" in body && typeof body.code === "string"
+              ? body.code
+              : undefined;
     return {
-        code: "code" in error && typeof error.code === "string" ? error.code : undefined,
+        code: "code" in error && typeof error.code === "string" ? error.code : bodyCode,
         message: error.message,
     };
 }
@@ -218,4 +270,27 @@ function hasTrustedOrigin(request: Request, allowedOrigins: readonly string[]): 
     if (!origin) return false;
     const requestOrigin = new URL(request.url).origin;
     return origin === requestOrigin || allowedOrigins.includes(origin);
+}
+
+function readContinuationOAuthQuery(body: unknown): string | null {
+    if (!body || typeof body !== "object" || !("oauthQuery" in body) || typeof body.oauthQuery !== "string") return null;
+    const oauthQuery = body.oauthQuery;
+    if (!oauthQuery || oauthQuery.startsWith("?") || oauthQuery.includes("#")) return null;
+
+    const params = new URLSearchParams(oauthQuery);
+    const signedNames = new Set(params.getAll("ba_param"));
+    const scope = params.get("scope")?.split(/\s+/) ?? [];
+    const requiredSignedNames = ["ba_iat", "ba_param", "client_id", "exp", "scope"];
+
+    if (!scope.includes("osu") || params.getAll("sig").length !== 1 || !params.get("sig")) return null;
+    if (requiredSignedNames.some((name) => !signedNames.has(name) || !params.has(name))) return null;
+    if ([...params.keys()].some((name) => name !== "sig" && !signedNames.has(name))) return null;
+
+    return oauthQuery;
+}
+
+function createContinuationURL(requestURL: string, oauthQuery: string): URL {
+    const url = new URL("/oauth/continue/osu", new URL(requestURL).origin);
+    url.search = oauthQuery;
+    return url;
 }

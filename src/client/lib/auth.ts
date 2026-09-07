@@ -1,9 +1,11 @@
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { createAuthClient } from "better-auth/react";
 
-import { createLoginPath, validateReturnTo } from "./auth-navigation";
+import { createLoginPath, getSignedOAuthQuery, validateReturnTo } from "./auth-navigation";
 
 const authClient = createAuthClient({
     basePath: "/api/auth",
+    plugins: [oauthProviderClient()],
 });
 export const { signIn, signOut, useSession } = authClient;
 export type IdentityProvider = "discord" | "osu";
@@ -11,6 +13,8 @@ export type IdentityProvider = "discord" | "osu";
 interface AuthOperationResult {
     error?: unknown;
 }
+
+type OAuthContinuationFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
 type SocialSignInOperation = (input: {
     provider: "discord";
@@ -66,6 +70,26 @@ export async function reauthenticateWithDiscord(callbackURL: string, errorCallba
 export async function signOutFromHanami(execute: SignOutOperation = signOut): Promise<void> {
     const result = await execute();
     if (result.error) throw new Error("Sign out could not be completed.");
+}
+
+export async function continueOAuthPostLogin(options: { fetch?: OAuthContinuationFetch } = {}): Promise<string> {
+    const search = typeof window === "undefined" ? "" : window.location.search;
+    const oauthQuery = getSignedOAuthQuery(search);
+    if (!oauthQuery) throw new Error("This authorization request could not be verified.");
+
+    const execute = options.fetch ?? globalThis.fetch;
+    const response = await execute("/api/auth/oauth2/continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postLogin: true, oauth_query: oauthQuery }),
+    });
+    const data = (await response.json().catch(() => null)) as { url?: unknown; redirect_uri?: unknown } | null;
+    const redirectURI = typeof data?.url === "string" ? data.url : data?.redirect_uri;
+    if (!response.ok || typeof redirectURI !== "string") {
+        throw new Error("Hanami could not continue the authorization request.");
+    }
+
+    return redirectURI;
 }
 
 export function claimPendingAttempt(attempt: { current: boolean }): boolean {

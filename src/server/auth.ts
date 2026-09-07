@@ -49,7 +49,7 @@ const osuProvider =
               onVerifiedIdentity: async ({ osuId }) => {
                   const state = await getOAuthState();
                   const targetUserId = state?.link?.userId;
-                  if (!targetUserId) return;
+                  if (!targetUserId || state?.preventIdentityTransfer === true) return;
                   const sourceUserId = await transferVerifiedOsuIdentity(targetUserId, osuId);
                   if (!sourceUserId) return;
                   await synchronizeTransferredIdentity(targetUserId, sourceUserId, "osu", osuId);

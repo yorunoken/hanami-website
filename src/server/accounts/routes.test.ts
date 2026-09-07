@@ -34,6 +34,91 @@ describe("canonical account routes", () => {
         expect(dependencies.beginLink).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1", provider: "osu" }));
     });
 
+    it("starts the osu OAuth continuation link only at its fixed same-origin callback", async () => {
+        const dependencies = makeDependencies();
+        const app = new Elysia({ prefix: "/api" }).use(createAccountRoutes(dependencies));
+        const oauthQuery =
+            "scope=openid+osu&client_id=guessr-client&ba_iat=1730000000000&exp=1730000600&ba_param=ba_iat&ba_param=ba_param&ba_param=client_id&ba_param=exp&ba_param=scope&sig=signature";
+
+        const response = await app.handle(
+            new Request("http://localhost:3000/api/account/providers/osu/link/continuation", {
+                method: "POST",
+                headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
+                body: JSON.stringify({ oauthQuery }),
+            }),
+        );
+
+        expect(response.status).toBe(200);
+        expect(dependencies.beginLink).toHaveBeenCalledWith({
+            userId: "user-1",
+            provider: "osu",
+            headers: expect.any(Headers),
+            callbackURL: `http://localhost:3000/oauth/continue/osu?${oauthQuery}&linked=1`,
+            errorCallbackURL: `http://localhost:3000/oauth/continue/osu?${oauthQuery}`,
+            oauthQuery,
+            preventIdentityTransfer: true,
+        });
+    });
+
+    it("rejects malformed continuation state before starting account linking", async () => {
+        const dependencies = makeDependencies();
+        const app = new Elysia({ prefix: "/api" }).use(createAccountRoutes(dependencies));
+
+        const response = await app.handle(
+            new Request("http://localhost:3000/api/account/providers/osu/link/continuation", {
+                method: "POST",
+                headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
+                body: JSON.stringify({ oauthQuery: "scope=openid+osu&redirect_uri=https%3A%2F%2Fevil.example" }),
+            }),
+        );
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: "This authorization request could not be verified." });
+        expect(dependencies.beginLink).not.toHaveBeenCalled();
+    });
+
+    it("returns a controlled error when Better Auth rejects the signed continuation query", async () => {
+        const dependencies = makeDependencies();
+        dependencies.beginLink = mock(async () => {
+            throw Object.assign(new Error("Bad Request"), { body: { error: "invalid_signature" } });
+        });
+        const app = new Elysia({ prefix: "/api" }).use(createAccountRoutes(dependencies));
+        const oauthQuery =
+            "scope=openid+osu&client_id=guessr-client&ba_iat=1730000000000&exp=1730000600&ba_param=ba_iat&ba_param=ba_param&ba_param=client_id&ba_param=exp&ba_param=scope&sig=signature";
+
+        const response = await app.handle(
+            new Request("http://localhost:3000/api/account/providers/osu/link/continuation", {
+                method: "POST",
+                headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
+                body: JSON.stringify({ oauthQuery }),
+            }),
+        );
+
+        expect(response.status).toBe(400);
+        expect(await response.json()).toEqual({ error: "This authorization request could not be verified." });
+    });
+
+    it("keeps a stale session on the safe restart path for osu continuation linking", async () => {
+        const dependencies = makeDependencies();
+        dependencies.isFreshSession = () => false;
+        const app = new Elysia({ prefix: "/api" }).use(createAccountRoutes(dependencies));
+
+        const response = await app.handle(
+            new Request("http://localhost:3000/api/account/providers/osu/link/continuation", {
+                method: "POST",
+                headers: { Origin: "http://localhost:3000", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    oauthQuery:
+                        "scope=openid+osu&client_id=guessr-client&ba_iat=1730000000000&exp=1730000600&ba_param=ba_iat&ba_param=ba_param&ba_param=client_id&ba_param=exp&ba_param=scope&sig=signature",
+                }),
+            }),
+        );
+
+        expect(response.status).toBe(403);
+        expect(await response.json()).toEqual({ error: "Sign out and sign in again before linking another login method." });
+        expect(dependencies.beginLink).not.toHaveBeenCalled();
+    });
+
     it("forwards every Better Auth link cookie while returning the authorization URL", async () => {
         const dependencies = makeDependencies();
         const headers = new Headers();

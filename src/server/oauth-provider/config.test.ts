@@ -27,12 +27,33 @@ describe("osu!guessr OAuth client configuration", () => {
     test("returns null when the client id or redirect URI configuration is missing", () => {
         expect(getOsuGuessrClientConfig({} as NodeJS.ProcessEnv)).toBeNull();
         expect(getOsuGuessrClientConfig({ OSU_GUESSR_CLIENT_ID: "guessr-client" } as NodeJS.ProcessEnv)).toBeNull();
-        expect(
-            getOsuGuessrClientConfig({
-                OSU_GUESSR_CLIENT_ID: "guessr-client",
-                OSU_GUESSR_REDIRECT_URIS: "http://localhost/callback",
-            } as NodeJS.ProcessEnv),
-        ).toBeNull();
+    });
+
+    test("accepts exact loopback HTTP redirect URIs for local development", () => {
+        const config = getOsuGuessrClientConfig({
+            OSU_GUESSR_CLIENT_ID: "guessr-client",
+            OSU_GUESSR_REDIRECT_URIS: ["http://localhost/callback", "http://127.0.0.1:4173/callback", "http://[::1]:5173/callback"].join(
+                ",",
+            ),
+        } as NodeJS.ProcessEnv);
+
+        expect(config?.redirectUris).toEqual(["http://localhost/callback", "http://127.0.0.1:4173/callback", "http://[::1]:5173/callback"]);
+    });
+
+    test("rejects fragments and non-loopback HTTP redirect URIs", () => {
+        for (const redirectURI of [
+            "http://localhost/callback#fragment",
+            "http://127.0.0.2/callback",
+            "http://example.com/callback",
+            "https://example.com/callback#fragment",
+        ]) {
+            expect(
+                getOsuGuessrClientConfig({
+                    OSU_GUESSR_CLIENT_ID: "guessr-client",
+                    OSU_GUESSR_REDIRECT_URIS: redirectURI,
+                } as NodeJS.ProcessEnv),
+            ).toBeNull();
+        }
     });
 
     test("reconciles the configured client idempotently", async () => {
