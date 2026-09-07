@@ -225,7 +225,7 @@ model OauthRefreshToken {
   sessionId               String?            @db.VarChar(36)
   userId                  String             @db.VarChar(36)
   referenceId             String?            @db.VarChar(255)
-  authorizationCodeId     String?            @db.VarChar(36)
+  authorizationCodeId     String?            @db.Text
   resources               Json?
   requestedUserInfoClaims Json?
   expiresAt               DateTime           @db.Timestamp(3)
@@ -245,7 +245,7 @@ model OauthRefreshToken {
   @@index([clientId], map: "oauthRefreshToken_clientId_idx")
   @@index([sessionId], map: "oauthRefreshToken_sessionId_idx")
   @@index([userId], map: "oauthRefreshToken_userId_idx")
-  @@index([authorizationCodeId], map: "oauthRefreshToken_authorizationCodeId_idx")
+  @@index([authorizationCodeId(length: 191)], map: "oauthRefreshToken_authorizationCodeId_idx")
   @@map("oauthRefreshToken")
 }
 
@@ -256,7 +256,7 @@ model OauthAccessToken {
   sessionId               String?            @db.VarChar(36)
   userId                  String?            @db.VarChar(36)
   referenceId             String?            @db.VarChar(255)
-  authorizationCodeId     String?            @db.VarChar(36)
+  authorizationCodeId     String?            @db.Text
   resources               Json?
   requestedUserInfoClaims Json?
   refreshId               String?            @db.VarChar(36)
@@ -273,7 +273,7 @@ model OauthAccessToken {
   @@index([clientId], map: "oauthAccessToken_clientId_idx")
   @@index([sessionId], map: "oauthAccessToken_sessionId_idx")
   @@index([userId], map: "oauthAccessToken_userId_idx")
-  @@index([authorizationCodeId], map: "oauthAccessToken_authorizationCodeId_idx")
+  @@index([authorizationCodeId(length: 191)], map: "oauthAccessToken_authorizationCodeId_idx")
   @@index([refreshId], map: "oauthAccessToken_refreshId_idx")
   @@map("oauthAccessToken")
 }
